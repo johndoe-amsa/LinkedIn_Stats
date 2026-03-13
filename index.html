@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LinkedIn Analytics — Dashboard</title>
+
+  <!-- Geist font (via npm CDN) -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  </style>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════
+       UPLOAD SCREEN
+  ══════════════════════════════════════════════ -->
+  <div id="upload-screen">
+    <header class="upload-header">
+      <div class="upload-header__brand">
+        <i data-lucide="bar-chart-2" aria-hidden="true"></i>
+        <span>LinkedIn Analytics</span>
+      </div>
+    </header>
+
+    <main class="upload-main">
+      <div class="upload-hero">
+        <p class="upload-hero__label">Dashboard</p>
+        <h1 class="upload-hero__title">Analysez vos<br>statistiques LinkedIn</h1>
+        <p class="upload-hero__desc">Importez votre export CSV LinkedIn pour visualiser vos performances, comparer vos posts et identifier vos meilleures publications.</p>
+      </div>
+
+      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
+        <input type="file" id="file-input" accept=".csv" hidden aria-label="Sélectionner un fichier CSV" />
+        <div class="drop-zone__icon">
+          <i data-lucide="upload-cloud" aria-hidden="true"></i>
+        </div>
+        <p class="drop-zone__title">Glissez-déposez votre fichier CSV</p>
+        <p class="drop-zone__sub">ou cliquez pour parcourir</p>
+        <button type="button" class="btn btn--secondary drop-zone__btn" id="browse-btn">
+          <i data-lucide="folder-open" aria-hidden="true"></i>
+          Parcourir
+        </button>
+        <p class="drop-zone__hint">Format : CSV avec séparateur <code>;</code> ou <code>,</code></p>
+      </div>
+
+      <div id="upload-error" class="upload-error" hidden>
+        <i data-lucide="alert-circle" aria-hidden="true"></i>
+        <span id="upload-error-msg"></span>
+      </div>
+
+      <div class="upload-features">
+        <div class="upload-feature">
+          <i data-lucide="shield" aria-hidden="true"></i>
+          <span>100 % local — aucune donnée envoyée</span>
+        </div>
+        <div class="upload-feature">
+          <i data-lucide="zap" aria-hidden="true"></i>
+          <span>Traitement instantané dans le navigateur</span>
+        </div>
+        <div class="upload-feature">
+          <i data-lucide="line-chart" aria-hidden="true"></i>
+          <span>Graphiques interactifs avec Chart.js</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════
+       DASHBOARD SCREEN (hidden until CSV loaded)
+  ══════════════════════════════════════════════ -->
+  <div id="dashboard-screen" hidden>
+
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Navigation principale">
+      <div class="nav__brand">
+        <i data-lucide="bar-chart-2" aria-hidden="true"></i>
+        <span>LinkedIn Analytics</span>
+      </div>
+      <div class="nav__meta">
+        <span class="nav__filename" id="nav-filename"></span>
+        <span class="nav__separator" aria-hidden="true">·</span>
+        <span class="nav__count" id="nav-count"></span>
+      </div>
+      <div class="nav__actions">
+        <button type="button" class="btn btn--secondary btn--sm" id="reset-btn">
+          <i data-lucide="upload" aria-hidden="true"></i>
+          Nouveau fichier
+        </button>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="dashboard">
+
+      <!-- Page title + filters -->
+      <section class="dashboard__header">
+        <div class="dashboard__title-group">
+          <p class="section-label">Vue d'ensemble</p>
+          <h2 class="section-title">Tableau de bord</h2>
+        </div>
+
+        <div class="filters" role="search" aria-label="Filtres">
+          <div class="filter-group">
+            <label class="filter-group__label" for="filter-theme">Thème</label>
+            <select class="filter-group__select" id="filter-theme" aria-label="Filtrer par thème">
+              <option value="">Tous les thèmes</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-group__label" for="filter-media">Média</label>
+            <select class="filter-group__select" id="filter-media" aria-label="Filtrer par média">
+              <option value="">Tous les médias</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-group__label" for="filter-type">Type</label>
+            <select class="filter-group__select" id="filter-type" aria-label="Filtrer par type">
+              <option value="">Tous les types</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn--ghost btn--sm" id="reset-filters-btn" aria-label="Réinitialiser les filtres">
+            <i data-lucide="x" aria-hidden="true"></i>
+            Réinitialiser
+          </button>
+        </div>
+      </section>
+
+      <!-- KPI Cards -->
+      <section class="kpis" aria-label="Indicateurs clés">
+        <div class="kpi-card" id="kpi-impressions">
+          <div class="kpi-card__header">
+            <p class="kpi-card__label">Total Impressions</p>
+            <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
+          </div>
+          <p class="kpi-card__value">—</p>
+          <p class="kpi-card__sub">Publications analysées : <strong id="kpi-posts-count">0</strong></p>
+        </div>
+
+        <div class="kpi-card" id="kpi-engagement">
+          <div class="kpi-card__header">
+            <p class="kpi-card__label">Taux d'engagement moyen</p>
+            <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
+          </div>
+          <p class="kpi-card__value">—</p>
+          <p class="kpi-card__sub">Médiane : <strong id="kpi-engagement-median">0%</strong></p>
+        </div>
+
+        <div class="kpi-card" id="kpi-clicks">
+          <div class="kpi-card__header">
+            <p class="kpi-card__label">Total Clics</p>
+            <div class="kpi-card__icon"><i data-lucide="mouse-pointer-click" aria-hidden="true"></i></div>
+          </div>
+          <p class="kpi-card__value">—</p>
+          <p class="kpi-card__sub">Taux de clics moyen : <strong id="kpi-ctr-avg">0%</strong></p>
+        </div>
+
+        <div class="kpi-card" id="kpi-interactions">
+          <div class="kpi-card__header">
+            <p class="kpi-card__label">Total Interactions</p>
+            <div class="kpi-card__icon"><i data-lucide="heart" aria-hidden="true"></i></div>
+          </div>
+          <p class="kpi-card__value">—</p>
+          <p class="kpi-card__sub">Réactions + Commentaires + Republications</p>
+        </div>
+      </section>
+
+      <!-- Charts row -->
+      <section class="charts-grid" aria-label="Graphiques">
+
+        <!-- Line chart — Impressions over time -->
+        <div class="chart-card chart-card--wide">
+          <div class="chart-card__header">
+            <div>
+              <p class="chart-card__label">Évolution temporelle</p>
+              <h3 class="chart-card__title">Impressions au fil du temps</h3>
+            </div>
+            <div class="chart-card__badge" id="chart-line-range"></div>
+          </div>
+          <div class="chart-card__body">
+            <canvas id="chart-impressions" aria-label="Graphique d'évolution des impressions"></canvas>
+          </div>
+        </div>
+
+        <!-- Bar chart — Top 5 posts -->
+        <div class="chart-card">
+          <div class="chart-card__header">
+            <div>
+              <p class="chart-card__label">Classement</p>
+              <h3 class="chart-card__title">Top 5 — Engagement</h3>
+            </div>
+          </div>
+          <div class="chart-card__body">
+            <canvas id="chart-top5" aria-label="Top 5 posts par taux d'engagement"></canvas>
+          </div>
+        </div>
+
+        <!-- Donut chart — Interactions breakdown -->
+        <div class="chart-card">
+          <div class="chart-card__header">
+            <div>
+              <p class="chart-card__label">Répartition</p>
+              <h3 class="chart-card__title">Types d'interactions</h3>
+            </div>
+          </div>
+          <div class="chart-card__body chart-card__body--donut">
+            <canvas id="chart-donut" aria-label="Répartition des types d'interactions"></canvas>
+            <div class="donut-legend" id="donut-legend" aria-label="Légende du graphique"></div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- Data table -->
+      <section class="table-section" aria-label="Tableau des publications">
+        <div class="table-section__header">
+          <div class="table-section__title-group">
+            <p class="section-label">Données brutes</p>
+            <h2 class="section-title">Toutes les publications</h2>
+          </div>
+          <div class="table-section__controls">
+            <div class="search-field">
+              <i data-lucide="search" aria-hidden="true"></i>
+              <input
+                type="search"
+                id="table-search"
+                class="search-field__input"
+                placeholder="Rechercher une publication…"
+                aria-label="Rechercher dans les publications"
+              />
+            </div>
+            <span class="table-count" id="table-count"></span>
+          </div>
+        </div>
+
+        <div class="table-wrapper" role="region" aria-label="Tableau scrollable">
+          <table class="data-table" id="posts-table" aria-label="Liste des publications LinkedIn">
+            <thead>
+              <tr>
+                <th class="sortable" data-col="date" tabindex="0" aria-sort="none">
+                  Date <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+                <th class="sortable col-pub" data-col="publication" tabindex="0" aria-sort="none">
+                  Publication <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+                <th>Thème</th>
+                <th>Média</th>
+                <th>Type</th>
+                <th class="sortable text-right" data-col="impressions" tabindex="0" aria-sort="none">
+                  Impressions <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+                <th class="sortable text-right" data-col="reactions" tabindex="0" aria-sort="none">
+                  Réactions <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+                <th class="text-right">Commentaires</th>
+                <th class="text-right">Republi.</th>
+                <th class="sortable text-right" data-col="clics" tabindex="0" aria-sort="none">
+                  Clics <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+                <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
+                  Engagement <span class="sort-icon" aria-hidden="true"></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty state -->
+        <div class="empty-state" id="table-empty" hidden>
+          <i data-lucide="search-x" aria-hidden="true"></i>
+          <p class="empty-state__title">Aucun résultat</p>
+          <p class="empty-state__desc">Aucune publication ne correspond à votre recherche.</p>
+          <button type="button" class="btn btn--secondary btn--sm" id="clear-search-btn">
+            Réinitialiser la recherche
+          </button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
