@@ -214,7 +214,7 @@ function parseRows(rows) {
         dateRaw: get('Date'),
         impressions: parseNum(get('Impressions')),
         vues: parseNum(get('Vues')),
-        reactions: parseNum(get('Réactions')),
+        reactions: parseNum(get('Reactions')),
         commentaires: parseNum(get('Commentaires')),
         republis: parseNum(get('Republi.')),
         clics: parseNum(get('Clics')),
