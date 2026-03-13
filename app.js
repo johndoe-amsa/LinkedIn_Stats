@@ -1597,7 +1597,7 @@ function renderLeaderboardTable() {
    SHARED CHART HELPERS
    ═══════════════════════════════════════════════════════════════ */
 
-Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 
 function destroyChart(id) {

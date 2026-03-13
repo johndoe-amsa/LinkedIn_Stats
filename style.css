@@ -24,8 +24,8 @@
   --color-warning:  #F5A623;
 
   /* Typographie */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Menlo', 'Monaco', 'Consolas', monospace;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', Menlo, monospace;
 
   /* Espacement (base 8px) */
   --space-1:   4px;
