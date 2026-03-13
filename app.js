@@ -36,34 +36,34 @@ const state = {
 };
 
 
-/* ─── Dark mode detection ───────────────────────────────────── */
-const isDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-const C = {
-  primary:     () => isDark() ? '#EDEDED' : '#000000',
-  secondary:   () => isDark() ? '#888888' : '#666666',
-  tertiary:    () => isDark() ? '#555555' : '#999999',
-  border:      () => isDark() ? '#333333' : '#EAEAEA',
-  bg:          () => isDark() ? '#000000' : '#FFFFFF',
-  bgSecondary: () => isDark() ? '#111111' : '#F2F2F2',
-  success:     '#0070F3',
-  warning:     '#F5A623',
-  error:       '#EE0000',
-};
-
-/* Monochrome shades for multi-series charts */
-function shades(count) {
-  if (isDark()) {
-    const base = [1, 0.8, 0.6, 0.45, 0.3, 0.2, 0.15, 0.1];
-    return Array.from({ length: count }, (_, i) =>
-      `rgba(237,237,237,${base[i % base.length]})`
-    );
-  }
-  const base = [1, 0.7, 0.5, 0.35, 0.22, 0.14, 0.1, 0.06];
-  return Array.from({ length: count }, (_, i) =>
-    `rgba(0,0,0,${base[i % base.length]})`
-  );
+/* ─── CSS variable reader ───────────────────────────────────── */
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
+
+/* Data-viz palette (Palette Isolée — CLAUDE.md §Data-Viz v2.1)
+   Uniquement pour <canvas> et pastilles de légende */
+function DATA_COLORS() {
+  return [
+    cssVar('--color-data-1'),
+    cssVar('--color-data-2'),
+    cssVar('--color-data-3'),
+    cssVar('--color-data-4'),
+    cssVar('--color-data-5'),
+  ];
+}
+
+/* UI/chart structural colors (grid, text, border) — toujours monochromes */
+const C = {
+  text:        () => cssVar('--color-text'),
+  muted:       () => cssVar('--color-text-muted'),
+  subtle:      () => cssVar('--color-text-subtle'),
+  border:      () => cssVar('--color-border'),
+  borderStrong:() => cssVar('--color-border-strong'),
+  bg:          () => cssVar('--color-bg'),
+  bgSecondary: () => cssVar('--color-bg-secondary'),
+  dataGrid:    () => cssVar('--color-data-grid'),
+};
 
 const POINT_STYLES = ['circle', 'triangle', 'rect', 'rectRot', 'star', 'crossRot'];
 
@@ -107,22 +107,14 @@ function clearError() {
 
 /* Drag & Drop */
 dropZone.addEventListener('click', (e) => {
-  if (e.target !== browseBtn && !browseBtn.contains(e.target)) {
-    fileInput.click();
-  }
+  if (e.target !== browseBtn && !browseBtn.contains(e.target)) fileInput.click();
 });
 
 dropZone.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault();
-    fileInput.click();
-  }
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
 });
 
-browseBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  fileInput.click();
-});
+browseBtn.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
 
 dropZone.addEventListener('dragover', (e) => {
   e.preventDefault();
@@ -130,9 +122,7 @@ dropZone.addEventListener('dragover', (e) => {
 });
 
 dropZone.addEventListener('dragleave', (e) => {
-  if (!dropZone.contains(e.relatedTarget)) {
-    dropZone.classList.remove('is-dragging');
-  }
+  if (!dropZone.contains(e.relatedTarget)) dropZone.classList.remove('is-dragging');
 });
 
 dropZone.addEventListener('drop', (e) => {
@@ -154,7 +144,6 @@ resetBtn.addEventListener('click', resetDashboard);
 function resetDashboard() {
   Object.values(state.charts).forEach(c => c && c.destroy());
   state.charts = {};
-
   state.rawData = [];
   state.filteredData = [];
   state.filename = '';
@@ -199,19 +188,15 @@ function handleFile(file) {
         showError('Le fichier CSV est vide ou ne contient pas de données lisibles.');
         return;
       }
-
       const parsed = parseRows(results.data);
       if (parsed.length === 0) {
         showError('Impossible de lire les données. Vérifiez le format du CSV.');
         return;
       }
-
       state.rawData = parsed;
       state.filename = file.name;
-
       uploadScreen.hidden = true;
       dashboardScreen.hidden = false;
-
       initDashboard();
     },
     error(err) {
@@ -259,14 +244,9 @@ function parseRows(rows) {
 }
 
 function normalize(str) {
-  return str.trim().toLowerCase()
-    .replace(/['\u2019]/g, "'")
-    .replace(/\s+/g, ' ');
+  return str.trim().toLowerCase().replace(/['\u2019]/g, "'").replace(/\s+/g, ' ');
 }
-
-function clean(str) {
-  return (str || '').trim();
-}
+function clean(str) { return (str || '').trim(); }
 
 function parseDate(str) {
   if (!str) return null;
@@ -286,10 +266,7 @@ function parseDate(str) {
 
 function parseNum(str) {
   if (!str && str !== 0) return 0;
-  const cleaned = String(str).trim()
-    .replace(/\s/g, '')
-    .replace(/\.(?=\d{3})/g, '')
-    .replace(',', '.');
+  const cleaned = String(str).trim().replace(/\s/g, '').replace(/\.(?=\d{3})/g, '').replace(',', '.');
   const n = parseFloat(cleaned);
   return isNaN(n) ? 0 : n;
 }
@@ -309,15 +286,11 @@ function parsePct(str) {
 function initDashboard() {
   $('nav-filename').textContent = state.filename;
 
-  /* Populate filter dropdowns */
   populateFilter(filterTheme, unique(state.rawData, 'theme'));
   populateFilter(filterMedia, unique(state.rawData, 'media'));
   populateFilter(filterType, unique(state.rawData, 'type'));
-
-  /* Populate podium month dropdown */
   populatePodiumMonths();
 
-  /* Bind filter events */
   filterTheme.addEventListener('change', applyFilters);
   filterMedia.addEventListener('change', applyFilters);
   filterType.addEventListener('change', applyFilters);
@@ -328,12 +301,10 @@ function initDashboard() {
     applyFilters();
   });
 
-  /* Tab events */
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  /* Table events */
   tableSearch.addEventListener('input', debounce(() => {
     state.searchQuery = tableSearch.value;
     state.page = 1;
@@ -347,18 +318,13 @@ function initDashboard() {
     renderLeaderboardTable();
   });
 
-  /* Sort events */
   document.querySelectorAll('#posts-table th.sortable').forEach(th => {
     th.addEventListener('click', () => onSort(th.dataset.col));
     th.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSort(th.dataset.col);
-      }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSort(th.dataset.col); }
     });
   });
 
-  /* Pagination events */
   $('page-prev').addEventListener('click', () => {
     if (state.page > 1) { state.page--; renderLeaderboardTable(); }
   });
@@ -367,13 +333,11 @@ function initDashboard() {
     renderLeaderboardTable();
   });
 
-  /* Podium month filter */
   $('podium-month').addEventListener('change', (e) => {
     state.podiumMonth = e.target.value;
     renderPodium(state.filteredData);
   });
 
-  /* Stacked engagement toggle */
   document.querySelectorAll('.stacked-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.stacked-toggle').forEach(b => b.classList.remove('is-active'));
@@ -383,14 +347,11 @@ function initDashboard() {
     });
   });
 
-  /* Dark mode change */
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     renderActiveTab();
   });
 
-  /* Initial render */
   applyFilters();
-
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
 
@@ -417,7 +378,8 @@ function populatePodiumMonths() {
   });
   [...months].sort().reverse().forEach(m => {
     const [y, mo] = m.split('-');
-    const label = new Date(parseInt(y), parseInt(mo) - 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    const label = new Date(parseInt(y), parseInt(mo) - 1)
+      .toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
     const opt = document.createElement('option');
     opt.value = m;
     opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
@@ -487,10 +449,119 @@ function applyFilters() {
     return true;
   });
 
-  $('nav-count').textContent = `${state.filteredData.length} publication${state.filteredData.length !== 1 ? 's' : ''}`;
+  $('nav-count').textContent =
+    `${state.filteredData.length} publication${state.filteredData.length !== 1 ? 's' : ''}`;
 
   state.page = 1;
   renderActiveTab();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SHARED CHART HELPERS
+   ═══════════════════════════════════════════════════════════════ */
+
+Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
+Chart.defaults.font.size = 12;
+
+function destroyChart(id) {
+  if (state.charts[id]) {
+    state.charts[id].destroy();
+    state.charts[id] = null;
+  }
+}
+
+/**
+ * Tooltip "mini-modal" spec (CLAUDE.md §Data-Viz v2.1)
+ * bg: color-bg / border: 1px color-border-strong / 12px dense text
+ */
+function tooltipBase() {
+  return {
+    backgroundColor:  C.bg(),
+    borderColor:      C.borderStrong(),
+    borderWidth:      1,
+    titleColor:       C.text(),
+    bodyColor:        C.muted(),
+    titleFont:        { size: 12, weight: '600', family: "'Geist', system-ui, sans-serif" },
+    bodyFont:         { size: 12, family: "'Geist', system-ui, sans-serif" },
+    padding:          12,
+    cornerRadius:     8,
+    displayColors:    false,
+  };
+}
+
+function buildTooltip(linesFn) {
+  return {
+    ...tooltipBase(),
+    callbacks: {
+      title:  (items) => items[0].label,
+      label:  (item)  => linesFn([item])[0],
+    },
+  };
+}
+
+/**
+ * Legend spec: 12px, color-text-muted, pastilles 8px circles (pointStyle: 'circle')
+ */
+function legendSpec(position = 'top', align = 'end') {
+  return {
+    display: true,
+    position,
+    align,
+    labels: {
+      color:            C.muted(),
+      usePointStyle:    true,
+      pointStyle:       'circle',
+      pointStyleWidth:  8,
+      font:             { size: 12 },
+      padding:          16,
+    },
+  };
+}
+
+/**
+ * Axis scale: horizontal grids only (y-axis grid on vertical charts).
+ * xAxis → no grid. yAxis → grid using --color-data-grid.
+ */
+function scaleX(opts = {}) {
+  return {
+    grid:   { display: false },
+    border: { display: false },
+    ticks:  { color: C.muted(), ...opts.ticks },
+    title:  opts.title ? { display: true, color: C.muted(), font: { size: 12 }, ...opts.title } : undefined,
+    ...opts.extra,
+  };
+}
+
+function scaleY(opts = {}) {
+  return {
+    grid:   { color: C.dataGrid(), drawTicks: false },
+    border: { display: false },
+    ticks:  { color: C.muted(), ...opts.ticks },
+    title:  opts.title ? { display: true, color: C.muted(), font: { size: 12 }, ...opts.title } : undefined,
+    beginAtZero: opts.beginAtZero !== false,
+    ...opts.extra,
+  };
+}
+
+/* For horizontal bar charts: value axis is X, category axis is Y */
+function scaleXValue(opts = {}) {
+  return {
+    grid:   { color: C.dataGrid(), drawTicks: false },
+    border: { display: false },
+    ticks:  { color: C.muted(), ...opts.ticks },
+    beginAtZero: opts.beginAtZero !== false,
+    ...opts.extra,
+  };
+}
+
+function scaleYCategory(opts = {}) {
+  return {
+    grid:   { display: false },
+    border: { display: false },
+    ticks:  { color: C.muted(), ...opts.ticks },
+    ...opts.extra,
+  };
 }
 
 
@@ -508,16 +579,13 @@ function renderOverview(data) {
 /* ── KPIs ── */
 function renderKPIs(data) {
   const count = data.length;
-
   const totalImpressions = sum(data, 'impressions');
   const avgEngagement = avg(data, 'tauxEngagement');
   const medianEngagement = median(data.map(d => d.tauxEngagement));
   const totalInteractions = data.reduce((acc, d) => acc + d.totalInteractions, 0);
 
-  /* Top media */
   const byMedia = groupBy(data, 'media');
-  let topMedia = '—';
-  let topMediaImpr = 0;
+  let topMedia = '—', topMediaImpr = 0;
   Object.entries(byMedia).forEach(([media, rows]) => {
     const tot = sum(rows, 'impressions');
     if (tot > topMediaImpr) { topMedia = media; topMediaImpr = tot; }
@@ -534,17 +602,15 @@ function renderKPIs(data) {
 }
 
 function setKPI(cardId, value) {
-  const card = $(cardId);
-  const el = card.querySelector('.kpi-card__value');
+  const el = $(cardId).querySelector('.kpi-card__value');
   el.classList.remove('skeleton');
   el.textContent = value;
 }
 
-/* ── Timeline: dual axis (impressions + engagement) ── */
+/* ── Timeline: dual axis — data-1 bars / data-2 line ── */
 function renderTimelineChart(data) {
   if (data.length === 0) return;
 
-  /* Aggregate by month */
   const byMonth = {};
   data.forEach(d => {
     const key = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
@@ -557,33 +623,28 @@ function renderTimelineChart(data) {
   const sorted = Object.entries(byMonth).sort(([a], [b]) => a.localeCompare(b));
   const labels = sorted.map(([k]) => {
     const [y, m] = k.split('-');
-    return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+    return new Date(parseInt(y), parseInt(m) - 1)
+      .toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
   });
   const impressionValues = sorted.map(([, v]) => v.impressions);
-  const engagementValues = sorted.map(([, v]) => {
-    const s = v.engagements.reduce((a, b) => a + b, 0);
-    return +(s / v.engagements.length).toFixed(2);
-  });
+  const engagementValues = sorted.map(([, v]) =>
+    +(v.engagements.reduce((a, b) => a + b, 0) / v.engagements.length).toFixed(2)
+  );
 
-  /* Range badge */
   if (sorted.length > 1) {
     const [fy, fm] = sorted[0][0].split('-');
     const [ly, lm] = sorted[sorted.length - 1][0].split('-');
-    const first = new Date(parseInt(fy), parseInt(fm) - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-    const last = new Date(parseInt(ly), parseInt(lm) - 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+    const first = new Date(parseInt(fy), parseInt(fm) - 1)
+      .toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+    const last  = new Date(parseInt(ly), parseInt(lm) - 1)
+      .toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
     $('chart-timeline-range').textContent = `${first} → ${last}`;
   }
 
   const ctx = $('chart-timeline').getContext('2d');
   destroyChart('chart-timeline');
 
-  const color = C.primary();
-  const borderColor = C.border();
-  const textMuted = C.secondary();
-
-  const gradient = ctx.createLinearGradient(0, 0, 0, 300);
-  gradient.addColorStop(0, isDark() ? 'rgba(237,237,237,0.12)' : 'rgba(0,0,0,0.07)');
-  gradient.addColorStop(1, isDark() ? 'rgba(237,237,237,0)' : 'rgba(0,0,0,0)');
+  const [d1, d2] = DATA_COLORS();
 
   state.charts['chart-timeline'] = new Chart(ctx, {
     type: 'bar',
@@ -594,7 +655,7 @@ function renderTimelineChart(data) {
           label: 'Impressions',
           type: 'bar',
           data: impressionValues,
-          backgroundColor: isDark() ? 'rgba(237,237,237,0.2)' : 'rgba(0,0,0,0.1)',
+          backgroundColor: d1,
           borderRadius: 4,
           borderSkipped: false,
           yAxisID: 'y',
@@ -604,10 +665,10 @@ function renderTimelineChart(data) {
           label: 'Engagement (%)',
           type: 'line',
           data: engagementValues,
-          borderColor: color,
+          borderColor: d2,
           borderWidth: 2,
           backgroundColor: 'transparent',
-          pointBackgroundColor: color,
+          pointBackgroundColor: d2,
           pointRadius: sorted.length > 20 ? 0 : 4,
           pointHoverRadius: 6,
           tension: 0.35,
@@ -622,43 +683,25 @@ function renderTimelineChart(data) {
       aspectRatio: 3,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            color: textMuted,
-            usePointStyle: true,
-            pointStyle: 'circle',
-            padding: 16,
-            font: { size: 12 },
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title:  (items) => items[0].label,
+            label:  (ctx)   => ctx.dataset.label === 'Engagement (%)'
+              ? `Engagement : ${fmtPct(ctx.raw)}`
+              : `Impressions : ${fmt(ctx.raw)}`,
           },
         },
-        tooltip: buildTooltip((items) =>
-          items.map(i => {
-            if (i.dataset.label === 'Engagement (%)') return `Engagement : ${fmtPct(i.raw)}`;
-            return `Impressions : ${fmt(i.raw)}`;
-          })
-        ),
       },
       scales: {
-        x: {
-          grid: { color: borderColor, drawTicks: false },
-          border: { display: false },
-          ticks: { color: textMuted, maxRotation: 0 },
-        },
-        y: {
-          position: 'left',
-          grid: { color: borderColor, drawTicks: false },
-          border: { display: false },
-          ticks: { color: textMuted, callback: (v) => fmtK(v) },
-          beginAtZero: true,
-        },
+        x:  scaleX({ ticks: { maxRotation: 0 } }),
+        y:  { ...scaleY({ ticks: { callback: (v) => fmtK(v) } }), position: 'left' },
         y1: {
           position: 'right',
-          grid: { display: false },
+          grid:   { display: false },
           border: { display: false },
-          ticks: { color: textMuted, callback: (v) => fmtPct(v) },
+          ticks:  { color: C.muted(), callback: (v) => fmtPct(v) },
           beginAtZero: true,
         },
       },
@@ -666,7 +709,7 @@ function renderTimelineChart(data) {
   });
 }
 
-/* ── Funnel ── */
+/* ── Funnel — data-1, data-2, data-3 per stage ── */
 function renderFunnelChart(data) {
   if (data.length === 0) return;
 
@@ -676,13 +719,10 @@ function renderFunnelChart(data) {
 
   const labels = ['Impressions', 'Clics', 'Interactions'];
   const values = [totalImpressions, totalClics, totalInteractions];
+  const [d1, d2, d3] = DATA_COLORS();
 
   const ctx = $('chart-funnel').getContext('2d');
   destroyChart('chart-funnel');
-
-  const grayShades = isDark()
-    ? ['rgba(237,237,237,0.8)', 'rgba(237,237,237,0.4)', 'rgba(237,237,237,0.2)']
-    : ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)', 'rgba(0,0,0,0.15)'];
 
   state.charts['chart-funnel'] = new Chart(ctx, {
     type: 'bar',
@@ -690,7 +730,7 @@ function renderFunnelChart(data) {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: grayShades,
+        backgroundColor: [d1, d2, d3],
         borderRadius: 6,
         borderSkipped: false,
       }]
@@ -702,44 +742,38 @@ function renderFunnelChart(data) {
       aspectRatio: 1.6,
       plugins: {
         legend: { display: false },
-        tooltip: buildTooltip((items) => {
-          const i = items[0];
-          const pct = totalImpressions > 0 ? ((i.raw / totalImpressions) * 100).toFixed(1) : 0;
-          return [`${i.label} : ${fmt(i.raw)} (${pct}% du total)`];
-        }),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (ctx) => {
+              const pct = totalImpressions > 0
+                ? ((ctx.raw / totalImpressions) * 100).toFixed(1) : 0;
+              return `${fmt(ctx.raw)} (${pct}% des impressions)`;
+            },
+          },
+        },
       },
       scales: {
-        x: {
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => fmtK(v) },
-          beginAtZero: true,
-        },
-        y: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), font: { weight: 500 } },
-        },
+        x: scaleXValue({ ticks: { callback: (v) => fmtK(v) } }),
+        y: scaleYCategory(),
       },
     },
   });
 }
 
-/* ── Donut: interactions breakdown ── */
+/* ── Donut: interactions breakdown — data palette ── */
 function renderDonutChart(data) {
   if (data.length === 0) return;
 
-  const totalReactions = sum(data, 'reactions');
+  const totalReactions    = sum(data, 'reactions');
   const totalCommentaires = sum(data, 'commentaires');
-  const totalRepublis = sum(data, 'republis');
+  const totalRepublis     = sum(data, 'republis');
   const total = totalReactions + totalCommentaires + totalRepublis;
 
   const labels = ['Réactions', 'Commentaires', 'Republications'];
   const values = [totalReactions, totalCommentaires, totalRepublis];
-
-  const colors = isDark()
-    ? ['#EDEDED', '#666666', '#333333']
-    : ['#000000', '#666666', '#CCCCCC'];
+  const colors = DATA_COLORS().slice(0, 3);
 
   const ctx = $('chart-donut').getContext('2d');
   destroyChart('chart-donut');
@@ -762,17 +796,25 @@ function renderDonutChart(data) {
       cutout: '68%',
       plugins: {
         legend: { display: false },
-        tooltip: buildTooltip((items) => {
-          const i = items[0];
-          const pct = total > 0 ? ((i.raw / total) * 100).toFixed(1) : 0;
-          return [`${i.label} : ${fmt(i.raw)} (${pct}%)`];
-        }),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (ctx) => {
+              const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+              return `${fmt(ctx.raw)} — ${pct}%`;
+            },
+          },
+        },
       },
     },
   });
 
-  /* Custom legend */
-  const legend = $('donut-legend');
+  renderDonutLegend('donut-legend', labels, values, colors, total);
+}
+
+function renderDonutLegend(containerId, labels, values, colors, total) {
+  const legend = $(containerId);
   legend.innerHTML = '';
   labels.forEach((label, i) => {
     const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
@@ -798,7 +840,7 @@ function renderPerformance(data) {
   renderScatterPerf(data);
 }
 
-/* ── Horizontal bar: engagement by media ── */
+/* ── Horizontal bar: engagement by media — data palette per bar ── */
 function renderEngagementByMedia(data) {
   if (data.length === 0) return;
 
@@ -810,22 +852,19 @@ function renderEngagementByMedia(data) {
 
   const labels = entries.map(e => e.media);
   const values = entries.map(e => +e.avg.toFixed(2));
+  const palette = DATA_COLORS();
 
   const ctx = $('chart-engagement-media').getContext('2d');
   destroyChart('chart-engagement-media');
-
-  const color = C.primary();
 
   state.charts['chart-engagement-media'] = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [{
-        label: "Taux d'engagement moyen (%)",
+        label: "Engagement moyen (%)",
         data: values,
-        backgroundColor: entries.map((_, i) =>
-          i === 0 ? color : (isDark() ? 'rgba(237,237,237,0.25)' : 'rgba(0,0,0,0.12)')
-        ),
+        backgroundColor: entries.map((_, i) => palette[i % palette.length]),
         borderRadius: 6,
         borderSkipped: false,
       }]
@@ -837,28 +876,17 @@ function renderEngagementByMedia(data) {
       aspectRatio: 1.4,
       plugins: {
         legend: { display: false },
-        tooltip: buildTooltip((items) =>
-          items.map(i => `Engagement : ${fmtPct(i.raw)}`)
-        ),
+        tooltip: buildTooltip((items) => [`Engagement : ${fmtPct(items[0].raw)}`]),
       },
       scales: {
-        x: {
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => fmtPct(v) },
-          beginAtZero: true,
-        },
-        y: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: C.secondary() },
-        },
+        x: scaleXValue({ ticks: { callback: (v) => fmtPct(v) } }),
+        y: scaleYCategory(),
       },
     },
   });
 }
 
-/* ── Donut: impressions by type ── */
+/* ── Donut: impressions by type — data palette ── */
 function renderImpressionsByType(data) {
   if (data.length === 0) return;
 
@@ -870,11 +898,8 @@ function renderImpressionsByType(data) {
 
   const labels = entries.map(e => e.type);
   const values = entries.map(e => e.impressions);
-  const total = values.reduce((a, b) => a + b, 0);
-
-  const colors = isDark()
-    ? ['#EDEDED', '#888888', '#555555', '#333333']
-    : ['#000000', '#666666', '#999999', '#CCCCCC'];
+  const total  = values.reduce((a, b) => a + b, 0);
+  const colors = DATA_COLORS().slice(0, labels.length);
 
   const ctx = $('chart-impressions-type').getContext('2d');
   destroyChart('chart-impressions-type');
@@ -885,7 +910,7 @@ function renderImpressionsByType(data) {
       labels,
       datasets: [{
         data: values,
-        backgroundColor: colors.slice(0, labels.length),
+        backgroundColor: colors,
         borderColor: C.bg(),
         borderWidth: 3,
         hoverOffset: 4,
@@ -897,37 +922,28 @@ function renderImpressionsByType(data) {
       cutout: '68%',
       plugins: {
         legend: { display: false },
-        tooltip: buildTooltip((items) => {
-          const i = items[0];
-          const pct = total > 0 ? ((i.raw / total) * 100).toFixed(1) : 0;
-          return [`${i.label} : ${fmt(i.raw)} (${pct}%)`];
-        }),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (ctx) => {
+              const pct = total > 0 ? ((ctx.raw / total) * 100).toFixed(1) : 0;
+              return `${fmt(ctx.raw)} — ${pct}%`;
+            },
+          },
+        },
       },
     },
   });
 
-  /* Custom legend */
-  const legend = $('type-donut-legend');
-  legend.innerHTML = '';
-  labels.forEach((label, i) => {
-    const pct = total > 0 ? ((values[i] / total) * 100).toFixed(1) : 0;
-    legend.innerHTML += `
-      <div class="donut-legend__item">
-        <span class="donut-legend__swatch" style="background:${colors[i]}" aria-hidden="true"></span>
-        <span class="donut-legend__label">${label}</span>
-        <span class="donut-legend__value">${fmt(values[i])}</span>
-        <span class="donut-legend__pct">${pct}%</span>
-      </div>`;
-  });
+  renderDonutLegend('type-donut-legend', labels, values, colors, total);
 }
 
-/* ── Video focus (conditional) ── */
+/* ── Video focus (conditional) — data-1/data-2 ── */
 function renderVideoFocus(data) {
-  const videoData = data.filter(d =>
-    d.media.toLowerCase().includes('vid')
-  );
-
+  const videoData = data.filter(d => d.media.toLowerCase().includes('vid'));
   const card = $('video-focus-card');
+
   if (videoData.length === 0) {
     card.hidden = true;
     destroyChart('chart-video-focus');
@@ -935,11 +951,11 @@ function renderVideoFocus(data) {
   }
 
   card.hidden = false;
-
   const sorted = [...videoData].sort((a, b) => a.date - b.date);
-  const labels = sorted.map(d => truncate(d.publication, 20));
+  const labels      = sorted.map(d => truncate(d.publication, 20));
   const impressions = sorted.map(d => d.impressions);
-  const vues = sorted.map(d => d.vues);
+  const vues        = sorted.map(d => d.vues);
+  const [d1, d2]    = DATA_COLORS();
 
   const ctx = $('chart-video-focus').getContext('2d');
   destroyChart('chart-video-focus');
@@ -949,20 +965,8 @@ function renderVideoFocus(data) {
     data: {
       labels,
       datasets: [
-        {
-          label: 'Impressions',
-          data: impressions,
-          backgroundColor: isDark() ? 'rgba(237,237,237,0.6)' : 'rgba(0,0,0,0.6)',
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-        {
-          label: 'Vues',
-          data: vues,
-          backgroundColor: isDark() ? 'rgba(237,237,237,0.2)' : 'rgba(0,0,0,0.2)',
-          borderRadius: 4,
-          borderSkipped: false,
-        },
+        { label: 'Impressions', data: impressions, backgroundColor: d1, borderRadius: 4, borderSkipped: false },
+        { label: 'Vues',        data: vues,        backgroundColor: d2, borderRadius: 4, borderSkipped: false },
       ]
     },
     options: {
@@ -970,48 +974,38 @@ function renderVideoFocus(data) {
       maintainAspectRatio: true,
       aspectRatio: 1.6,
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: { color: C.secondary(), usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } },
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (ctx) => `${ctx.dataset.label} : ${fmt(ctx.raw)}`,
+          },
         },
-        tooltip: buildTooltip((items) =>
-          items.map(i => `${i.dataset.label} : ${fmt(i.raw)}`)
-        ),
       },
       scales: {
-        x: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), maxRotation: 45 },
-        },
-        y: {
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => fmtK(v) },
-          beginAtZero: true,
-        },
+        x: scaleX({ ticks: { maxRotation: 45 } }),
+        y: scaleY({ ticks: { callback: (v) => fmtK(v) } }),
       },
     },
   });
 }
 
-/* ── Scatter: impressions vs engagement ── */
+/* ── Scatter: impressions vs engagement — data palette per media ── */
 function renderScatterPerf(data) {
   if (data.length === 0) return;
 
-  const byMedia = groupBy(data, 'media');
+  const byMedia  = groupBy(data, 'media');
   const mediaTypes = Object.keys(byMedia).filter(m => m !== '—');
-  const s = shades(mediaTypes.length);
+  const palette  = DATA_COLORS();
 
   const datasets = mediaTypes.map((media, idx) => ({
     label: media,
     data: byMedia[media].map(d => ({ x: d.impressions, y: d.tauxEngagement })),
-    backgroundColor: s[idx],
-    borderColor: s[idx],
-    pointStyle: POINT_STYLES[idx % POINT_STYLES.length],
-    pointRadius: 5,
+    backgroundColor: palette[idx % palette.length],
+    borderColor:     palette[idx % palette.length],
+    pointStyle:      POINT_STYLES[idx % POINT_STYLES.length],
+    pointRadius:     5,
     pointHoverRadius: 8,
   }));
 
@@ -1026,25 +1020,9 @@ function renderScatterPerf(data) {
       maintainAspectRatio: true,
       aspectRatio: 2.5,
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: {
-            color: C.secondary(),
-            usePointStyle: true,
-            padding: 16,
-            font: { size: 12 },
-          },
-        },
+        legend: legendSpec('top', 'end'),
         tooltip: {
-          backgroundColor: isDark() ? '#1A1A1A' : '#FFFFFF',
-          titleColor: isDark() ? '#EDEDED' : '#000000',
-          bodyColor: isDark() ? '#888888' : '#666666',
-          borderColor: isDark() ? '#333333' : '#EAEAEA',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
+          ...tooltipBase(),
           callbacks: {
             title: () => '',
             label: (ctx) =>
@@ -1053,20 +1031,15 @@ function renderScatterPerf(data) {
         },
       },
       scales: {
-        x: {
-          title: { display: true, text: 'Impressions', color: C.secondary(), font: { size: 12 } },
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => fmtK(v) },
-          beginAtZero: true,
-        },
-        y: {
-          title: { display: true, text: "Taux d'engagement (%)", color: C.secondary(), font: { size: 12 } },
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => fmtPct(v) },
-          beginAtZero: true,
-        },
+        x: scaleY({
+          ticks:      { callback: (v) => fmtK(v) },
+          title:      { text: 'Impressions' },
+          extra:      {},
+        }),
+        y: scaleY({
+          ticks: { callback: (v) => fmtPct(v) },
+          title: { text: "Taux d'engagement (%)" },
+        }),
       },
     },
   });
@@ -1083,7 +1056,7 @@ function renderThematic(data) {
   renderThemeSummaryTable(data);
 }
 
-/* ── Bar: volume by theme ── */
+/* ── Bar: volume by theme — data palette per theme ── */
 function renderThemeVolume(data) {
   if (data.length === 0) return;
 
@@ -1093,13 +1066,12 @@ function renderThemeVolume(data) {
     .map(([theme, rows]) => ({ theme, count: rows.length }))
     .sort((a, b) => b.count - a.count);
 
-  const labels = entries.map(e => e.theme);
-  const values = entries.map(e => e.count);
+  const labels  = entries.map(e => e.theme);
+  const values  = entries.map(e => e.count);
+  const palette = DATA_COLORS();
 
   const ctx = $('chart-theme-volume').getContext('2d');
   destroyChart('chart-theme-volume');
-
-  const color = C.primary();
 
   state.charts['chart-theme-volume'] = new Chart(ctx, {
     type: 'bar',
@@ -1108,9 +1080,7 @@ function renderThemeVolume(data) {
       datasets: [{
         label: 'Publications',
         data: values,
-        backgroundColor: entries.map((_, i) =>
-          i === 0 ? color : (isDark() ? 'rgba(237,237,237,0.25)' : 'rgba(0,0,0,0.12)')
-        ),
+        backgroundColor: entries.map((_, i) => palette[i % palette.length]),
         borderRadius: 6,
         borderSkipped: false,
       }]
@@ -1123,37 +1093,27 @@ function renderThemeVolume(data) {
       plugins: {
         legend: { display: false },
         tooltip: buildTooltip((items) =>
-          items.map(i => `${i.raw} publication${i.raw > 1 ? 's' : ''}`)
+          [`${items[0].raw} publication${items[0].raw > 1 ? 's' : ''}`]
         ),
       },
       scales: {
-        x: {
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), stepSize: 1 },
-          beginAtZero: true,
-        },
-        y: {
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: C.secondary() },
-        },
+        x: scaleXValue({ ticks: { stepSize: 1 } }),
+        y: scaleYCategory(),
       },
     },
   });
 }
 
-/* ── Radar: theme comparison ── */
+/* ── Radar: theme comparison — data palette per theme ── */
 function renderThemeRadar(data) {
   const radarCard = $('radar-card');
-
-  const byTheme = groupBy(data, 'theme');
-  const themes = Object.entries(byTheme)
+  const byTheme   = groupBy(data, 'theme');
+  const themes    = Object.entries(byTheme)
     .filter(([t]) => t !== '—')
     .map(([theme, rows]) => ({
       theme,
-      avgClics: avg(rows, 'tauxClics'),
-      avgEngagement: avg(rows, 'tauxEngagement'),
+      avgClics:       avg(rows, 'tauxClics'),
+      avgEngagement:  avg(rows, 'tauxEngagement'),
       avgImpressions: avg(rows, 'impressions'),
     }))
     .sort((a, b) => b.avgImpressions - a.avgImpressions)
@@ -1166,14 +1126,11 @@ function renderThemeRadar(data) {
   }
 
   radarCard.hidden = false;
-
-  /* Normalize impressions to 0-100 scale */
   const maxImpr = Math.max(...themes.map(t => t.avgImpressions));
   const maxClics = Math.max(...themes.map(t => t.avgClics)) || 1;
-  const maxEng = Math.max(...themes.map(t => t.avgEngagement)) || 1;
+  const maxEng   = Math.max(...themes.map(t => t.avgEngagement)) || 1;
 
-  const s = shades(themes.length);
-
+  const palette = DATA_COLORS();
   const ctx = $('chart-theme-radar').getContext('2d');
   destroyChart('chart-theme-radar');
 
@@ -1188,10 +1145,10 @@ function renderThemeRadar(data) {
           (t.avgEngagement / maxEng) * 100,
           (t.avgImpressions / maxImpr) * 100,
         ],
-        borderColor: s[i],
-        backgroundColor: s[i].replace(/[\d.]+\)$/, '0.1)'),
+        borderColor:     palette[i % palette.length],
+        backgroundColor: hexToRgba(palette[i % palette.length], 0.1),
         borderWidth: 2,
-        pointBackgroundColor: s[i],
+        pointBackgroundColor: palette[i % palette.length],
         pointRadius: 3,
       })),
     },
@@ -1200,19 +1157,9 @@ function renderThemeRadar(data) {
       maintainAspectRatio: true,
       aspectRatio: 1.2,
       plugins: {
-        legend: {
-          display: true,
-          position: 'bottom',
-          labels: { color: C.secondary(), usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } },
-        },
+        legend: legendSpec('bottom', 'center'),
         tooltip: {
-          backgroundColor: isDark() ? '#1A1A1A' : '#FFFFFF',
-          titleColor: isDark() ? '#EDEDED' : '#000000',
-          bodyColor: isDark() ? '#888888' : '#666666',
-          borderColor: isDark() ? '#333333' : '#EAEAEA',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
+          ...tooltipBase(),
           callbacks: {
             label: (ctx) => `${ctx.dataset.label} : ${ctx.raw.toFixed(0)}/100`,
           },
@@ -1220,10 +1167,10 @@ function renderThemeRadar(data) {
       },
       scales: {
         r: {
-          angleLines: { color: C.border() },
-          grid: { color: C.border() },
-          pointLabels: { color: C.secondary(), font: { size: 12 } },
-          ticks: { display: false },
+          angleLines:  { color: C.dataGrid() },
+          grid:        { color: C.dataGrid() },
+          pointLabels: { color: C.muted(), font: { size: 12 } },
+          ticks:       { display: false },
           suggestedMin: 0,
           suggestedMax: 100,
         },
@@ -1239,16 +1186,15 @@ function renderThemeSummaryTable(data) {
     .filter(([t]) => t !== '—')
     .map(([theme, rows]) => ({
       theme,
-      count: rows.length,
-      avgImpressions: avg(rows, 'impressions'),
+      count:           rows.length,
+      avgImpressions:  avg(rows, 'impressions'),
       avgCommentaires: avg(rows, 'commentaires'),
-      avgRepublis: avg(rows, 'republis'),
-      avgEngagement: avg(rows, 'tauxEngagement'),
+      avgRepublis:     avg(rows, 'republis'),
+      avgEngagement:   avg(rows, 'tauxEngagement'),
     }))
     .sort((a, b) => b.avgEngagement - a.avgEngagement);
 
-  const tbody = $('theme-summary-body');
-  tbody.innerHTML = entries.map(e => `
+  $('theme-summary-body').innerHTML = entries.map(e => `
     <tr>
       <td><span class="badge badge--neutral">${escHtml(e.theme)}</span></td>
       <td class="text-right">${e.count}</td>
@@ -1274,7 +1220,7 @@ function renderEngagementTab(data) {
   renderClicksVsComments(data);
 }
 
-/* ── Stacked 100% bar ── */
+/* ── Stacked 100% bar — data-1/data-2/data-3 ── */
 function renderStackedEngagement(data) {
   if (data.length === 0) return;
 
@@ -1285,47 +1231,46 @@ function renderStackedEngagement(data) {
       .filter(([t]) => t !== '—')
       .map(([label, rows]) => ({
         label,
-        reactions: sum(rows, 'reactions'),
+        reactions:    sum(rows, 'reactions'),
         commentaires: sum(rows, 'commentaires'),
-        republis: sum(rows, 'republis'),
+        republis:     sum(rows, 'republis'),
       }))
       .filter(e => (e.reactions + e.commentaires + e.republis) > 0)
-      .sort((a, b) => (b.reactions + b.commentaires + b.republis) - (a.reactions + a.commentaires + a.republis));
+      .sort((a, b) =>
+        (b.reactions + b.commentaires + b.republis) -
+        (a.reactions + a.commentaires + a.republis)
+      );
   } else {
     entries = [...data]
       .sort((a, b) => b.interactions - a.interactions)
       .slice(0, 15)
       .map(d => ({
-        label: truncate(d.publication, 25),
-        reactions: d.reactions,
+        label:        truncate(d.publication, 25),
+        reactions:    d.reactions,
         commentaires: d.commentaires,
-        republis: d.republis,
+        republis:     d.republis,
       }))
       .filter(e => (e.reactions + e.commentaires + e.republis) > 0);
   }
 
   const labels = entries.map(e => e.label);
   const totals = entries.map(e => e.reactions + e.commentaires + e.republis);
-
-  const reactPct = entries.map((e, i) => totals[i] > 0 ? (e.reactions / totals[i]) * 100 : 0);
+  const reactPct   = entries.map((e, i) => totals[i] > 0 ? (e.reactions    / totals[i]) * 100 : 0);
   const commentPct = entries.map((e, i) => totals[i] > 0 ? (e.commentaires / totals[i]) * 100 : 0);
-  const republiPct = entries.map((e, i) => totals[i] > 0 ? (e.republis / totals[i]) * 100 : 0);
+  const republiPct = entries.map((e, i) => totals[i] > 0 ? (e.republis     / totals[i]) * 100 : 0);
 
+  const [d1, d2, d3] = DATA_COLORS();
   const ctx = $('chart-stacked-engagement').getContext('2d');
   destroyChart('chart-stacked-engagement');
-
-  const colors = isDark()
-    ? ['#EDEDED', '#666666', '#333333']
-    : ['#000000', '#666666', '#CCCCCC'];
 
   state.charts['chart-stacked-engagement'] = new Chart(ctx, {
     type: 'bar',
     data: {
       labels,
       datasets: [
-        { label: 'Réactions', data: reactPct, backgroundColor: colors[0], borderSkipped: false },
-        { label: 'Commentaires', data: commentPct, backgroundColor: colors[1], borderSkipped: false },
-        { label: 'Republications', data: republiPct, backgroundColor: colors[2], borderSkipped: false },
+        { label: 'Réactions',     data: reactPct,   backgroundColor: d1, borderSkipped: false },
+        { label: 'Commentaires',  data: commentPct, backgroundColor: d2, borderSkipped: false },
+        { label: 'Republications',data: republiPct, backgroundColor: d3, borderSkipped: false },
       ]
     },
     options: {
@@ -1334,48 +1279,28 @@ function renderStackedEngagement(data) {
       maintainAspectRatio: true,
       aspectRatio: Math.max(1, Math.min(2.5, 15 / entries.length)),
       plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          align: 'end',
-          labels: { color: C.secondary(), usePointStyle: true, pointStyle: 'circle', padding: 16, font: { size: 12 } },
-        },
+        legend: legendSpec('top', 'end'),
         tooltip: {
-          backgroundColor: isDark() ? '#1A1A1A' : '#FFFFFF',
-          titleColor: isDark() ? '#EDEDED' : '#000000',
-          bodyColor: isDark() ? '#888888' : '#666666',
-          borderColor: isDark() ? '#333333' : '#EAEAEA',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
+          ...tooltipBase(),
           callbacks: {
-            label: (ctx) => `${ctx.dataset.label} : ${ctx.raw.toFixed(1)}%`,
+            title: (items) => items[0].label,
+            label: (ctx)   => `${ctx.dataset.label} : ${ctx.raw.toFixed(1)}%`,
           },
         },
       },
       scales: {
-        x: {
-          stacked: true,
-          max: 100,
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), callback: (v) => `${v}%` },
-        },
-        y: {
-          stacked: true,
-          grid: { display: false },
-          border: { display: false },
-          ticks: { color: C.secondary() },
-        },
+        x: { ...scaleXValue({ ticks: { callback: (v) => `${v}%` } }), max: 100, stacked: true },
+        y: { ...scaleYCategory(), stacked: true },
       },
     },
   });
 }
 
-/* ── Scatter: clicks vs comments ── */
+/* ── Scatter: clicks vs comments — data-1 ── */
 function renderClicksVsComments(data) {
   if (data.length === 0) return;
 
+  const [d1] = DATA_COLORS();
   const points = data.map(d => ({
     x: d.clics,
     y: d.commentaires,
@@ -1385,16 +1310,14 @@ function renderClicksVsComments(data) {
   const ctx = $('chart-clicks-comments').getContext('2d');
   destroyChart('chart-clicks-comments');
 
-  const dotColor = isDark() ? 'rgba(237,237,237,0.5)' : 'rgba(0,0,0,0.3)';
-
   state.charts['chart-clicks-comments'] = new Chart(ctx, {
     type: 'scatter',
     data: {
       datasets: [{
         label: 'Publications',
         data: points,
-        backgroundColor: dotColor,
-        borderColor: C.primary(),
+        backgroundColor: hexToRgba(d1, 0.5),
+        borderColor:     d1,
         borderWidth: 1,
         pointRadius: 5,
         pointHoverRadius: 8,
@@ -1407,34 +1330,22 @@ function renderClicksVsComments(data) {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: isDark() ? '#1A1A1A' : '#FFFFFF',
-          titleColor: isDark() ? '#EDEDED' : '#000000',
-          bodyColor: isDark() ? '#888888' : '#666666',
-          borderColor: isDark() ? '#333333' : '#EAEAEA',
-          borderWidth: 1,
-          padding: 12,
-          cornerRadius: 8,
+          ...tooltipBase(),
           callbacks: {
             title: (items) => items[0].raw.label || '',
-            label: (ctx) => `${ctx.raw.x} clics / ${ctx.raw.y} commentaires`,
+            label: (ctx)   => `${ctx.raw.x} clics / ${ctx.raw.y} commentaires`,
           },
         },
       },
       scales: {
-        x: {
-          title: { display: true, text: 'Clics', color: C.secondary(), font: { size: 12 } },
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary() },
-          beginAtZero: true,
-        },
-        y: {
-          title: { display: true, text: 'Commentaires', color: C.secondary(), font: { size: 12 } },
-          grid: { color: C.border(), drawTicks: false },
-          border: { display: false },
-          ticks: { color: C.secondary(), stepSize: 1 },
-          beginAtZero: true,
-        },
+        x: scaleY({
+          ticks: { stepSize: 1 },
+          title: { text: 'Clics' },
+        }),
+        y: scaleY({
+          ticks: { stepSize: 1 },
+          title: { text: 'Commentaires' },
+        }),
       },
     },
   });
@@ -1455,7 +1366,9 @@ function renderPodium(data) {
   let filtered = data;
   if (state.podiumMonth) {
     const [y, m] = state.podiumMonth.split('-').map(Number);
-    filtered = data.filter(d => d.date.getFullYear() === y && d.date.getMonth() + 1 === m);
+    filtered = data.filter(d =>
+      d.date.getFullYear() === y && d.date.getMonth() + 1 === m
+    );
   }
 
   const top3 = [...filtered]
@@ -1475,7 +1388,7 @@ function renderPodium(data) {
     return;
   }
 
-  const ranks = ['1er', '2e', '3e'];
+  const ranks     = ['1er', '2e', '3e'];
   const rankIcons = ['trophy', 'medal', 'award'];
 
   container.innerHTML = top3.map((post, i) => `
@@ -1484,7 +1397,9 @@ function renderPodium(data) {
         <i data-lucide="${rankIcons[i]}" aria-hidden="true"></i>
         <span>${ranks[i]}</span>
       </div>
-      <p class="podium-card__title" title="${escHtml(post.publication)}">${escHtml(truncate(post.publication, 60))}</p>
+      <p class="podium-card__title" title="${escHtml(post.publication)}">
+        ${escHtml(truncate(post.publication, 60))}
+      </p>
       <p class="podium-card__date">${formatDisplayDate(post.date)}</p>
       <div class="podium-card__stats">
         <div class="podium-card__stat">
@@ -1520,62 +1435,49 @@ function renderLeaderboardTable() {
     );
   });
 
-  /* Sort */
   data = sortData(data, state.sortCol, state.sortDir);
 
-  /* Update sort UI */
+  /* Sort UI */
   document.querySelectorAll('#posts-table th.sortable').forEach(th => {
     th.classList.toggle('is-sorted', th.dataset.col === state.sortCol);
     th.setAttribute('aria-sort', th.dataset.col === state.sortCol
-      ? (state.sortDir === 'asc' ? 'ascending' : 'descending')
-      : 'none'
-    );
+      ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
     const icon = th.querySelector('.sort-icon');
-    if (icon) {
-      icon.textContent = th.dataset.col === state.sortCol
-        ? (state.sortDir === 'asc' ? '↑' : '↓')
-        : '↕';
-    }
+    if (icon) icon.textContent = th.dataset.col === state.sortCol
+      ? (state.sortDir === 'asc' ? '↑' : '↓') : '↕';
   });
 
-  /* Count */
   const total = state.filteredData.length;
   tableCount.textContent = q
     ? `${data.length} / ${total} résultat${data.length !== 1 ? 's' : ''}`
     : `${total} publication${total !== 1 ? 's' : ''}`;
 
-  /* Empty state */
   tableEmpty.hidden = data.length > 0;
-
   const tableWrapper = tableBody.closest('.table-wrapper');
   if (tableWrapper) tableWrapper.style.display = data.length === 0 ? 'none' : '';
 
   /* Pagination */
   const totalPages = Math.max(1, Math.ceil(data.length / state.pageSize));
   if (state.page > totalPages) state.page = totalPages;
-
-  const start = (state.page - 1) * state.pageSize;
-  const end = Math.min(start + state.pageSize, data.length);
+  const start    = (state.page - 1) * state.pageSize;
+  const end      = Math.min(start + state.pageSize, data.length);
   const pageData = data.slice(start, end);
 
-  $('pagination-info').textContent = data.length > 0
-    ? `${start + 1}–${end} sur ${data.length}`
-    : '';
-  $('pagination-current').textContent = data.length > 0
-    ? `Page ${state.page} / ${totalPages}`
-    : '';
+  $('pagination-info').textContent    = data.length > 0 ? `${start + 1}–${end} sur ${data.length}` : '';
+  $('pagination-current').textContent = data.length > 0 ? `Page ${state.page} / ${totalPages}` : '';
   $('page-prev').disabled = state.page <= 1;
   $('page-next').disabled = state.page >= totalPages;
   $('pagination').style.display = data.length > state.pageSize ? '' : 'none';
 
-  /* Render rows */
   tableBody.innerHTML = pageData.map(row => `
     <tr>
       <td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:13px;">
         ${formatDisplayDate(row.date)}
       </td>
       <td class="col-pub">
-        <span class="pub-title" title="${escHtml(row.publication)}">${escHtml(row.publication) || '<em style="color:var(--color-text-subtle)">Sans titre</em>'}</span>
+        <span class="pub-title" title="${escHtml(row.publication)}">
+          ${escHtml(row.publication) || '<em style="color:var(--color-text-subtle)">Sans titre</em>'}
+        </span>
       </td>
       <td>${row.theme !== '—' ? `<span class="badge badge--neutral">${escHtml(row.theme)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
       <td class="text-right">${fmt(row.impressions)}</td>
@@ -1590,38 +1492,6 @@ function renderLeaderboardTable() {
       <td class="text-right">${fmt(row.republis)}</td>
     </tr>
   `).join('');
-}
-
-
-/* ═══════════════════════════════════════════════════════════════
-   SHARED CHART HELPERS
-   ═══════════════════════════════════════════════════════════════ */
-
-Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
-Chart.defaults.font.size = 12;
-
-function destroyChart(id) {
-  if (state.charts[id]) {
-    state.charts[id].destroy();
-    state.charts[id] = null;
-  }
-}
-
-function buildTooltip(linesFn) {
-  return {
-    backgroundColor: isDark() ? '#1A1A1A' : '#FFFFFF',
-    titleColor: isDark() ? '#EDEDED' : '#000000',
-    bodyColor: isDark() ? '#888888' : '#666666',
-    borderColor: isDark() ? '#333333' : '#EAEAEA',
-    borderWidth: 1,
-    padding: 12,
-    cornerRadius: 8,
-    displayColors: false,
-    callbacks: {
-      title: (items) => items[0].label,
-      label: (item) => linesFn([item])[0],
-    },
-  };
 }
 
 
@@ -1666,14 +1536,8 @@ function sortData(data, col, dir) {
    UTILITY FUNCTIONS
    ═══════════════════════════════════════════════════════════════ */
 
-function sum(arr, key) {
-  return arr.reduce((acc, d) => acc + (d[key] || 0), 0);
-}
-
-function avg(arr, key) {
-  if (arr.length === 0) return 0;
-  return sum(arr, key) / arr.length;
-}
+function sum(arr, key)  { return arr.reduce((acc, d) => acc + (d[key] || 0), 0); }
+function avg(arr, key)  { return arr.length === 0 ? 0 : sum(arr, key) / arr.length; }
 
 function median(arr) {
   if (arr.length === 0) return 0;
@@ -1694,23 +1558,13 @@ function groupBy(arr, key) {
   return map;
 }
 
-function fmt(n) {
-  return Math.round(n).toLocaleString('fr-FR');
-}
-
-function fmtK(n) {
+function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
+function fmtK(n)    {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
   return String(n);
 }
-
-function fmtPct(n) {
-  return `${(+n).toFixed(2).replace('.', ',')} %`;
-}
-
-function formatDateKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
+function fmtPct(n)  { return `${(+n).toFixed(2).replace('.', ',')} %`; }
 
 function formatDisplayDate(date) {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -1723,18 +1577,28 @@ function truncate(str, maxLen) {
 
 function escHtml(str) {
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function debounce(fn, delay) {
   let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
+}
+
+/**
+ * Convert a hex colour to rgba(r,g,b,alpha).
+ * Works with 3-digit (#ABC) and 6-digit (#AABBCC) hex strings.
+ */
+function hexToRgba(hex, alpha) {
+  const h = hex.replace('#', '');
+  const full = h.length === 3
+    ? h.split('').map(c => c + c).join('')
+    : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 
