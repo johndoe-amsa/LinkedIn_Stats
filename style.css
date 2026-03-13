@@ -901,12 +901,8 @@ code, kbd {
   font-size: 14px;
 }
 
-/* Header */
-.data-table thead {
-  position: sticky;
-  top: 64px;
-  z-index: 1;
-}
+/* Header — pas de sticky (incompatible avec scroll de page + border-radius) */
+.data-table thead {}
 
 .data-table th {
   background: var(--color-bg-tertiary);
