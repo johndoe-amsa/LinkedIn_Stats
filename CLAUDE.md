@@ -1,9 +1,5 @@
 # Charte Graphique & Standards UI
 
-> Version 2.0 — Minimaliste, Monochrome, Production-Grade
-
----
-
 ## 1. Principes Fondamentaux
 
 Six règles qui gouvernent toutes les décisions de design :
@@ -40,6 +36,15 @@ Six règles qui gouvernent toutes les décisions de design :
   --color-success:      #0070F3;
   --color-error:        #EE0000;
   --color-warning:      #F5A623;
+  
+  /* Couleurs Data-Viz (Graphiques exclusivement) */
+  /* Palette désaturée pour maintenir le style minimaliste */
+  --color-data-1:       #5E6AD2;
+  --color-data-2:       #2B9A9A;
+  --color-data-3:       #D4793B;
+  --color-data-4:       #B55489;
+  --color-data-5:       #6B8E23;
+  --color-data-grid: var(--color-border);
 
   /* Typographie */
   --font-sans:   'Geist', system-ui, -apple-system, sans-serif;
@@ -96,6 +101,14 @@ Six règles qui gouvernent toutes les décisions de design :
     --backdrop-bg: rgba(0,0,0,0.85);
     --elevation-1: 0 4px 12px rgba(0,0,0,0.3);
     --elevation-2: 0 8px 32px rgba(0,0,0,0.5);
+    
+    /* Data-Viz Dark Mode */
+    --color-data-1: #7B88EB;
+    --color-data-2: #42BABA;
+    --color-data-3: #E89156;
+    --color-data-4: #D173A7;
+    --color-data-5: #8FBA3A;
+    --color-data-grid: var(--color-border);
   }
 }
 ```
@@ -126,6 +139,11 @@ L'interface est strictement **monochrome**. Les couleurs sémantiques sont rése
 |Attention|`#F5A623`|Avertissements, états dégradés|
 
 > **Règle stricte :** ne jamais utiliser ces couleurs à des fins décoratives. Elles portent une signification fonctionnelle.
+
+### Couleurs de Visualisation de Données (Data-Viz)
+- **Rôle :** `var(--color-data-1)` à `var(--color-data-5)`.
+- **Règle stricte d'isolation :** Ces couleurs sont **exclusivement** réservées aux éléments de type SVG, Canvas, courbes, bar charts et pie charts. Elles ne doivent **jamais** être utilisées pour des textes d'interface, des boutons, des badges ou des fonds de layout.
+- **Grilles :** Dans les graphiques, utiliser `var(--color-data-grid)` pour les axes et les lignes de repère pour qu'ils se fondent dans le fond (stroke: 1px, stroke-dasharray optionnel).
 
 ---
 
@@ -406,6 +424,13 @@ hr {
 /* Séparateur avec label centré */
 /* Utiliser flex + deux <hr> de part et d'autre d'un <span> */
 ```
+
+### 7.9 Graphiques & Dashboards
+- **Conteneur :** Les graphiques sont toujours encapsulés dans une carte standard (voir 7.3).
+- **Axes et Grilles :** Les lignes de fond (grid lines) doivent être très discrètes (`stroke: var(--color-border)`, `stroke-width: 1px`). Privilégier uniquement les lignes horizontales pour alléger la lecture.
+- **Courbes & Barres :** Utiliser les couleurs `--color-data-*` en opacité pleine (100%). Pas de dégradés, pas d'ombres portées sous les courbes.
+- **Tooltips (Infobulles) :** Lors du survol d'une donnée, le tooltip doit ressembler à une petite modale : fond `var(--color-bg)`, bordure `var(--color-border-strong)`, ombre `var(--elevation-2)`, texte dense `12px`.
+- **Légende :** Typographie `12px`, couleur `var(--color-text-muted)`, accompagnée d'une pastille ronde de `8px` reprenant la couleur de la donnée.
 
 ---
 
@@ -717,6 +742,54 @@ Trois niveaux uniquement. Aucune shadow arbitraire.
 .field__error {
   font-size: 12px;
   color:     var(--color-error);
+}
+```
+
+```html
+Carte Graphique (Data-Viz)
+<div class="card">
+  <div class="card__header">
+    <h3 class="card__title">Évolution des revenus</h3>
+    <div class="chart-legend">
+      <span class="chart-legend__item" style="--dot-color: var(--color-data-1)">Revenus</span>
+      <span class="chart-legend__item" style="--dot-color: var(--color-data-2)">Dépenses</span>
+    </div>
+  </div>
+  <div class="chart-container">
+    </div>
+</div>
+```
+
+```css
+/* CSS spécifique à la carte graphique */
+.card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+.chart-legend {
+  display: flex;
+  gap: var(--space-4);
+}
+.chart-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+.chart-legend__item::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--dot-color);
+}
+.chart-container {
+  height: 240px;
+  width: 100%;
 }
 ```
 
