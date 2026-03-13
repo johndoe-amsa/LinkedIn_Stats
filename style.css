@@ -110,6 +110,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Enforce native hidden attribute — prevents CSS display rules from overriding it */
+[hidden] { display: none !important; }
+
 /* Focus visible — never suppress */
 *:focus { outline: none; }
 *:focus-visible {
@@ -743,12 +746,13 @@ code, kbd {
   display: flex;
   align-items: center;
   gap: var(--space-6);
-  min-height: 240px;
+  min-height: 220px;
 }
 
 .chart-card__body--donut canvas {
-  width: auto !important;
-  max-width: 200px;
+  /* Dimensions fixes pour que Chart.js maintienne un carré parfait */
+  width: 200px !important;
+  height: 200px !important;
   flex-shrink: 0;
 }
 
@@ -801,6 +805,11 @@ code, kbd {
   flex-direction: column;
   gap: var(--space-4);
   animation: enter var(--duration-slow) var(--ease-out) 150ms both;
+
+  /* Full-bleed: break out of .dashboard max-width and padding */
+  width: calc(100% + 2 * var(--space-16));
+  margin-left: calc(-1 * var(--space-16));
+  padding: 0 var(--space-16);
 }
 
 .table-section__header {
@@ -881,7 +890,8 @@ code, kbd {
 .table-wrapper {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  /* Only overflow-x: auto — overflow: hidden would confine position:sticky
+     to the wrapper instead of the viewport, breaking the sticky header */
   overflow-x: auto;
 }
 
@@ -1060,6 +1070,12 @@ code, kbd {
     padding: var(--space-6) var(--space-8) var(--space-8);
   }
 
+  .table-section {
+    width: calc(100% + 2 * var(--space-8));
+    margin-left: calc(-1 * var(--space-8));
+    padding: 0 var(--space-8);
+  }
+
   .kpis {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1078,6 +1094,12 @@ code, kbd {
   .dashboard {
     padding: var(--space-4) var(--space-4) var(--space-8);
     gap: var(--space-6);
+  }
+
+  .table-section {
+    width: calc(100% + 2 * var(--space-4));
+    margin-left: calc(-1 * var(--space-4));
+    padding: 0 var(--space-4);
   }
 
   .dashboard__header {
@@ -1108,7 +1130,8 @@ code, kbd {
   }
 
   .chart-card__body--donut canvas {
-    max-width: 160px;
+    width: 160px !important;
+    height: 160px !important;
   }
 
   .nav__meta {

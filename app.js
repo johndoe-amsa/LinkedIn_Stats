@@ -615,9 +615,8 @@ function renderDonutChart(data) {
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 1,
+      responsive: false,
+      maintainAspectRatio: false,
       cutout: '68%',
       plugins: {
         legend: { display: false },
