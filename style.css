@@ -23,9 +23,17 @@
   --color-error:    #EE0000;
   --color-warning:  #F5A623;
 
+  /* Palette Data-Viz (exclusivement pour <canvas> et pastilles de légende) */
+  --color-data-1: #5E6AD2;
+  --color-data-2: #2B9A9A;
+  --color-data-3: #D4793B;
+  --color-data-4: #B55489;
+  --color-data-5: #6B8E23;
+  --color-data-grid: var(--color-border);
+
   /* Typographie */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'Menlo', 'Monaco', 'Consolas', monospace;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', Menlo, monospace;
 
   /* Espacement (base 8px) */
   --space-1:   4px;
@@ -77,6 +85,13 @@
     --backdrop-bg: rgba(0,0,0,0.85);
     --elevation-1: 0 4px 12px rgba(0,0,0,0.3);
     --elevation-2: 0 8px 32px rgba(0,0,0,0.5);
+
+    /* Palette Data-Viz — Dark Mode */
+    --color-data-1: #7B88EB;
+    --color-data-2: #42BABA;
+    --color-data-3: #E89156;
+    --color-data-4: #D173A7;
+    --color-data-5: #8FBA3A;
   }
 }
 
@@ -828,8 +843,8 @@ code, kbd {
 }
 
 .donut-legend__swatch {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
