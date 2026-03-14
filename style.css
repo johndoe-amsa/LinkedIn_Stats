@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   LinkedIn Analytics Dashboard — Stylesheet
+   LinkedIn Analytics Dashboard V2 — Stylesheet
    Design System: CLAUDE.md v2.0 — Minimaliste, Monochrome
    ═══════════════════════════════════════════════════════════════ */
 
@@ -503,36 +503,79 @@ code, kbd {
 }
 
 
-/* ─── 8. Dashboard Layout ───────────────────────────────────── */
-.dashboard {
-  max-width: 1200px;
+/* ─── 8. Dashboard Layout (Sidebar + Main) ─────────────────── */
+.dashboard-layout {
+  display: flex;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: var(--space-8) var(--space-16) var(--space-16);
+  min-height: calc(100vh - 64px);
+}
+
+.sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  padding: var(--space-6);
+  border-right: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
 }
 
-.dashboard__header {
+.sidebar__title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.sidebar__filters {
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sidebar__divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: var(--space-1) 0;
+}
+
+.sidebar__reset-btn {
+  align-self: flex-start;
+}
+
+.sidebar__footer {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.sidebar__count {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-8) var(--space-8);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-6);
-  flex-wrap: wrap;
+}
+
+.dashboard-main__header {
   animation: enter var(--duration-slow) var(--ease-out);
 }
 
-.dashboard__title-group {
-  flex-shrink: 0;
-}
 
-.filters {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-
+/* ─── 9. Sidebar Filters ──────────────────────────────────── */
 .filter-group {
   display: flex;
   flex-direction: column;
@@ -547,10 +590,10 @@ code, kbd {
 }
 
 .filter-group__select {
-  height: 32px;
+  height: 36px;
   padding: 0 var(--space-3);
   padding-right: var(--space-6);
-  background: var(--color-bg-secondary);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: 13px;
@@ -558,6 +601,7 @@ code, kbd {
   color: var(--color-text);
   cursor: pointer;
   appearance: none;
+  width: 100%;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
@@ -572,17 +616,39 @@ code, kbd {
   box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
 }
 
+.filter-group__input {
+  height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  width: 100%;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow   var(--duration-fast) var(--ease-out);
+}
+
+.filter-group__input:focus {
+  outline: none;
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.08);
+}
+
 @media (prefers-color-scheme: dark) {
   .filter-group__select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23555555' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   }
-  .filter-group__select:focus {
+  .filter-group__select:focus,
+  .filter-group__input:focus {
     box-shadow: 0 0 0 3px rgba(255,255,255,0.1);
   }
 }
 
 
-/* ─── 9. Tab Bar ────────────────────────────────────────────── */
+/* ─── 10. Tab Bar ──────────────────────────────────────────── */
 .tab-bar {
   display: flex;
   align-items: center;
@@ -635,7 +701,7 @@ code, kbd {
 }
 
 
-/* ─── 10. Tab Panels ───────────────────────────────────────── */
+/* ─── 11. Tab Panels ───────────────────────────────────────── */
 .tab-panel {
   display: none;
   flex-direction: column;
@@ -648,7 +714,7 @@ code, kbd {
 }
 
 
-/* ─── 11. KPI Cards ──────────────────────────────────────────── */
+/* ─── 12. KPI Cards ──────────────────────────────────────────── */
 .kpis {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -736,8 +802,28 @@ code, kbd {
   color: transparent;
 }
 
+/* KPI Trend arrows */
+.kpi-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-right: var(--space-2);
+  font-variant-numeric: tabular-nums;
+}
 
-/* ─── 12. Charts Grid ───────────────────────────────────────── */
+.kpi-card__trend svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.5;
+}
+
+.kpi-card__trend--up   { color: var(--color-success); }
+.kpi-card__trend--down { color: var(--color-error); }
+
+
+/* ─── 13. Charts Grid ───────────────────────────────────────── */
 .charts-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -815,78 +901,132 @@ code, kbd {
   width: 100% !important;
 }
 
-/* Donut layout */
-.chart-card__body--donut {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  min-height: 220px;
-}
 
-.chart-card__body--donut canvas {
-  width: 200px !important;
-  height: 200px !important;
-  flex-shrink: 0;
-}
-
-.donut-legend {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  flex: 1;
-}
-
-.donut-legend__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.donut-legend__swatch {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.donut-legend__label {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  flex: 1;
-}
-
-.donut-legend__value {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--color-text);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
-}
-
-.donut-legend__pct {
-  font-size: 12px;
-  color: var(--color-text-subtle);
-  min-width: 36px;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-
-/* ─── 13. Stacked Toggle ───────────────────────────────────── */
-.stacked-toggle {
+/* ─── 14. Stacked / Heatmap Toggle ────────────────────────── */
+.stacked-toggle,
+.heatmap-toggle {
   height: 28px;
   padding: 0 var(--space-3);
   font-size: 12px;
   border-radius: var(--radius-md);
 }
 
-.stacked-toggle.is-active {
+.stacked-toggle.is-active,
+.heatmap-toggle.is-active {
   background: var(--color-bg-tertiary);
   color: var(--color-text);
 }
 
 
-/* ─── 14. Podium ────────────────────────────────────────────── */
+/* ─── 15. Heatmap ──────────────────────────────────────────── */
+.heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.heatmap-table th {
+  background: var(--color-bg-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  padding: 10px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.heatmap-table th:first-child {
+  text-align: left;
+}
+
+.heatmap-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  vertical-align: middle;
+  min-width: 80px;
+}
+
+.heatmap-table td:first-child {
+  text-align: left;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.heatmap-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.heatmap-cell--empty {
+  color: var(--color-text-subtle);
+}
+
+.heatmap-cell--value {
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+}
+
+.heatmap-count {
+  display: block;
+  font-size: 11px;
+  color: var(--color-text-subtle);
+  font-weight: 400;
+  margin-top: 2px;
+}
+
+
+/* ─── 16. Tops vs Flops ───────────────────────────────────── */
+.tops-flops {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+.tops-flops__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.tops-flops__heading {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tops-flops__heading svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.tops-flops__heading--top  { color: var(--color-success); }
+.tops-flops__heading--flop { color: var(--color-error); }
+
+.tops-flops .data-table {
+  font-size: 13px;
+}
+
+.cell--top {
+  background: rgba(0,112,243,0.06);
+}
+
+.cell--bottom {
+  background: rgba(238,0,0,0.06);
+}
+
+
+/* ─── 17. Podium ────────────────────────────────────────────── */
 .podium-section {
   display: flex;
   flex-direction: column;
@@ -956,6 +1096,13 @@ code, kbd {
   overflow: hidden;
 }
 
+.podium-card__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 .podium-card__date {
   font-size: 12px;
   color: var(--color-text-subtle);
@@ -992,7 +1139,7 @@ code, kbd {
 }
 
 
-/* ─── 15. Table ─────────────────────────────────────────────── */
+/* ─── 18. Table ─────────────────────────────────────────────── */
 .table-section {
   display: flex;
   flex-direction: column;
@@ -1205,7 +1352,7 @@ code, kbd {
 .engagement-pill--high { background: rgba(0,112,243,0.08); color: var(--color-success); }
 
 
-/* ─── 16. Pagination ────────────────────────────────────────── */
+/* ─── 19. Pagination ────────────────────────────────────────── */
 .pagination {
   display: flex;
   align-items: center;
@@ -1234,7 +1381,7 @@ code, kbd {
 }
 
 
-/* ─── 17. Empty State ───────────────────────────────────────── */
+/* ─── 20. Empty State ───────────────────────────────────────── */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -1266,15 +1413,15 @@ code, kbd {
 }
 
 
-/* ─── 18. Responsive ────────────────────────────────────────── */
+/* ─── 21. Responsive ────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .upload-header,
   .nav {
     padding: 0 var(--space-8);
   }
 
-  .dashboard {
-    padding: var(--space-6) var(--space-8) var(--space-8);
+  .dashboard-main {
+    padding: var(--space-6) var(--space-6);
   }
 
   .kpis {
@@ -1282,6 +1429,10 @@ code, kbd {
   }
 
   .podium {
+    grid-template-columns: 1fr;
+  }
+
+  .tops-flops {
     grid-template-columns: 1fr;
   }
 }
@@ -1296,14 +1447,52 @@ code, kbd {
     padding: var(--space-8) var(--space-4);
   }
 
-  .dashboard {
+  /* Sidebar collapses to horizontal strip */
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+
+  .sidebar__header {
+    display: none;
+  }
+
+  .sidebar__filters {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    align-items: flex-end;
+  }
+
+  .sidebar__filters .filter-group {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .sidebar__divider {
+    display: none;
+  }
+
+  .sidebar__footer {
+    display: none;
+  }
+
+  .dashboard-main {
     padding: var(--space-4) var(--space-4) var(--space-8);
     gap: var(--space-6);
   }
 
-  .dashboard__header {
-    flex-direction: column;
-    align-items: flex-start;
+  .dashboard-main__header {
+    display: none;
   }
 
   .kpis {
@@ -1321,16 +1510,6 @@ code, kbd {
 
   .chart-card--wide {
     grid-column: 1;
-  }
-
-  .chart-card__body--donut {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .chart-card__body--donut canvas {
-    width: 160px !important;
-    height: 160px !important;
   }
 
   .chart-card__header {
@@ -1381,11 +1560,11 @@ code, kbd {
     gap: var(--space-3);
   }
 
-  .filters {
-    width: 100%;
+  .podium {
+    grid-template-columns: 1fr;
   }
 
-  .podium {
+  .tops-flops {
     grid-template-columns: 1fr;
   }
 

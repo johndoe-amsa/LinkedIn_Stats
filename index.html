@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LinkedIn Analytics — Dashboard</title>
+  <title>LinkedIn Analytics — Dashboard V2</title>
 
   <!-- Geist + Geist Mono (spec CLAUDE.md) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -15,6 +15,9 @@
 
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <!-- Chart.js Annotation Plugin (average reference lines) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -36,9 +39,9 @@
 
     <main class="upload-main">
       <div class="upload-hero">
-        <p class="upload-hero__label">Dashboard</p>
+        <p class="upload-hero__label">Dashboard V2</p>
         <h1 class="upload-hero__title">Analysez vos<br>statistiques LinkedIn</h1>
-        <p class="upload-hero__desc">Importez votre export CSV LinkedIn pour visualiser vos performances, comparer vos posts et identifier vos meilleures publications.</p>
+        <p class="upload-hero__desc">Importez votre export CSV LinkedIn pour visualiser vos performances, croiser thèmes et formats, et définir votre stratégie éditoriale.</p>
       </div>
 
       <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
@@ -91,7 +94,7 @@
       </div>
       <div class="nav__meta">
         <span class="nav__filename" id="nav-filename"></span>
-        <span class="nav__separator" aria-hidden="true">·</span>
+        <span class="nav__separator" aria-hidden="true">&middot;</span>
         <span class="nav__count" id="nav-count"></span>
       </div>
       <div class="nav__actions">
@@ -102,421 +105,344 @@
       </div>
     </nav>
 
-    <!-- Main content -->
-    <main class="dashboard">
+    <!-- Main layout: Sidebar + Content -->
+    <main class="dashboard-layout">
 
-      <!-- Page title + filters -->
-      <section class="dashboard__header">
-        <div class="dashboard__title-group">
-          <p class="section-label" id="tab-section-label">Vue d'ensemble</p>
-          <h2 class="section-title" id="tab-section-title">Tableau de bord</h2>
+      <!-- ── Sidebar Filters ── -->
+      <aside class="sidebar" role="complementary" aria-label="Filtres">
+        <div class="sidebar__header">
+          <p class="section-label">Filtres</p>
+          <h2 class="sidebar__title">Panneau de contrôle</h2>
         </div>
 
-        <div class="filters" role="search" aria-label="Filtres">
+        <div class="sidebar__filters">
+          <!-- Date range -->
+          <div class="filter-group">
+            <label class="filter-group__label" for="filter-date-from">Date début</label>
+            <input type="date" class="filter-group__input" id="filter-date-from" aria-label="Date de début" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-group__label" for="filter-date-to">Date fin</label>
+            <input type="date" class="filter-group__input" id="filter-date-to" aria-label="Date de fin" />
+          </div>
+
+          <hr class="sidebar__divider" />
+
+          <!-- Theme -->
           <div class="filter-group">
             <label class="filter-group__label" for="filter-theme">Thème</label>
             <select class="filter-group__select" id="filter-theme" aria-label="Filtrer par thème">
               <option value="">Tous les thèmes</option>
             </select>
           </div>
+
+          <!-- Media -->
           <div class="filter-group">
             <label class="filter-group__label" for="filter-media">Média</label>
             <select class="filter-group__select" id="filter-media" aria-label="Filtrer par média">
               <option value="">Tous les médias</option>
             </select>
           </div>
-          <div class="filter-group">
-            <label class="filter-group__label" for="filter-type">Type</label>
-            <select class="filter-group__select" id="filter-type" aria-label="Filtrer par type">
-              <option value="">Tous les types</option>
-            </select>
-          </div>
-          <button type="button" class="btn btn--ghost btn--sm" id="reset-filters-btn" aria-label="Réinitialiser les filtres">
+
+          <button type="button" class="btn btn--ghost btn--sm sidebar__reset-btn" id="reset-filters-btn" aria-label="Réinitialiser les filtres">
             <i data-lucide="x" aria-hidden="true"></i>
             Réinitialiser
           </button>
         </div>
-      </section>
 
-      <!-- ── Tab Bar ── -->
-      <div class="tab-bar" role="tablist" aria-label="Sections du dashboard">
-        <button class="tab-btn is-active" role="tab" data-tab="overview" aria-selected="true">
-          <i data-lucide="eye" aria-hidden="true"></i>
-          Vue d'ensemble
-        </button>
-        <button class="tab-btn" role="tab" data-tab="performance" aria-selected="false">
-          <i data-lucide="target" aria-hidden="true"></i>
-          Performance
-        </button>
-        <button class="tab-btn" role="tab" data-tab="thematic" aria-selected="false">
-          <i data-lucide="lightbulb" aria-hidden="true"></i>
-          Thématique
-        </button>
-        <button class="tab-btn" role="tab" data-tab="engagement" aria-selected="false">
-          <i data-lucide="message-circle" aria-hidden="true"></i>
-          Engagement
-        </button>
-        <button class="tab-btn" role="tab" data-tab="leaderboard" aria-selected="false">
-          <i data-lucide="trophy" aria-hidden="true"></i>
-          Leaderboard
-        </button>
-      </div>
+        <div class="sidebar__footer">
+          <span class="sidebar__count" id="sidebar-count">0 publications</span>
+        </div>
+      </aside>
 
+      <!-- ── Main Content ── -->
+      <div class="dashboard-main">
 
-      <!-- ══════════════════════════════════════════
-           TAB 1 — VUE D'ENSEMBLE
-      ══════════════════════════════════════════ -->
-      <div class="tab-panel is-active" id="panel-overview" role="tabpanel">
-
-        <!-- KPI Cards -->
-        <section class="kpis" aria-label="Indicateurs clés">
-          <div class="kpi-card" id="kpi-impressions">
-            <div class="kpi-card__header">
-              <p class="kpi-card__label">Total Impressions</p>
-              <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
-            </div>
-            <p class="kpi-card__value">—</p>
-            <p class="kpi-card__sub">Publications analysées : <strong id="kpi-posts-count">0</strong></p>
-          </div>
-
-          <div class="kpi-card" id="kpi-engagement">
-            <div class="kpi-card__header">
-              <p class="kpi-card__label">Taux d'engagement moyen</p>
-              <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
-            </div>
-            <p class="kpi-card__value">—</p>
-            <p class="kpi-card__sub">Médiane : <strong id="kpi-engagement-median">0 %</strong></p>
-          </div>
-
-          <div class="kpi-card" id="kpi-interactions">
-            <div class="kpi-card__header">
-              <p class="kpi-card__label">Total Interactions</p>
-              <div class="kpi-card__icon"><i data-lucide="heart" aria-hidden="true"></i></div>
-            </div>
-            <p class="kpi-card__value">—</p>
-            <p class="kpi-card__sub">Réactions + Commentaires + Republi. + Clics</p>
-          </div>
-
-          <div class="kpi-card" id="kpi-top-media">
-            <div class="kpi-card__header">
-              <p class="kpi-card__label">Top Média</p>
-              <div class="kpi-card__icon"><i data-lucide="image" aria-hidden="true"></i></div>
-            </div>
-            <p class="kpi-card__value">—</p>
-            <p class="kpi-card__sub" id="kpi-top-media-sub">—</p>
-          </div>
+        <!-- Page title -->
+        <section class="dashboard-main__header">
+          <p class="section-label" id="tab-section-label">Le Bilan</p>
+          <h2 class="section-title" id="tab-section-title">Synthèse du compte</h2>
         </section>
 
-        <!-- Charts -->
-        <section class="charts-grid" aria-label="Graphiques">
-          <!-- Timeline: dual axis -->
-          <div class="chart-card chart-card--wide">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Évolution temporelle</p>
-                <h3 class="chart-card__title">Impressions & Engagement</h3>
+        <!-- ── Tab Bar ── -->
+        <div class="tab-bar" role="tablist" aria-label="Sections du dashboard">
+          <button class="tab-btn is-active" role="tab" data-tab="bilan" aria-selected="true">
+            <i data-lucide="bar-chart-2" aria-hidden="true"></i>
+            Le Bilan
+          </button>
+          <button class="tab-btn" role="tab" data-tab="matrice" aria-selected="false">
+            <i data-lucide="grid-3x3" aria-hidden="true"></i>
+            Matrice Stratégique
+          </button>
+          <button class="tab-btn" role="tab" data-tab="entonnoir" aria-selected="false">
+            <i data-lucide="filter" aria-hidden="true"></i>
+            Entonnoir
+          </button>
+          <button class="tab-btn" role="tab" data-tab="laboratoire" aria-selected="false">
+            <i data-lucide="flask-conical" aria-hidden="true"></i>
+            Laboratoire
+          </button>
+        </div>
+
+
+        <!-- ══════════════════════════════════════════
+             TAB 1 — LE BILAN
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel is-active" id="panel-bilan" role="tabpanel">
+
+          <!-- KPI Cards -->
+          <section class="kpis" aria-label="Indicateurs clés">
+            <div class="kpi-card" id="kpi-impressions">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Total Impressions</p>
+                <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
               </div>
-              <div class="chart-card__badge" id="chart-timeline-range"></div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub">
+                <span id="kpi-impressions-trend"></span>
+                Publications : <strong id="kpi-posts-count">0</strong>
+              </p>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-timeline" aria-label="Évolution des impressions et du taux d'engagement"></canvas>
-            </div>
-          </div>
 
-          <!-- Funnel -->
-          <div class="chart-card">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Entonnoir</p>
-                <h3 class="chart-card__title">Parcours audience</h3>
+            <div class="kpi-card" id="kpi-clics">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Taux de Clics Moyen</p>
+                <div class="kpi-card__icon"><i data-lucide="mouse-pointer-click" aria-hidden="true"></i></div>
               </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub">
+                <span id="kpi-clics-trend"></span>
+                Médiane : <strong id="kpi-clics-median">0 %</strong>
+              </p>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-funnel" aria-label="Entonnoir Impressions vers Clics vers Interactions"></canvas>
-            </div>
-          </div>
 
-          <!-- Donut: interactions breakdown -->
-          <div class="chart-card">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Répartition</p>
-                <h3 class="chart-card__title">Types d'interactions</h3>
+            <div class="kpi-card" id="kpi-engagement">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Taux d'Engagement Moyen</p>
+                <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
               </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub">
+                <span id="kpi-engagement-trend"></span>
+                Médiane : <strong id="kpi-engagement-median">0 %</strong>
+              </p>
             </div>
-            <div class="chart-card__body chart-card__body--donut">
-              <canvas id="chart-donut" aria-label="Répartition des interactions"></canvas>
-              <div class="donut-legend" id="donut-legend" aria-label="Légende"></div>
-            </div>
-          </div>
-        </section>
-      </div>
 
-
-      <!-- ══════════════════════════════════════════
-           TAB 2 — PERFORMANCE PAR FORMAT & STRATÉGIE
-      ══════════════════════════════════════════ -->
-      <div class="tab-panel" id="panel-performance" role="tabpanel">
-        <section class="charts-grid" aria-label="Graphiques de performance">
-
-          <!-- Horizontal bar: engagement by media -->
-          <div class="chart-card">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Par format</p>
-                <h3 class="chart-card__title">Engagement moyen par Média</h3>
+            <div class="kpi-card" id="kpi-interactions">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Total Interactions</p>
+                <div class="kpi-card__icon"><i data-lucide="heart" aria-hidden="true"></i></div>
               </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub">
+                <span id="kpi-interactions-trend"></span>
+                Réactions + Coms + Republi. + Clics
+              </p>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-engagement-media" aria-label="Taux d'engagement moyen par type de média"></canvas>
-            </div>
-          </div>
+          </section>
 
-          <!-- Donut: impressions by type -->
-          <div class="chart-card">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Par type</p>
-                <h3 class="chart-card__title">Impressions par Type</h3>
+          <!-- Charts -->
+          <section class="charts-grid" aria-label="Graphiques">
+            <!-- Timeline: dual axis -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Évolution temporelle</p>
+                  <h3 class="chart-card__title">Impressions & Engagement</h3>
+                </div>
+                <div class="chart-card__badge" id="chart-timeline-range"></div>
               </div>
-            </div>
-            <div class="chart-card__body chart-card__body--donut">
-              <canvas id="chart-impressions-type" aria-label="Répartition des impressions par type"></canvas>
-              <div class="donut-legend" id="type-donut-legend" aria-label="Légende"></div>
-            </div>
-          </div>
-
-          <!-- Video focus (conditional) -->
-          <div class="chart-card" id="video-focus-card" hidden>
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Focus Vidéo</p>
-                <h3 class="chart-card__title">Impressions vs Vues</h3>
-              </div>
-            </div>
-            <div class="chart-card__body">
-              <canvas id="chart-video-focus" aria-label="Comparaison impressions et vues pour les vidéos"></canvas>
-            </div>
-          </div>
-
-          <!-- Scatter: impressions vs engagement -->
-          <div class="chart-card chart-card--wide">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Nuage de points</p>
-                <h3 class="chart-card__title">Impressions vs Engagement</h3>
+              <div class="chart-card__body">
+                <canvas id="chart-timeline" aria-label="Évolution des impressions et du taux d'engagement"></canvas>
               </div>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-scatter-perf" aria-label="Nuage de points impressions versus engagement"></canvas>
-            </div>
-          </div>
+          </section>
 
-        </section>
-      </div>
-
-
-      <!-- ══════════════════════════════════════════
-           TAB 3 — ANALYSE THÉMATIQUE
-      ══════════════════════════════════════════ -->
-      <div class="tab-panel" id="panel-thematic" role="tabpanel">
-        <section class="charts-grid" aria-label="Analyse thématique">
-
-          <!-- Bar: volume by theme -->
-          <div class="chart-card">
-            <div class="chart-card__header">
+          <!-- Podium Express -->
+          <section class="podium-section">
+            <div class="podium-section__header">
               <div>
-                <p class="chart-card__label">Volume</p>
-                <h3 class="chart-card__title">Publications par Thème</h3>
+                <p class="section-label">Podium Express</p>
+                <h3 class="section-title">Top 3 publications</h3>
               </div>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-theme-volume" aria-label="Nombre de publications par thème"></canvas>
-            </div>
-          </div>
+            <div class="podium" id="podium-cards"></div>
+          </section>
+        </div>
 
-          <!-- Radar: theme comparison -->
-          <div class="chart-card" id="radar-card">
+
+        <!-- ══════════════════════════════════════════
+             TAB 2 — LA MATRICE STRATÉGIQUE
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-matrice" role="tabpanel">
+          <section class="charts-grid" aria-label="Matrice stratégique">
+
+            <!-- Heatmap -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Carte de chaleur</p>
+                  <h3 class="chart-card__title">Thème × Média</h3>
+                </div>
+                <div class="chart-card__actions">
+                  <button class="btn btn--ghost btn--sm heatmap-toggle is-active" data-metric="engagement">Engagement</button>
+                  <button class="btn btn--ghost btn--sm heatmap-toggle" data-metric="impressions">Impressions</button>
+                </div>
+              </div>
+              <div class="chart-card__body chart-card__body--table">
+                <div class="table-wrapper" id="heatmap-container"></div>
+              </div>
+            </div>
+
+            <!-- Effort vs Reward -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Effort vs Récompense</p>
+                  <h3 class="chart-card__title">Volume publié vs Engagement généré</h3>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-effort-reward" aria-label="Comparaison volume de publication vs engagement par thème"></canvas>
+              </div>
+            </div>
+
+          </section>
+        </div>
+
+
+        <!-- ══════════════════════════════════════════
+             TAB 3 — L'ENTONNOIR DE L'AUDIENCE
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-entonnoir" role="tabpanel">
+          <section class="charts-grid" aria-label="Entonnoir de l'audience">
+
+            <!-- Funnel -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Entonnoir de conversion</p>
+                  <h3 class="chart-card__title">Impressions → Clics → Interactions</h3>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-funnel" aria-label="Entonnoir Impressions vers Clics vers Interactions"></canvas>
+              </div>
+            </div>
+
+            <!-- Stacked 100% bar -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Jauge d'interactions</p>
+                  <h3 class="chart-card__title">Réactions vs Commentaires vs Republications</h3>
+                </div>
+                <div class="chart-card__actions">
+                  <button class="btn btn--ghost btn--sm stacked-toggle is-active" data-mode="theme">Par thème</button>
+                  <button class="btn btn--ghost btn--sm stacked-toggle" data-mode="publication">Top 15 publications</button>
+                </div>
+              </div>
+              <div class="chart-card__body chart-card__body--tall">
+                <canvas id="chart-stacked-engagement" aria-label="Barres empilées 100% de la composition de l'engagement"></canvas>
+              </div>
+            </div>
+
+          </section>
+        </div>
+
+
+        <!-- ══════════════════════════════════════════
+             TAB 4 — LE LABORATOIRE
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-laboratoire" role="tabpanel">
+
+          <!-- Tops vs Flops -->
+          <section class="chart-card chart-card--wide">
             <div class="chart-card__header">
               <div>
                 <p class="chart-card__label">Comparaison</p>
-                <h3 class="chart-card__title">Profil des thèmes</h3>
+                <h3 class="chart-card__title">Tops vs Flops — Engagement</h3>
               </div>
             </div>
-            <div class="chart-card__body">
-              <canvas id="chart-theme-radar" aria-label="Radar comparatif des thèmes"></canvas>
-            </div>
-          </div>
+            <div class="tops-flops" id="tops-flops-container"></div>
+          </section>
 
-          <!-- Summary table -->
-          <div class="chart-card chart-card--wide">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Synthèse</p>
-                <h3 class="chart-card__title">Détail par thème</h3>
+          <!-- Data table -->
+          <section class="table-section" aria-label="Tableau des publications">
+            <div class="table-section__header">
+              <div class="table-section__title-group">
+                <p class="section-label">Classement</p>
+                <h2 class="section-title">Toutes les publications</h2>
+              </div>
+              <div class="table-section__controls">
+                <div class="search-field">
+                  <i data-lucide="search" aria-hidden="true"></i>
+                  <input
+                    type="search"
+                    id="table-search"
+                    class="search-field__input"
+                    placeholder="Rechercher une publication…"
+                    aria-label="Rechercher dans les publications"
+                  />
+                </div>
+                <span class="table-count" id="table-count"></span>
               </div>
             </div>
-            <div class="chart-card__body chart-card__body--table">
-              <div class="table-wrapper">
-                <table class="data-table" id="theme-summary-table" aria-label="Synthèse par thème">
-                  <thead>
-                    <tr>
-                      <th>Thème</th>
-                      <th class="text-right">Publications</th>
-                      <th class="text-right">Impressions moy.</th>
-                      <th class="text-right">Commentaires moy.</th>
-                      <th class="text-right">Republi. moy.</th>
-                      <th class="text-right">Engagement moy.</th>
-                    </tr>
-                  </thead>
-                  <tbody id="theme-summary-body"></tbody>
-                </table>
-              </div>
+
+            <div class="table-wrapper" role="region" aria-label="Tableau scrollable">
+              <table class="data-table" id="posts-table" aria-label="Liste des publications LinkedIn">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-col="date" tabindex="0" aria-sort="none">
+                      Date <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                    <th class="sortable col-pub" data-col="publication" tabindex="0" aria-sort="none">
+                      Publication <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                    <th>Thème</th>
+                    <th>Média</th>
+                    <th class="sortable text-right" data-col="impressions" tabindex="0" aria-sort="none">
+                      Impressions <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                    <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
+                      Tx Clics <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                    <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
+                      Engagement <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+              </table>
             </div>
-          </div>
 
-        </section>
-      </div>
-
-
-      <!-- ══════════════════════════════════════════
-           TAB 4 — QUALITÉ DE L'ENGAGEMENT
-      ══════════════════════════════════════════ -->
-      <div class="tab-panel" id="panel-engagement" role="tabpanel">
-        <section class="charts-grid" aria-label="Qualité de l'engagement">
-
-          <!-- Stacked 100% bar -->
-          <div class="chart-card chart-card--wide">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Composition</p>
-                <h3 class="chart-card__title">Nature de l'engagement par thème</h3>
-              </div>
-              <div class="chart-card__actions">
-                <button class="btn btn--ghost btn--sm stacked-toggle is-active" data-mode="theme">Par thème</button>
-                <button class="btn btn--ghost btn--sm stacked-toggle" data-mode="publication">Top 15 publications</button>
-              </div>
-            </div>
-            <div class="chart-card__body chart-card__body--tall">
-              <canvas id="chart-stacked-engagement" aria-label="Barres empilées 100% de la composition de l'engagement"></canvas>
-            </div>
-          </div>
-
-          <!-- Scatter: clicks vs comments -->
-          <div class="chart-card chart-card--wide">
-            <div class="chart-card__header">
-              <div>
-                <p class="chart-card__label">Corrélation</p>
-                <h3 class="chart-card__title">Clics vs Commentaires</h3>
-              </div>
-            </div>
-            <div class="chart-card__body">
-              <canvas id="chart-clicks-comments" aria-label="Corrélation entre clics et commentaires"></canvas>
-            </div>
-          </div>
-
-        </section>
-      </div>
-
-
-      <!-- ══════════════════════════════════════════
-           TAB 5 — LEADERBOARD
-      ══════════════════════════════════════════ -->
-      <div class="tab-panel" id="panel-leaderboard" role="tabpanel">
-
-        <!-- Podium -->
-        <section class="podium-section">
-          <div class="podium-section__header">
-            <div>
-              <p class="section-label">Top 3</p>
-              <h3 class="section-title">Meilleures publications</h3>
-            </div>
-            <select class="filter-group__select" id="podium-month" aria-label="Filtrer par mois">
-              <option value="">Toute la période</option>
-            </select>
-          </div>
-          <div class="podium" id="podium-cards"></div>
-        </section>
-
-        <!-- Data table -->
-        <section class="table-section" aria-label="Tableau des publications">
-          <div class="table-section__header">
-            <div class="table-section__title-group">
-              <p class="section-label">Classement</p>
-              <h2 class="section-title">Toutes les publications</h2>
-            </div>
-            <div class="table-section__controls">
-              <div class="search-field">
-                <i data-lucide="search" aria-hidden="true"></i>
-                <input
-                  type="search"
-                  id="table-search"
-                  class="search-field__input"
-                  placeholder="Rechercher une publication…"
-                  aria-label="Rechercher dans les publications"
-                />
-              </div>
-              <span class="table-count" id="table-count"></span>
-            </div>
-          </div>
-
-          <div class="table-wrapper" role="region" aria-label="Tableau scrollable">
-            <table class="data-table" id="posts-table" aria-label="Liste des publications LinkedIn">
-              <thead>
-                <tr>
-                  <th class="sortable" data-col="date" tabindex="0" aria-sort="none">
-                    Date <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th class="sortable col-pub" data-col="publication" tabindex="0" aria-sort="none">
-                    Publication <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th>Thème</th>
-                  <th class="sortable text-right" data-col="impressions" tabindex="0" aria-sort="none">
-                    Impressions <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
-                    Engagement <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th class="sortable text-right" data-col="clics" tabindex="0" aria-sort="none">
-                    Clics <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th class="sortable text-right" data-col="reactions" tabindex="0" aria-sort="none">
-                    Réactions <span class="sort-icon" aria-hidden="true"></span>
-                  </th>
-                  <th class="text-right">Commentaires</th>
-                  <th class="text-right">Republi.</th>
-                </tr>
-              </thead>
-              <tbody id="table-body"></tbody>
-            </table>
-          </div>
-
-          <!-- Empty state -->
-          <div class="empty-state" id="table-empty" hidden>
-            <i data-lucide="search-x" aria-hidden="true"></i>
-            <p class="empty-state__title">Aucun résultat</p>
-            <p class="empty-state__desc">Aucune publication ne correspond à votre recherche.</p>
-            <button type="button" class="btn btn--secondary btn--sm" id="clear-search-btn">
-              Réinitialiser la recherche
-            </button>
-          </div>
-
-          <!-- Pagination -->
-          <div class="pagination" id="pagination">
-            <span class="pagination__info" id="pagination-info"></span>
-            <div class="pagination__controls">
-              <button type="button" class="btn btn--ghost btn--sm" id="page-prev" disabled aria-label="Page précédente">
-                <i data-lucide="chevron-left" aria-hidden="true"></i>
-              </button>
-              <span class="pagination__current" id="pagination-current"></span>
-              <button type="button" class="btn btn--ghost btn--sm" id="page-next" aria-label="Page suivante">
-                <i data-lucide="chevron-right" aria-hidden="true"></i>
+            <!-- Empty state -->
+            <div class="empty-state" id="table-empty" hidden>
+              <i data-lucide="search-x" aria-hidden="true"></i>
+              <p class="empty-state__title">Aucun résultat</p>
+              <p class="empty-state__desc">Aucune publication ne correspond à votre recherche.</p>
+              <button type="button" class="btn btn--secondary btn--sm" id="clear-search-btn">
+                Réinitialiser la recherche
               </button>
             </div>
-          </div>
-        </section>
-      </div>
 
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+              <span class="pagination__info" id="pagination-info"></span>
+              <div class="pagination__controls">
+                <button type="button" class="btn btn--ghost btn--sm" id="page-prev" disabled aria-label="Page précédente">
+                  <i data-lucide="chevron-left" aria-hidden="true"></i>
+                </button>
+                <span class="pagination__current" id="pagination-current"></span>
+                <button type="button" class="btn btn--ghost btn--sm" id="page-next" aria-label="Page suivante">
+                  <i data-lucide="chevron-right" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+      </div><!-- /.dashboard-main -->
     </main>
   </div>
 
