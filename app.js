@@ -512,7 +512,6 @@ function legendSpec(position = 'top', align = 'end') {
       color:            C.muted(),
       usePointStyle:    true,
       pointStyle:       'circle',
-      pointStyleWidth:  8,
       font:             { size: 12 },
       padding:          16,
     },
