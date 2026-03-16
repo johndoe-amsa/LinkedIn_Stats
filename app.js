@@ -76,12 +76,22 @@ function $(id) { return document.getElementById(id); }
    CSV PARSING & UPLOAD
    ═══════════════════════════════════════════════════════════════ */
 
-function parseDate(str) {
-  if (!str) return null;
-  str = str.trim();
-  /* DD/MM/YYYY */
+function parseDate(val) {
+  if (!val) return null;
+  /* SheetJS already returns a JS Date object for Excel date cells */
+  if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+  const str = String(val).trim();
+  /* DD/MM/YYYY or MM/DD/YYYY — detect by checking which part exceeds 12 */
   const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) return new Date(parseInt(dmy[3]), parseInt(dmy[2]) - 1, parseInt(dmy[1]));
+  if (dmy) {
+    const a = parseInt(dmy[1]);
+    const b = parseInt(dmy[2]);
+    const y = parseInt(dmy[3]);
+    /* If the second component is > 12 it can't be a month → format is MM/DD/YYYY */
+    if (b > 12) return new Date(y, a - 1, b);
+    /* Otherwise assume DD/MM/YYYY (French default) */
+    return new Date(y, b - 1, a);
+  }
   /* YYYY-MM-DD */
   const ymd = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
   if (ymd) return new Date(parseInt(ymd[1]), parseInt(ymd[2]) - 1, parseInt(ymd[3]));
@@ -156,43 +166,63 @@ function parseRows(rows) {
     .sort((a, b) => a.date - b.date);
 }
 
-function handleFile(file) {
-  const errorEl = $('upload-error');
-  const errorMsg = $('upload-error-msg');
+function showUploadError(msg) {
+  $('upload-error').hidden = false;
+  $('upload-error-msg').textContent = msg;
+}
 
-  if (!file.name.toLowerCase().endsWith('.csv')) {
-    errorEl.hidden = false;
-    errorMsg.textContent = 'Veuillez sélectionner un fichier CSV.';
+function finalizeParsedData(data, filename) {
+  if (data.length === 0) {
+    showUploadError('Aucune ligne valide trouvée. Vérifiez le format du fichier.');
+    return;
+  }
+  state.rawData = data;
+  state.filteredData = [...data];
+  state.filename = filename;
+  $('upload-screen').hidden = true;
+  $('dashboard-screen').hidden = false;
+  initDashboard();
+}
+
+function handleFile(file) {
+  $('upload-error').hidden = true;
+
+  const name = file.name.toLowerCase();
+
+  if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        /* cellDates:true → les cellules date Excel sont converties en Date JS */
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        finalizeParsedData(parseRows(rows), file.name);
+      } catch {
+        showUploadError('Erreur lors de la lecture du fichier Excel.');
+      }
+    };
+    reader.onerror = () => showUploadError('Erreur lors de la lecture du fichier.');
+    reader.readAsArrayBuffer(file);
     return;
   }
 
-  errorEl.hidden = true;
+  if (name.endsWith('.csv')) {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete(results) {
+        finalizeParsedData(parseRows(results.data), file.name);
+      },
+      error() {
+        showUploadError('Erreur lors de la lecture du fichier CSV.');
+      },
+    });
+    return;
+  }
 
-  Papa.parse(file, {
-    header: true,
-    skipEmptyLines: true,
-    complete(results) {
-      const data = parseRows(results.data);
-      if (data.length === 0) {
-        errorEl.hidden = false;
-        errorMsg.textContent = 'Aucune ligne valide trouvée. Vérifiez le format du CSV.';
-        return;
-      }
-
-      state.rawData = data;
-      state.filteredData = [...data];
-      state.filename = file.name;
-
-      $('upload-screen').hidden = true;
-      $('dashboard-screen').hidden = false;
-
-      initDashboard();
-    },
-    error() {
-      errorEl.hidden = false;
-      errorMsg.textContent = 'Erreur lors de la lecture du fichier.';
-    },
-  });
+  showUploadError('Format non supporté. Utilisez un fichier .xlsx, .xls ou .csv.');
 }
 
 
