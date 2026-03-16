@@ -22,6 +22,9 @@
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
+  <!-- SheetJS — lecture des fichiers Excel (.xlsx / .xls) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -45,7 +48,7 @@
       </div>
 
       <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
-        <input type="file" id="file-input" accept=".csv" hidden aria-label="Sélectionner un fichier CSV" />
+        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" hidden aria-label="Sélectionner un fichier CSV ou Excel" />
         <div class="drop-zone__icon">
           <i data-lucide="upload-cloud" aria-hidden="true"></i>
         </div>
@@ -55,7 +58,7 @@
           <i data-lucide="folder-open" aria-hidden="true"></i>
           Parcourir
         </button>
-        <p class="drop-zone__hint">Format : CSV avec séparateur <code>;</code> ou <code>,</code></p>
+        <p class="drop-zone__hint">Formats acceptés : <code>.xlsx</code>, <code>.xls</code> ou <code>.csv</code></p>
       </div>
 
       <div id="upload-error" class="upload-error" hidden>
