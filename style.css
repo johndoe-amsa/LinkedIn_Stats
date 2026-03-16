@@ -24,11 +24,13 @@
   --color-warning:  #F5A623;
 
   /* Palette Data-Viz (exclusivement pour <canvas> et pastilles de légende) */
-  --color-data-1: #000000;
-  --color-data-2: #0070F3;
+  --color-data-1: #0070F3;
+  --color-data-2: #06B6D4;
   --color-data-3: #7928CA;
   --color-data-4: #FF0080;
-  --color-data-5: #F5A623;
+  --color-data-5: #FF4D4D;
+  --color-data-6: #F5A623;
+  --color-data-7: #10B981;
   --color-data-grid: var(--color-border);
 
   /* Typographie */
@@ -87,11 +89,13 @@
     --elevation-2: 0 8px 32px rgba(0,0,0,0.5);
 
     /* Palette Data-Viz — Dark Mode */
-    --color-data-1: #FFFFFF;
-    --color-data-2: #3291FF;
+    --color-data-1: #3291FF;
+    --color-data-2: #22D3EE;
     --color-data-3: #8A2BE2;
     --color-data-4: #FF1493;
-    --color-data-5: #F5A623;
+    --color-data-5: #FF5C5C;
+    --color-data-6: #FBBF24;
+    --color-data-7: #34D399;
   }
 }
 

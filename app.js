@@ -50,6 +50,8 @@ function DATA_COLORS() {
     cssVar('--color-data-3'),
     cssVar('--color-data-4'),
     cssVar('--color-data-5'),
+    cssVar('--color-data-6'),
+    cssVar('--color-data-7'),
   ];
 }
 
