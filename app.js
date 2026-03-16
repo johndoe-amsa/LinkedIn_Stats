@@ -30,6 +30,7 @@ const state = {
 
   /* Heatmap metric */
   heatmapMetric: 'engagement',
+  heatmapJHMetric: 'impressions',
 
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
@@ -111,6 +112,17 @@ function parsePct(val) {
   return parseFloat(String(val).replace(/\s/g, '').replace('%', '').replace(',', '.')) || 0;
 }
 
+function parseHeure(val) {
+  if (!val && val !== 0) return null;
+  // SheetJS avec cellDates:true retourne un Date pour les cellules "time"
+  if (val instanceof Date) return val.getHours(); // 0–23
+  // Fraction décimale de journée (0–1) : parfois retourné par SheetJS sans cellDates
+  if (typeof val === 'number') return Math.floor(val * 24) % 24;
+  // Chaîne "HH:MM:SS" ou "HH:MM"
+  const match = String(val).trim().match(/^(\d{1,2}):/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 /**
  * Normalize column names: lowercase, trim, strip accents & special chars.
  */
@@ -139,6 +151,8 @@ function parseRows(rows) {
       const date = parseDate(get('Date'));
       if (!date) return null;
 
+      const heure = parseHeure(get('Heure')); // 0–23, null si absent
+
       const impressions   = parseNum(get('Impressions'));
       const vues          = parseNum(get('Vues'));
       const reactions     = parseNum(get('Reactions') || get('Réactions'));
@@ -156,7 +170,7 @@ function parseRows(rows) {
       const totalInteractions = interactions + clics;
 
       return {
-        date, publication, impressions, vues,
+        date, heure, publication, impressions, vues,
         reactions, commentaires, republis, clics,
         tauxClics, tauxEngagement,
         theme, media, type,
@@ -270,6 +284,16 @@ function initDashboard() {
       btn.classList.add('is-active');
       state.heatmapMetric = btn.dataset.metric;
       renderHeatmap(state.filteredData);
+    });
+  });
+
+  /* Heatmap Jour × Heure toggle */
+  document.querySelectorAll('.heatmap-jh-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.heatmap-jh-toggle').forEach(b => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      state.heatmapJHMetric = btn.dataset.metric;
+      renderHeatmapJourHeure(state.filteredData);
     });
   });
 
@@ -388,6 +412,7 @@ function resetDashboard() {
   state.page = 1;
   state.stackedMode = 'theme';
   state.heatmapMetric = 'engagement';
+  state.heatmapJHMetric = 'impressions';
   state.charts = {};
 
   $('dashboard-screen').hidden = true;
@@ -1346,6 +1371,7 @@ const MONTH_LABELS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'ao
 function renderStatistiques(data) {
   renderYtdCumulChart(data);
   renderYearlyTotalChart(data);
+  renderHeatmapJourHeure(data);
 }
 
 function renderYtdCumulChart(data) {
@@ -1500,6 +1526,79 @@ function renderYearlyTotalChart(data) {
       },
     },
   });
+}
+
+
+const JOURS_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const JOURS_ORDER  = [1, 2, 3, 4, 5, 6, 0]; // Lun–Dim (JS: 0=Dim)
+
+function renderHeatmapJourHeure(data) {
+  const container = $('heatmap-jour-heure');
+  if (!container) return;
+
+  const withHeure = data.filter(d => d.heure !== null && d.heure !== undefined);
+
+  if (withHeure.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i data-lucide="clock" aria-hidden="true"></i>
+        <p class="empty-state__title">Aucune donnée horaire</p>
+        <p class="empty-state__desc">La colonne "Heure" est absente ou vide dans votre fichier.</p>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  const metric = state.heatmapJHMetric || 'impressions';
+  const metricKey = metric === 'engagement' ? 'tauxEngagement' : 'impressions';
+
+  const matrix = {};
+  let globalMin = Infinity, globalMax = -Infinity;
+
+  JOURS_ORDER.forEach(dayIdx => {
+    matrix[dayIdx] = {};
+    for (let h = 0; h < 24; h++) {
+      const matches = withHeure.filter(d => d.date.getDay() === dayIdx && d.heure === h);
+      if (matches.length > 0) {
+        const val = avg(matches, metricKey);
+        matrix[dayIdx][h] = { value: val, count: matches.length };
+        if (val < globalMin) globalMin = val;
+        if (val > globalMax) globalMax = val;
+      } else {
+        matrix[dayIdx][h] = null;
+      }
+    }
+  });
+
+  const range = globalMax - globalMin || 1;
+  const heatColor = cssVar('--color-data-1');
+
+  let html = `<table class="heatmap-jh-table" aria-label="Heatmap jour × heure des meilleures performances">
+    <thead><tr><th scope="col">Jour</th>`;
+  for (let h = 0; h < 24; h++) {
+    html += `<th scope="col">${h}h</th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  JOURS_ORDER.forEach(dayIdx => {
+    html += `<tr><td scope="row">${JOURS_LABELS[dayIdx]}</td>`;
+    for (let h = 0; h < 24; h++) {
+      const cell = matrix[dayIdx][h];
+      if (cell) {
+        const opacity = 0.08 + ((cell.value - globalMin) / range) * 0.72;
+        const bg = hexToRgba(heatColor, opacity);
+        const displayVal = metric === 'engagement' ? fmtPct(cell.value) : fmtK(cell.value);
+        html += `<td class="heatmap-jh-cell--value" style="background:${bg}" title="${cell.count} post${cell.count > 1 ? 's' : ''}">`;
+        html += `${escHtml(displayVal)}<span class="heatmap-jh-count">${cell.count}</span></td>`;
+      } else {
+        html += `<td class="heatmap-jh-cell--empty">—</td>`;
+      }
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  container.innerHTML = html;
 }
 
 
