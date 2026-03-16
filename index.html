@@ -182,6 +182,10 @@
             <i data-lucide="flask-conical" aria-hidden="true"></i>
             Laboratoire
           </button>
+          <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false">
+            <i data-lucide="calendar-days" aria-hidden="true"></i>
+            Statistiques
+          </button>
         </div>
 
 
@@ -439,6 +443,41 @@
                 </button>
               </div>
             </div>
+          </section>
+        </div>
+
+        <!-- ══════════════════════════════════════════
+             TAB 5 — STATISTIQUES PAR ANNÉE
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-statistiques" role="tabpanel">
+          <section class="charts-grid" aria-label="Statistiques par année">
+
+            <!-- Cumulative line chart -->
+            <div class="chart-card">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Publications cumulées</p>
+                  <h3 class="chart-card__title">Progression YTD par année</h3>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-ytd-cumul" aria-label="Courbe cumulative des publications par année et par mois"></canvas>
+              </div>
+            </div>
+
+            <!-- Bar chart per year -->
+            <div class="chart-card">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Volume annuel</p>
+                  <h3 class="chart-card__title">Publications par année</h3>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-yearly-total" aria-label="Nombre total de publications par année"></canvas>
+              </div>
+            </div>
+
           </section>
         </div>
 
