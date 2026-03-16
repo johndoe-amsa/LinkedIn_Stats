@@ -112,6 +112,17 @@ function parsePct(val) {
   return parseFloat(String(val).replace(/\s/g, '').replace('%', '').replace(',', '.')) || 0;
 }
 
+function parseHeure(val) {
+  if (!val && val !== 0) return null;
+  // SheetJS avec cellDates:true retourne un Date pour les cellules "time"
+  if (val instanceof Date) return val.getHours(); // 0–23
+  // Fraction décimale de journée (0–1) : parfois retourné par SheetJS sans cellDates
+  if (typeof val === 'number') return Math.floor(val * 24) % 24;
+  // Chaîne "HH:MM:SS" ou "HH:MM"
+  const match = String(val).trim().match(/^(\d{1,2}):/);
+  return match ? parseInt(match[1], 10) : null;
+}
+
 /**
  * Normalize column names: lowercase, trim, strip accents & special chars.
  */
@@ -140,8 +151,7 @@ function parseRows(rows) {
       const date = parseDate(get('Date'));
       if (!date) return null;
 
-      const heureRaw = (get('Heure') || '').trim();
-      const heure = heureRaw ? parseInt(heureRaw.split(':')[0], 10) : null; // 0–23, null si absent
+      const heure = parseHeure(get('Heure')); // 0–23, null si absent
 
       const impressions   = parseNum(get('Impressions'));
       const vues          = parseNum(get('Vues'));
