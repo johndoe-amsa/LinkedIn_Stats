@@ -189,6 +189,10 @@
             <i data-lucide="calendar-days" aria-hidden="true"></i>
             Statistiques
           </button>
+          <button class="tab-btn" role="tab" data-tab="comparaison" aria-selected="false">
+            <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
+            Comparaison
+          </button>
         </div>
 
 
@@ -500,6 +504,109 @@
 
           </section>
         </div>
+
+        <!-- ══════════════════════════════════════════
+             TAB 6 — COMPARAISON MULTI-ANNÉES
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-comparaison" role="tabpanel">
+
+          <!-- Year selector -->
+          <div class="compare-controls">
+            <div>
+              <p class="section-label">Périodes</p>
+              <h3 class="compare-controls__title">Sélectionnez les années à comparer</h3>
+            </div>
+            <div class="year-pills" id="compare-year-pills" role="group" aria-label="Sélection des années à comparer"></div>
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-state" id="compare-empty" hidden>
+            <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
+            <p class="empty-state__title">Sélectionnez au moins 2 années</p>
+            <p class="empty-state__desc">Activez les années à comparer via les pills ci-dessus.</p>
+          </div>
+
+          <!-- Main comparison content -->
+          <div id="compare-content">
+
+            <!-- KPI cards per year -->
+            <div class="compare-kpis" id="compare-kpis" aria-label="KPIs par année"></div>
+
+            <!-- Charts -->
+            <section class="charts-grid" aria-label="Graphiques de comparaison">
+
+              <!-- Publications count -->
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Volume de contenu</p>
+                    <h3 class="chart-card__title">Publications par année</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-compare-posts" aria-label="Nombre de publications par année"></canvas>
+                </div>
+              </div>
+
+              <!-- Avg impressions per post -->
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Portée moyenne</p>
+                    <h3 class="chart-card__title">Impressions moyennes / post</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-compare-impressions" aria-label="Impressions moyennes par post et par année"></canvas>
+                </div>
+              </div>
+
+              <!-- Grouped performance -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Taux de performance</p>
+                    <h3 class="chart-card__title">Engagement & Clics par année</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-compare-perf" aria-label="Taux d'engagement et de clics comparés par année"></canvas>
+                </div>
+              </div>
+
+              <!-- Monthly trend overlay -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Tendance mensuelle</p>
+                    <h3 class="chart-card__title">Engagement moyen par mois</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-compare-trend" aria-label="Évolution mensuelle du taux d'engagement par année"></canvas>
+                </div>
+              </div>
+
+            </section>
+
+            <!-- Delta table (2 years only) -->
+            <section id="compare-delta-section" hidden>
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Analyse différentielle</p>
+                    <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body chart-card__body--table">
+                  <div class="table-wrapper" id="compare-delta-table"></div>
+                </div>
+              </div>
+            </section>
+
+          </div><!-- /#compare-content -->
+
+        </div><!-- /#panel-comparaison -->
 
       </div><!-- /.dashboard-main -->
     </main>

@@ -32,6 +32,9 @@ const state = {
   heatmapMetric: 'engagement',
   heatmapJHMetric: 'impressions',
 
+  /* Comparaison tab: selected years */
+  compareYears: [],
+
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
 };
@@ -413,6 +416,7 @@ function resetDashboard() {
   state.stackedMode = 'theme';
   state.heatmapMetric = 'engagement';
   state.heatmapJHMetric = 'impressions';
+  state.compareYears = [];
   state.charts = {};
 
   $('dashboard-screen').hidden = true;
@@ -431,6 +435,7 @@ const TAB_META = {
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
   laboratoire:   { label: 'Le Laboratoire',              title: 'Tops & Flops' },
   statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
+  comparaison:   { label: 'Comparaison',                 title: 'Analyse multi-années' },
 };
 
 function switchTab(tabId) {
@@ -461,6 +466,7 @@ function renderActiveTab() {
     case 'entonnoir':   renderEntonnoir(data); break;
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatistiques(data); break;
+    case 'comparaison':  renderComparaison(data);  break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
@@ -1607,6 +1613,338 @@ function renderHeatmapJourHeure(data) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB 6: COMPARAISON MULTI-ANNÉES
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderComparaison(data) {
+  const allYears = [...new Set(data.filter(d => d.date).map(d => d.date.getFullYear()))].sort((a, b) => a - b);
+
+  /* Init or prune selected years */
+  if (state.compareYears.length === 0 || state.compareYears.every(y => !allYears.includes(y))) {
+    state.compareYears = [...allYears];
+  } else {
+    state.compareYears = state.compareYears.filter(y => allYears.includes(y));
+  }
+
+  renderYearPills(allYears);
+
+  const selected = state.compareYears.slice().sort((a, b) => a - b);
+  const hasEnough = selected.length >= 2;
+
+  $('compare-content').hidden = !hasEnough;
+  $('compare-empty').hidden = hasEnough;
+
+  if (!hasEnough) return;
+
+  const yearDataMap = {};
+  selected.forEach(y => {
+    yearDataMap[y] = data.filter(d => d.date && d.date.getFullYear() === y);
+  });
+
+  renderCompareKPIs(yearDataMap, selected);
+  renderComparePostsChart(yearDataMap, selected);
+  renderCompareImpressionsChart(yearDataMap, selected);
+  renderComparePerfChart(yearDataMap, selected);
+  renderCompareTrendChart(yearDataMap, selected);
+
+  const deltaSection = $('compare-delta-section');
+  if (selected.length === 2) {
+    deltaSection.hidden = false;
+    $('compare-delta-title').textContent = `${selected[0]} → ${selected[1]} — Variation`;
+    renderCompareDelta(yearDataMap, selected[0], selected[1]);
+  } else {
+    deltaSection.hidden = true;
+  }
+}
+
+function renderYearPills(allYears) {
+  const container = $('compare-year-pills');
+  const colors = DATA_COLORS();
+  container.innerHTML = allYears.map((y, i) => {
+    const active = state.compareYears.includes(y) ? 'is-active' : '';
+    const color = colors[i % colors.length];
+    return `<button class="year-pill ${active}" data-year="${y}" style="--pill-color:${color}" aria-pressed="${state.compareYears.includes(y)}">${y}</button>`;
+  }).join('');
+
+  container.querySelectorAll('.year-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const y = Number(btn.dataset.year);
+      const idx = state.compareYears.indexOf(y);
+      if (idx >= 0) {
+        state.compareYears.splice(idx, 1);
+      } else {
+        state.compareYears.push(y);
+      }
+      renderComparaison(state.filteredData);
+    });
+  });
+}
+
+function renderCompareKPIs(yearDataMap, years) {
+  const colors = DATA_COLORS();
+  $('compare-kpis').innerHTML = years.map((y, i) => {
+    const d = yearDataMap[y];
+    const color = colors[i % colors.length];
+    return `
+      <div class="compare-year-card">
+        <div class="compare-year-card__header">
+          <span class="compare-year-card__dot" style="--year-color:${color}"></span>
+          <span class="compare-year-card__year">${y}</span>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Publications</p>
+          <p class="compare-kpi-item__value">${fmt(d.length)}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Impressions totales</p>
+          <p class="compare-kpi-item__value">${fmtK(sum(d, 'impressions'))}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Engagement moy.</p>
+          <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxEngagement'))}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Taux de clics moy.</p>
+          <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxClics'))}</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderComparePostsChart(yearDataMap, years) {
+  destroyChart('chart-compare-posts');
+  const colors = DATA_COLORS();
+  const ctx = $('chart-compare-posts').getContext('2d');
+  state.charts['chart-compare-posts'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [{
+        label: 'Publications',
+        data: years.map(y => yearDataMap[y].length),
+        backgroundColor: years.map((_, i) => colors[i % colors.length]),
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => String(items[0].label),
+            label: (item) => ` ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ beginAtZero: true, ticks: { precision: 0 } }),
+      },
+    },
+  });
+}
+
+function renderCompareImpressionsChart(yearDataMap, years) {
+  destroyChart('chart-compare-impressions');
+  const colors = DATA_COLORS();
+  const ctx = $('chart-compare-impressions').getContext('2d');
+  state.charts['chart-compare-impressions'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [{
+        label: 'Impressions moy. / post',
+        data: years.map(y => {
+          const d = yearDataMap[y];
+          return d.length > 0 ? sum(d, 'impressions') / d.length : 0;
+        }),
+        backgroundColor: years.map((_, i) => colors[i % colors.length]),
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => String(items[0].label),
+            label: (item) => ` ${fmtK(item.parsed.y)} impressions / post`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ beginAtZero: true }),
+      },
+    },
+  });
+}
+
+function renderComparePerfChart(yearDataMap, years) {
+  destroyChart('chart-compare-perf');
+  const colors = DATA_COLORS();
+  const ctx = $('chart-compare-perf').getContext('2d');
+  state.charts['chart-compare-perf'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [
+        {
+          label: 'Engagement moyen (%)',
+          data: years.map(y => avg(yearDataMap[y], 'tauxEngagement')),
+          backgroundColor: hexToRgba(colors[0], 0.9),
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: 'Taux de clics moyen (%)',
+          data: years.map(y => avg(yearDataMap[y], 'tauxClics')),
+          backgroundColor: hexToRgba(colors[1], 0.9),
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => `Année ${items[0].label}`,
+            label: (item) => ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+        }),
+      },
+    },
+  });
+}
+
+function renderCompareTrendChart(yearDataMap, years) {
+  destroyChart('chart-compare-trend');
+  const colors = DATA_COLORS();
+  const datasets = years.map((y, i) => {
+    const d = yearDataMap[y];
+    const color = colors[i % colors.length];
+    const byMonth = Array.from({ length: 12 }, (_, m) => {
+      const rows = d.filter(r => r.date && r.date.getMonth() === m);
+      return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
+    });
+    return {
+      label: String(y),
+      data: byMonth,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      pointBackgroundColor: color,
+      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2,
+      tension: 0.3,
+      spanGaps: true,
+    };
+  });
+
+  const ctx = $('chart-compare-trend').getContext('2d');
+  state.charts['chart-compare-trend'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => MONTH_LABELS[items[0].dataIndex],
+            label: (item) => item.parsed.y !== null
+              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`
+              : ` ${item.dataset.label} : —`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+        }),
+      },
+    },
+  });
+}
+
+function renderCompareDelta(yearDataMap, yearA, yearB) {
+  const dA = yearDataMap[yearA];
+  const dB = yearDataMap[yearB];
+  const colors = DATA_COLORS();
+  const allYears = Object.keys(yearDataMap).map(Number).sort((a, b) => a - b);
+  const iA = allYears.indexOf(yearA);
+  const iB = allYears.indexOf(yearB);
+
+  const metrics = [
+    { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
+    { label: 'Impressions totales', valA: sum(dA, 'impressions'),                               valB: sum(dB, 'impressions'),                               fmtFn: fmtK   },
+    { label: 'Impressions / post',  valA: dA.length ? sum(dA, 'impressions') / dA.length : 0,  valB: dB.length ? sum(dB, 'impressions') / dB.length : 0,  fmtFn: fmtK   },
+    { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                            valB: avg(dB, 'tauxEngagement'),                            fmtFn: fmtPct },
+    { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                 valB: avg(dB, 'tauxClics'),                                 fmtFn: fmtPct },
+    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
+  ];
+
+  const rows = metrics.map(m => {
+    const delta = m.valA === 0 ? null : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
+    let deltaHtml;
+    if (delta === null) {
+      deltaHtml = `<span class="delta-neutral">—</span>`;
+    } else {
+      const sign = delta >= 0 ? '+' : '';
+      const cls = delta > 0.05 ? 'delta-positive' : delta < -0.05 ? 'delta-negative' : 'delta-neutral';
+      deltaHtml = `<span class="${cls}">${sign}${delta.toFixed(1)} %</span>`;
+    }
+    return `<tr>
+      <td>${escHtml(m.label)}</td>
+      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valA)}</td>
+      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valB)}</td>
+      <td class="text-right">${deltaHtml}</td>
+    </tr>`;
+  }).join('');
+
+  $('compare-delta-table').innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead>
+        <tr>
+          <th>Métrique</th>
+          <th class="text-right" style="color:${colors[iA % colors.length]}">${yearA}</th>
+          <th class="text-right" style="color:${colors[iB % colors.length]}">${yearB}</th>
+          <th class="text-right">Variation</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
 }
 
 
