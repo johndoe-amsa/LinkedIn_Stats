@@ -369,10 +369,11 @@ function resetDashboard() {
    ═══════════════════════════════════════════════════════════════ */
 
 const TAB_META = {
-  bilan:       { label: 'Le Bilan',                   title: 'Synthèse du compte' },
-  matrice:     { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
-  entonnoir:   { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
-  laboratoire: { label: 'Le Laboratoire',              title: 'Tops & Flops' },
+  bilan:         { label: 'Le Bilan',                   title: 'Synthèse du compte' },
+  matrice:       { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
+  entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
+  laboratoire:   { label: 'Le Laboratoire',              title: 'Tops & Flops' },
+  statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
 };
 
 function switchTab(tabId) {
@@ -401,7 +402,8 @@ function renderActiveTab() {
     case 'bilan':       renderBilan(data); break;
     case 'matrice':     renderMatrice(data); break;
     case 'entonnoir':   renderEntonnoir(data); break;
-    case 'laboratoire': renderLaboratoire(data); break;
+    case 'laboratoire':  renderLaboratoire(data); break;
+    case 'statistiques': renderStatistiques(data); break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
@@ -1299,6 +1301,172 @@ function sortData(data, col, dir) {
       case 'engagement':   return mult * (a.tauxEngagement - b.tauxEngagement);
       default:             return 0;
     }
+  });
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB 5: STATISTIQUES PAR ANNÉE
+   ═══════════════════════════════════════════════════════════════ */
+
+const MONTH_LABELS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc'];
+
+function renderStatistiques(data) {
+  renderYtdCumulChart(data);
+  renderYearlyTotalChart(data);
+}
+
+function renderYtdCumulChart(data) {
+  destroyChart('chart-ytd-cumul');
+  if (!data.length) return;
+
+  /* Group posts by year then by month (0-indexed) */
+  const byYear = {};
+  data.forEach(d => {
+    if (!d.date) return;
+    const y = d.date.getFullYear();
+    const m = d.date.getMonth();
+    if (!byYear[y]) byYear[y] = new Array(12).fill(0);
+    byYear[y][m]++;
+  });
+
+  const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+  const colors = DATA_COLORS();
+  const pointShapes = POINT_STYLES;
+
+  const datasets = years.map((year, i) => {
+    const counts = byYear[year];
+    /* Cumulative sum month by month */
+    const cumul = [];
+    let acc = 0;
+    for (let m = 0; m < 12; m++) {
+      acc += counts[m];
+      /* Only include months up to last month with data for this year */
+      cumul.push(acc);
+    }
+    /* Trim trailing zeros beyond the last month that has data */
+    let lastNonZero = 11;
+    while (lastNonZero > 0 && byYear[year][lastNonZero] === 0) lastNonZero--;
+    const trimmed = cumul.slice(0, lastNonZero + 1);
+
+    const color = colors[i % colors.length];
+    return {
+      label: String(year),
+      data: trimmed,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      pointBackgroundColor: color,
+      pointStyle: pointShapes[i % pointShapes.length],
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2,
+      tension: 0.3,
+    };
+  });
+
+  const ctx = $('chart-ytd-cumul').getContext('2d');
+  state.charts['chart-ytd-cumul'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => MONTH_LABELS[items[0].dataIndex],
+            label: (item) => ` ${item.dataset.label} : ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { color: C.muted() } }),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { color: C.muted(), stepSize: 1, precision: 0 },
+        }),
+      },
+    },
+  });
+}
+
+function renderYearlyTotalChart(data) {
+  destroyChart('chart-yearly-total');
+  if (!data.length) return;
+
+  /* Count publications per year */
+  const byYear = {};
+  data.forEach(d => {
+    if (!d.date) return;
+    const y = d.date.getFullYear();
+    byYear[y] = (byYear[y] || 0) + 1;
+  });
+
+  const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+  const counts = years.map(y => byYear[y]);
+  const colors = DATA_COLORS();
+
+  const ctx = $('chart-yearly-total').getContext('2d');
+  state.charts['chart-yearly-total'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [{
+        label: 'Publications',
+        data: counts,
+        backgroundColor: years.map((_, i) => colors[i % colors.length]),
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
+          },
+        },
+        datalabels: undefined,
+      },
+      scales: {
+        x: scaleX({ ticks: { color: C.muted() } }),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: {
+            color: C.muted(),
+            stepSize: 20,
+            precision: 0,
+          },
+        }),
+      },
+      animation: {
+        onComplete: function() {
+          const chart = this;
+          const ctx2 = chart.ctx;
+          ctx2.save();
+          ctx2.font = `500 12px 'Geist', system-ui, sans-serif`;
+          ctx2.fillStyle = C.muted();
+          ctx2.textAlign = 'center';
+          ctx2.textBaseline = 'bottom';
+          chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            meta.data.forEach((bar, index) => {
+              const value = dataset.data[index];
+              ctx2.fillText(value, bar.x, bar.y - 4);
+            });
+          });
+          ctx2.restore();
+        },
+      },
+    },
   });
 }
 
