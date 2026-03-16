@@ -916,8 +916,12 @@ function renderHeatmap(data) {
       if (cell) {
         const opacity = 0.1 + ((cell.value - globalMin) / range) * 0.7;
         const bg = hexToRgba(heatColor, opacity);
+        const isDark = opacity >= 0.4;
+        const bgCol = cssVar('--color-bg');
+        const textColor  = isDark ? bgCol : cssVar('--color-text');
+        const countColor = isDark ? hexToRgba(bgCol, 0.75) : cssVar('--color-text-muted');
         const displayVal = metric === 'engagement' ? fmtPct(cell.value) : fmt(Math.round(cell.value));
-        html += `<td class="heatmap-cell--value" style="background:${bg}">${displayVal}<span class="heatmap-count">${cell.count} post${cell.count > 1 ? 's' : ''}</span></td>`;
+        html += `<td class="heatmap-cell--value" style="background:${bg};color:${textColor}">${displayVal}<span class="heatmap-count" style="color:${countColor}">${cell.count} post${cell.count > 1 ? 's' : ''}</span></td>`;
       } else {
         html += `<td class="heatmap-cell--empty">—</td>`;
       }
@@ -1587,9 +1591,13 @@ function renderHeatmapJourHeure(data) {
       if (cell) {
         const opacity = 0.08 + ((cell.value - globalMin) / range) * 0.72;
         const bg = hexToRgba(heatColor, opacity);
+        const isDark = opacity >= 0.4;
+        const bgCol = cssVar('--color-bg');
+        const textColor  = isDark ? bgCol : cssVar('--color-text');
+        const countColor = isDark ? hexToRgba(bgCol, 0.75) : cssVar('--color-text-muted');
         const displayVal = metric === 'engagement' ? fmtPct(cell.value) : fmtK(cell.value);
-        html += `<td class="heatmap-jh-cell--value" style="background:${bg}" title="${cell.count} post${cell.count > 1 ? 's' : ''}">`;
-        html += `${escHtml(displayVal)}<span class="heatmap-jh-count">${cell.count}</span></td>`;
+        html += `<td class="heatmap-jh-cell--value" style="background:${bg};color:${textColor}" title="${cell.count} post${cell.count > 1 ? 's' : ''}">`;
+        html += `${escHtml(displayVal)}<span class="heatmap-jh-count" style="color:${countColor}">${cell.count}</span></td>`;
       } else {
         html += `<td class="heatmap-jh-cell--empty">—</td>`;
       }
