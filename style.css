@@ -1422,7 +1422,8 @@ code, kbd {
   padding: 3px 8px;
   border-radius: var(--radius-full);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 500;
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
