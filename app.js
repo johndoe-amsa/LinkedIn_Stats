@@ -433,7 +433,7 @@ const TAB_META = {
   bilan:         { label: 'Le Bilan',                   title: 'Synthèse du compte' },
   matrice:       { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
-  laboratoire:   { label: 'Le Laboratoire',              title: 'Tops & Flops' },
+  laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
   statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
   comparaison:   { label: 'Comparaison',                 title: 'Analyse multi-années' },
 };
