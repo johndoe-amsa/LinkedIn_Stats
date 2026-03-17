@@ -1409,8 +1409,9 @@ code, kbd {
 }
 
 .badge--neutral {
-  background: var(--color-bg-tertiary);
+  background: transparent;
   color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
 }
 
 /* Engagement pill */
@@ -1425,7 +1426,7 @@ code, kbd {
   font-variant-numeric: tabular-nums;
 }
 
-.engagement-pill--low  { background: var(--color-bg-tertiary); color: var(--color-text-muted); }
+.engagement-pill--low  { background: transparent; color: var(--color-text-muted); border: 1px solid var(--color-border); }
 .engagement-pill--mid  { background: rgba(245,166,35,0.1); color: var(--color-warning); }
 .engagement-pill--high { background: rgba(0,112,243,0.08); color: var(--color-success); }
 
