@@ -973,7 +973,7 @@ code, kbd {
 }
 
 .heatmap-cell--value {
-  font-weight: 600;
+  font-weight: 400;
   border-radius: var(--radius-sm);
 }
 
@@ -1042,7 +1042,7 @@ code, kbd {
 }
 
 .heatmap-jh-cell--value {
-  font-weight: 600;
+  font-weight: 400;
   border-radius: 3px;
 }
 
@@ -1422,7 +1422,8 @@ code, kbd {
   padding: 3px 8px;
   border-radius: var(--radius-full);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1650,7 +1651,7 @@ td .engagement-pill--high { color: var(--color-success); }
 
 .compare-kpi-item__value {
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 400;
   letter-spacing: -0.02em;
   color: var(--color-text);
   font-family: var(--font-mono);
