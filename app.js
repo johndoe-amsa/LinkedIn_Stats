@@ -40,6 +40,67 @@ const state = {
 };
 
 
+/* ─── Theme toggle (light / dark / system) ─────────────────── */
+function initThemeToggle() {
+  const saved = localStorage.getItem('linkedin-analytics-theme');
+  if (saved === 'light' || saved === 'dark') {
+    document.documentElement.setAttribute('data-theme', saved);
+  }
+  updateThemeIcons();
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.theme-toggle');
+    if (!btn) return;
+    cycleTheme();
+  });
+}
+
+function cycleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+  let next;
+  if (!current) {
+    /* System mode → force opposite */
+    next = systemDark ? 'light' : 'dark';
+  } else if (current === 'dark') {
+    next = 'light';
+  } else {
+    /* light → remove override (back to system) */
+    next = systemDark ? null : 'dark';
+  }
+
+  if (next) {
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('linkedin-analytics-theme', next);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('linkedin-analytics-theme');
+  }
+
+  updateThemeIcons();
+
+  /* Re-render active charts since Chart.js reads CSS vars at creation time */
+  if (state.filteredData.length > 0) renderActiveTab();
+}
+
+function updateThemeIcons() {
+  const isDark = getEffectiveTheme() === 'dark';
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    /* Show sun icon in dark mode, moon icon in light mode */
+    const iconName = isDark ? 'sun' : 'moon';
+    btn.innerHTML = `<i data-lucide="${iconName}" aria-hidden="true"></i>`;
+  });
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+}
+
+function getEffectiveTheme() {
+  const forced = document.documentElement.getAttribute('data-theme');
+  if (forced) return forced;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+
 /* ─── CSS variable reader ───────────────────────────────────── */
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -353,6 +414,9 @@ document.addEventListener('DOMContentLoaded', () => {
   resetBtn        = $('reset-btn');
 
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+
+  /* Theme toggle */
+  initThemeToggle();
 
   /* Upload interactions */
   const dropZone  = $('drop-zone');
@@ -677,7 +741,61 @@ function renderTrend(elementId, oldVal, newVal) {
 function setKPI(cardId, value) {
   const el = $(cardId).querySelector('.kpi-card__value');
   el.classList.remove('skeleton');
-  el.textContent = value;
+  animateCounter(el, value);
+}
+
+/* ── Counter animation — numbers count up from 0 ── */
+function animateCounter(el, targetText) {
+  /* Parse numeric part from formatted string like "12,5k", "3,45 %", "1 234" */
+  const numMatch = targetText.match(/[\d\s,.]+/);
+  if (!numMatch) { el.textContent = targetText; return; }
+
+  const numStr = numMatch[0].trim();
+  const prefix = targetText.slice(0, numMatch.index);
+  const suffix = targetText.slice(numMatch.index + numMatch[0].length);
+
+  /* Detect decimal separator (comma in fr-FR) */
+  const hasDecimal = numStr.includes(',');
+  const decimalPlaces = hasDecimal ? numStr.split(',')[1].replace(/\s/g, '').length : 0;
+  const targetNum = parseFloat(numStr.replace(/\s/g, '').replace(',', '.'));
+
+  if (isNaN(targetNum) || targetNum === 0) { el.textContent = targetText; return; }
+
+  /* Respect prefers-reduced-motion */
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.textContent = targetText;
+    return;
+  }
+
+  const duration = 600; /* ms */
+  const startTime = performance.now();
+
+  function formatAnimatedNum(n) {
+    if (hasDecimal) {
+      return n.toFixed(decimalPlaces).replace('.', ',');
+    }
+    /* Replicate toLocaleString with spaces for thousands */
+    return Math.round(n).toLocaleString('fr-FR');
+  }
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    /* Expo ease-out for snappy feel */
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = targetNum * eased;
+
+    el.textContent = prefix + formatAnimatedNum(current) + suffix;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      /* Ensure final value is exact */
+      el.textContent = targetText;
+    }
+  }
+
+  requestAnimationFrame(step);
 }
 
 /* ── Timeline: dual axis — data-1 bars / data-2 line + average reference ── */
