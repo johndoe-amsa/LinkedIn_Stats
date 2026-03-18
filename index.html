@@ -26,6 +26,14 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Apply saved theme immediately to prevent flash -->
+  <script>
+    (function() {
+      var t = localStorage.getItem('linkedin-analytics-theme');
+      if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
 </head>
 <body>
 
@@ -33,11 +41,14 @@
        UPLOAD SCREEN
   ══════════════════════════════════════════════ -->
   <div id="upload-screen">
-    <header class="upload-header">
+    <header class="upload-header" style="justify-content: space-between;">
       <div class="upload-header__brand">
         <i data-lucide="bar-chart-2" aria-hidden="true"></i>
         <span>LinkedIn Analytics</span>
       </div>
+      <button type="button" class="theme-toggle" id="theme-toggle-upload" aria-label="Changer le thème clair/sombre">
+        <i data-lucide="moon" aria-hidden="true"></i>
+      </button>
     </header>
 
     <main class="upload-main">
@@ -101,6 +112,9 @@
         <span class="nav__count" id="nav-count"></span>
       </div>
       <div class="nav__actions">
+        <button type="button" class="theme-toggle" id="theme-toggle-nav" aria-label="Changer le thème clair/sombre">
+          <i data-lucide="moon" aria-hidden="true"></i>
+        </button>
         <button type="button" class="btn btn--secondary btn--sm" id="reset-btn">
           <i data-lucide="upload" aria-hidden="true"></i>
           Nouveau fichier
