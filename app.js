@@ -2378,31 +2378,49 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
 function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
   const dA = themeDataMap[themeA];
   const dB = themeDataMap[themeB];
+  const colorA = themeColorMap[themeA];
+  const colorB = themeColorMap[themeB];
 
   const metrics = [
-    { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
-    { label: 'Impressions totales', valA: sum(dA, 'impressions'),                               valB: sum(dB, 'impressions'),                               fmtFn: fmtK   },
-    { label: 'Impressions / post',  valA: dA.length ? sum(dA, 'impressions') / dA.length : 0,  valB: dB.length ? sum(dB, 'impressions') / dB.length : 0,  fmtFn: fmtK   },
-    { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                            valB: avg(dB, 'tauxEngagement'),                            fmtFn: fmtPct },
-    { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                 valB: avg(dB, 'tauxClics'),                                 fmtFn: fmtPct },
-    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
+    { label: 'Publications',        valA: dA.length,                                          valB: dB.length,                                          fmtFn: fmt    },
+    { label: 'Impressions totales', valA: sum(dA, 'impressions'),                              valB: sum(dB, 'impressions'),                              fmtFn: fmtK   },
+    { label: 'Impressions / post',  valA: dA.length ? sum(dA,'impressions')/dA.length : 0,    valB: dB.length ? sum(dB,'impressions')/dB.length : 0,    fmtFn: fmtK   },
+    { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                           valB: avg(dB, 'tauxEngagement'),                           fmtFn: fmtPct },
+    { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                valB: avg(dB, 'tauxClics'),                                fmtFn: fmtPct },
+    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                        valB: sum(dB, 'totalInteractions'),                        fmtFn: fmt    },
   ];
 
   const rows = metrics.map(m => {
-    const delta = m.valA === 0 ? null : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-    let deltaHtml;
-    if (delta === null) {
-      deltaHtml = `<span class="delta-neutral">—</span>`;
+    /* Proportional split bar — minimum 3% per side so it's always visible */
+    const total = m.valA + m.valB;
+    const pctA  = total > 0 ? Math.max((m.valA / total) * 100, 3) : 50;
+    const pctB  = total > 0 ? Math.max((m.valB / total) * 100, 3) : 50;
+
+    /* Advantage badge: who wins and by how much */
+    let badgeHtml;
+    if (m.valA === 0 && m.valB === 0) {
+      badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">—</span>`;
+    } else if (Math.abs(m.valA - m.valB) / Math.max(Math.abs(m.valA), Math.abs(m.valB)) <= 0.005) {
+      badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
+    } else if (m.valA >= m.valB) {
+      const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">A&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
     } else {
-      const sign = delta >= 0 ? '+' : '';
-      const cls = delta > 0.05 ? 'delta-positive' : delta < -0.05 ? 'delta-negative' : 'delta-neutral';
-      deltaHtml = `<span class="${cls}">${sign}${delta.toFixed(1)} %</span>`;
+      const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">B&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
     }
+
     return `<tr>
-      <td>${escHtml(m.label)}</td>
-      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valA)}</td>
-      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valB)}</td>
-      <td class="text-right">${deltaHtml}</td>
+      <td class="ct-delta-metric">${escHtml(m.label)}</td>
+      <td class="ct-delta-val text-right">${m.fmtFn(m.valA)}</td>
+      <td class="ct-delta-split">
+        <div class="ct-split-bar">
+          <div class="ct-split-bar__seg" style="width:${pctA.toFixed(1)}%;background:${colorA}"></div>
+          <div class="ct-split-bar__seg" style="width:${pctB.toFixed(1)}%;background:${colorB}"></div>
+        </div>
+      </td>
+      <td class="ct-delta-val text-right">${m.fmtFn(m.valB)}</td>
+      <td class="ct-delta-adv text-right">${badgeHtml}</td>
     </tr>`;
   }).join('');
 
@@ -2411,9 +2429,14 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
       <thead>
         <tr>
           <th>Métrique</th>
-          <th class="text-right" style="color:${themeColorMap[themeA]}">${escHtml(themeA)}</th>
-          <th class="text-right" style="color:${themeColorMap[themeB]}">${escHtml(themeB)}</th>
-          <th class="text-right">Variation</th>
+          <th class="text-right">
+            <span class="ct-th-theme" style="--theme-color:${colorA}"><span class="ct-th-dot"></span>${escHtml(themeA)}</span>
+          </th>
+          <th class="ct-delta-split-th">Répartition</th>
+          <th class="text-right">
+            <span class="ct-th-theme" style="--theme-color:${colorB}"><span class="ct-th-dot"></span>${escHtml(themeB)}</span>
+          </th>
+          <th class="text-right">Avantage</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>

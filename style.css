@@ -1787,13 +1787,85 @@ td .engagement-pill--high { color: var(--color-success); }
   font-variant-numeric: tabular-nums;
 }
 
-/* Delta table */
+/* Delta table — year comparison (legacy) */
 .delta-positive { color: var(--color-success); font-weight: 600; }
 .delta-negative { color: var(--color-error);   font-weight: 600; }
 .delta-neutral  { color: var(--color-text-muted); }
 
-#ct-delta-section {
-  margin-bottom: var(--space-6);
+/* Delta table — theme comparison */
+#ct-delta-section { margin-bottom: var(--space-6); }
+
+.ct-th-theme {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--theme-color);
+}
+
+.ct-th-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--theme-color);
+  flex-shrink: 0;
+}
+
+.ct-delta-metric {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.ct-delta-val {
+  font-size: 13px;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.ct-delta-split-th {
+  text-align: center !important;
+  width: 120px;
+}
+
+.ct-delta-split {
+  padding: var(--space-2) var(--space-4) !important;
+  vertical-align: middle;
+  min-width: 100px;
+}
+
+.ct-split-bar {
+  display: flex;
+  height: 8px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  gap: 2px;
+  width: 100%;
+}
+
+.ct-split-bar__seg {
+  height: 100%;
+  min-width: 3px;
+  border-radius: 2px;
+}
+
+.ct-delta-adv {
+  min-width: 96px;
+}
+
+.ct-adv-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  background: var(--color-bg-tertiary);
+}
+
+.ct-adv-badge--neutral {
+  color: var(--color-text-muted);
 }
 
 @media (max-width: 1024px) {
