@@ -2121,50 +2121,39 @@ function renderCTSelectors(allThemes) {
   selA.innerHTML = opts;
   selB.innerHTML = opts;
 
-  /* Restore selections */
-  if (state.compareThemes[0] && allThemes.includes(state.compareThemes[0])) {
-    selA.value = state.compareThemes[0];
-  }
-  if (state.compareThemes[1] && allThemes.includes(state.compareThemes[1])) {
-    selB.value = state.compareThemes[1];
-  }
-
-  /* Change handler with auto-swap on duplicate */
-  function onSelectChange(changedSel, otherSel, changedIdx, otherIdx) {
-    return () => {
-      const newVal = changedSel.value;
-      const otherVal = otherSel.value;
-
-      /* If the new value matches the other dropdown → swap */
-      if (newVal && newVal === otherVal) {
-        const prevVal = state.compareThemes[changedIdx] || '';
-        otherSel.value = prevVal;
-        state.compareThemes[otherIdx] = prevVal || undefined;
-      }
-
-      state.compareThemes[changedIdx] = newVal || undefined;
-
-      /* Clean up: keep only defined entries, maintain positions */
-      const a = state.compareThemes[0] || '';
-      const b = state.compareThemes[1] || '';
-      state.compareThemes = [];
-      if (a) state.compareThemes[0] = a;
-      if (b) state.compareThemes[1] = b;
-      /* Compact to real array for length check */
-      state.compareThemes = state.compareThemes.filter(Boolean);
-
-      renderCompareThemes(state.filteredData);
-    };
-  }
-
-  /* Remove old listeners by cloning */
+  /* Clone FIRST (cloneNode doesn't preserve programmatic .value) */
   const newA = selA.cloneNode(true);
   const newB = selB.cloneNode(true);
   selA.parentNode.replaceChild(newA, selA);
   selB.parentNode.replaceChild(newB, selB);
 
-  newA.addEventListener('change', onSelectChange(newA, newB, 0, 1));
-  newB.addEventListener('change', onSelectChange(newB, newA, 1, 0));
+  /* Restore .value on the clones now in DOM */
+  if (state.compareThemes[0] && allThemes.includes(state.compareThemes[0])) {
+    newA.value = state.compareThemes[0];
+  }
+  if (state.compareThemes[1] && allThemes.includes(state.compareThemes[1])) {
+    newB.value = state.compareThemes[1];
+  }
+
+  /* Change handler — reads state for swap detection, not DOM */
+  function handleChange(changedIdx, otherIdx) {
+    return (e) => {
+      const newVal = e.target.value;
+      const otherVal = state.compareThemes[otherIdx] || '';
+
+      if (newVal && newVal === otherVal) {
+        /* Swap: give the other dropdown the previous value of this one */
+        state.compareThemes[otherIdx] = state.compareThemes[changedIdx] || '';
+      }
+
+      state.compareThemes[changedIdx] = newVal;
+      state.compareThemes = state.compareThemes.filter(Boolean);
+      renderCompareThemes(state.filteredData);
+    };
+  }
+
+  newA.addEventListener('change', handleChange(0, 1));
+  newB.addEventListener('change', handleChange(1, 0));
 
   /* Swap button */
   const newSwap = swapBtn.cloneNode(true);
