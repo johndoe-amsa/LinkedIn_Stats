@@ -2082,7 +2082,7 @@ function renderCompareThemes(data) {
   const themeColorMap = {};
   allThemes.forEach((t, i) => { themeColorMap[t] = colors[i % colors.length]; });
 
-  renderThemePills(allThemes, themeColorMap);
+  renderCTSelectors(allThemes);
 
   const selected = state.compareThemes.slice();
   const hasEnough = selected.length === 2;
@@ -2098,37 +2098,80 @@ function renderCompareThemes(data) {
   });
 
   renderCTKPIs(themeDataMap, selected, themeColorMap);
+
+  /* Delta table first */
+  $('ct-delta-title').textContent = `${selected[0]} vs ${selected[1]} — Variation`;
+  renderCTDelta(themeDataMap, selected[0], selected[1], themeColorMap);
+
+  /* Then charts */
   renderCTPostsChart(themeDataMap, selected, themeColorMap);
   renderCTImpressionsChart(themeDataMap, selected, themeColorMap);
   renderCTPerfChart(themeDataMap, selected, themeColorMap);
   renderCTTrendChart(themeDataMap, selected, themeColorMap);
-
-  $('ct-delta-title').textContent = `${selected[0]} vs ${selected[1]} — Variation`;
-  renderCTDelta(themeDataMap, selected[0], selected[1], themeColorMap);
 }
 
-function renderThemePills(allThemes, themeColorMap) {
-  const container = $('ct-theme-pills');
-  container.innerHTML = allThemes.map(t => {
-    const active = state.compareThemes.includes(t) ? 'is-active' : '';
-    const color = themeColorMap[t];
-    return `<button class="year-pill ${active}" data-theme="${escHtml(t)}" style="--pill-color:${color}" aria-pressed="${state.compareThemes.includes(t)}">${escHtml(t)}</button>`;
-  }).join('');
+function renderCTSelectors(allThemes) {
+  const selA = $('ct-theme-a');
+  const selB = $('ct-theme-b');
+  const swapBtn = $('ct-swap');
 
-  container.querySelectorAll('.year-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const t = btn.dataset.theme;
-      const idx = state.compareThemes.indexOf(t);
-      if (idx >= 0) {
-        state.compareThemes.splice(idx, 1);
-      } else {
-        if (state.compareThemes.length >= 2) {
-          state.compareThemes.shift(); /* FIFO: remove oldest */
-        }
-        state.compareThemes.push(t);
+  const opts = '<option value="">— Choisir —</option>' +
+    allThemes.map(t => `<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('');
+
+  selA.innerHTML = opts;
+  selB.innerHTML = opts;
+
+  /* Restore selections */
+  if (state.compareThemes[0] && allThemes.includes(state.compareThemes[0])) {
+    selA.value = state.compareThemes[0];
+  }
+  if (state.compareThemes[1] && allThemes.includes(state.compareThemes[1])) {
+    selB.value = state.compareThemes[1];
+  }
+
+  /* Change handler with auto-swap on duplicate */
+  function onSelectChange(changedSel, otherSel, changedIdx, otherIdx) {
+    return () => {
+      const newVal = changedSel.value;
+      const otherVal = otherSel.value;
+
+      /* If the new value matches the other dropdown → swap */
+      if (newVal && newVal === otherVal) {
+        const prevVal = state.compareThemes[changedIdx] || '';
+        otherSel.value = prevVal;
+        state.compareThemes[otherIdx] = prevVal || undefined;
       }
+
+      state.compareThemes[changedIdx] = newVal || undefined;
+
+      /* Clean up: keep only defined entries, maintain positions */
+      const a = state.compareThemes[0] || '';
+      const b = state.compareThemes[1] || '';
+      state.compareThemes = [];
+      if (a) state.compareThemes[0] = a;
+      if (b) state.compareThemes[1] = b;
+      /* Compact to real array for length check */
+      state.compareThemes = state.compareThemes.filter(Boolean);
+
       renderCompareThemes(state.filteredData);
-    });
+    };
+  }
+
+  /* Remove old listeners by cloning */
+  const newA = selA.cloneNode(true);
+  const newB = selB.cloneNode(true);
+  selA.parentNode.replaceChild(newA, selA);
+  selB.parentNode.replaceChild(newB, selB);
+
+  newA.addEventListener('change', onSelectChange(newA, newB, 0, 1));
+  newB.addEventListener('change', onSelectChange(newB, newA, 1, 0));
+
+  /* Swap button */
+  const newSwap = swapBtn.cloneNode(true);
+  swapBtn.parentNode.replaceChild(newSwap, swapBtn);
+  newSwap.addEventListener('click', () => {
+    state.compareThemes = [state.compareThemes[1], state.compareThemes[0]].filter(Boolean);
+    renderCompareThemes(state.filteredData);
   });
 }
 
