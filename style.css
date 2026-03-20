@@ -1792,6 +1792,9 @@ td .engagement-pill--high { color: var(--color-success); }
 .delta-negative { color: var(--color-error);   font-weight: 600; }
 .delta-neutral  { color: var(--color-text-muted); }
 
+#ct-delta-section {
+  margin-bottom: var(--space-6);
+}
 
 @media (max-width: 1024px) {
   .upload-header,

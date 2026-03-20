@@ -2077,10 +2077,11 @@ function renderCompareThemes(data) {
   /* Prune invalid selections */
   state.compareThemes = state.compareThemes.filter(t => allThemes.includes(t));
 
-  /* Stable color map: theme → color, keyed by position */
+  /* Fixed colors: theme A = data-1, theme B = data-2 */
   const colors = DATA_COLORS();
   const themeColorMap = {};
-  allThemes.forEach((t, i) => { themeColorMap[t] = colors[i % colors.length]; });
+  if (state.compareThemes[0]) themeColorMap[state.compareThemes[0]] = colors[0];
+  if (state.compareThemes[1]) themeColorMap[state.compareThemes[1]] = colors[1];
 
   renderCTSelectors(allThemes);
 
