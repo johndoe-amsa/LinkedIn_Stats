@@ -207,6 +207,10 @@
             <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
             Comparaison
           </button>
+          <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false">
+            <i data-lucide="palette" aria-hidden="true"></i>
+            Comparaison Thèmes
+          </button>
         </div>
 
 
@@ -621,6 +625,105 @@
           </div><!-- /#compare-content -->
 
         </div><!-- /#panel-comparaison -->
+
+        <!-- ══════════════════════════════════════════
+             TAB 7 — COMPARAISON THÈMES
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-compare-themes" role="tabpanel">
+
+          <!-- Theme selector -->
+          <div class="compare-controls">
+            <div>
+              <p class="section-label">Thèmes</p>
+              <h3 class="compare-controls__title">Sélectionnez 2 thèmes à comparer</h3>
+            </div>
+            <div class="year-pills" id="ct-theme-pills" role="group" aria-label="Sélection des thèmes à comparer"></div>
+          </div>
+
+          <!-- Empty state -->
+          <div class="empty-state" id="ct-empty">
+            <i data-lucide="palette" aria-hidden="true"></i>
+            <p class="empty-state__title">Sélectionnez exactement 2 thèmes</p>
+            <p class="empty-state__desc">Cliquez sur les thèmes ci-dessus pour les comparer.</p>
+          </div>
+
+          <!-- Main content -->
+          <div id="ct-content" hidden>
+
+            <!-- KPI cards -->
+            <div class="compare-kpis" id="ct-kpis" aria-label="KPIs par thème"></div>
+
+            <!-- Charts -->
+            <section class="charts-grid" aria-label="Graphiques de comparaison des thèmes">
+
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Volume de contenu</p>
+                    <h3 class="chart-card__title">Publications par thème</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-ct-posts" aria-label="Nombre de publications par thème"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Portée moyenne</p>
+                    <h3 class="chart-card__title">Impressions moyennes / post</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-ct-impressions" aria-label="Impressions moyennes par post et par thème"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Taux de performance</p>
+                    <h3 class="chart-card__title">Engagement & Clics par thème</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-ct-perf" aria-label="Taux d'engagement et de clics comparés par thème"></canvas>
+                </div>
+              </div>
+
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Tendance mensuelle</p>
+                    <h3 class="chart-card__title">Engagement moyen par mois</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-ct-trend" aria-label="Évolution mensuelle du taux d'engagement par thème"></canvas>
+                </div>
+              </div>
+
+            </section>
+
+            <!-- Delta table -->
+            <section id="ct-delta-section">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Analyse différentielle</p>
+                    <h3 class="chart-card__title" id="ct-delta-title">Variation Thème A vs Thème B</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body chart-card__body--table">
+                  <div class="table-wrapper" id="ct-delta-table"></div>
+                </div>
+              </div>
+            </section>
+
+          </div><!-- /#ct-content -->
+
+        </div><!-- /#panel-compare-themes -->
 
       </div><!-- /.dashboard-main -->
     </main>

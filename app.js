@@ -35,6 +35,9 @@ const state = {
   /* Comparaison tab: selected years */
   compareYears: [],
 
+  /* Comparaison Thèmes tab: selected themes */
+  compareThemes: [],
+
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
 };
@@ -499,7 +502,8 @@ const TAB_META = {
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
   laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
   statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
-  comparaison:   { label: 'Comparaison',                 title: 'Analyse multi-années' },
+  comparaison:      { label: 'Comparaison',                 title: 'Analyse multi-années' },
+  'compare-themes': { label: 'Comparaison Thèmes',          title: 'Comparaison entre thèmes' },
 };
 
 function switchTab(tabId) {
@@ -530,7 +534,8 @@ function renderActiveTab() {
     case 'entonnoir':   renderEntonnoir(data); break;
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatistiques(data); break;
-    case 'comparaison':  renderComparaison(data);  break;
+    case 'comparaison':     renderComparaison(data);    break;
+    case 'compare-themes':  renderCompareThemes(data);  break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
@@ -2054,6 +2059,327 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
           <th>Métrique</th>
           <th class="text-right" style="color:${yearColorMap[yearA]}">${yearA}</th>
           <th class="text-right" style="color:${yearColorMap[yearB]}">${yearB}</th>
+          <th class="text-right">Variation</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB 7: COMPARAISON THÈMES
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderCompareThemes(data) {
+  const allThemes = [...new Set(data.filter(d => d.theme && d.theme !== '—').map(d => d.theme))].sort((a, b) => a.localeCompare(b, 'fr'));
+
+  /* Prune invalid selections */
+  state.compareThemes = state.compareThemes.filter(t => allThemes.includes(t));
+
+  /* Stable color map: theme → color, keyed by position */
+  const colors = DATA_COLORS();
+  const themeColorMap = {};
+  allThemes.forEach((t, i) => { themeColorMap[t] = colors[i % colors.length]; });
+
+  renderThemePills(allThemes, themeColorMap);
+
+  const selected = state.compareThemes.slice();
+  const hasEnough = selected.length === 2;
+
+  $('ct-content').hidden = !hasEnough;
+  $('ct-empty').hidden = hasEnough;
+
+  if (!hasEnough) return;
+
+  const themeDataMap = {};
+  selected.forEach(t => {
+    themeDataMap[t] = data.filter(d => d.theme === t);
+  });
+
+  renderCTKPIs(themeDataMap, selected, themeColorMap);
+  renderCTPostsChart(themeDataMap, selected, themeColorMap);
+  renderCTImpressionsChart(themeDataMap, selected, themeColorMap);
+  renderCTPerfChart(themeDataMap, selected, themeColorMap);
+  renderCTTrendChart(themeDataMap, selected, themeColorMap);
+
+  $('ct-delta-title').textContent = `${selected[0]} vs ${selected[1]} — Variation`;
+  renderCTDelta(themeDataMap, selected[0], selected[1], themeColorMap);
+}
+
+function renderThemePills(allThemes, themeColorMap) {
+  const container = $('ct-theme-pills');
+  container.innerHTML = allThemes.map(t => {
+    const active = state.compareThemes.includes(t) ? 'is-active' : '';
+    const color = themeColorMap[t];
+    return `<button class="year-pill ${active}" data-theme="${escHtml(t)}" style="--pill-color:${color}" aria-pressed="${state.compareThemes.includes(t)}">${escHtml(t)}</button>`;
+  }).join('');
+
+  container.querySelectorAll('.year-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const t = btn.dataset.theme;
+      const idx = state.compareThemes.indexOf(t);
+      if (idx >= 0) {
+        state.compareThemes.splice(idx, 1);
+      } else {
+        if (state.compareThemes.length >= 2) {
+          state.compareThemes.shift(); /* FIFO: remove oldest */
+        }
+        state.compareThemes.push(t);
+      }
+      renderCompareThemes(state.filteredData);
+    });
+  });
+}
+
+function renderCTKPIs(themeDataMap, themes, themeColorMap) {
+  $('ct-kpis').innerHTML = themes.map(t => {
+    const d = themeDataMap[t];
+    const color = themeColorMap[t];
+    return `
+      <div class="compare-year-card">
+        <div class="compare-year-card__header">
+          <span class="compare-year-card__dot" style="--year-color:${color}"></span>
+          <span class="compare-year-card__year">${escHtml(t)}</span>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Publications</p>
+          <p class="compare-kpi-item__value">${fmt(d.length)}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Impressions totales</p>
+          <p class="compare-kpi-item__value">${fmtK(sum(d, 'impressions'))}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Engagement moy.</p>
+          <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxEngagement'))}</p>
+        </div>
+        <div class="compare-kpi-item">
+          <p class="compare-kpi-item__label">Taux de clics moy.</p>
+          <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxClics'))}</p>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderCTPostsChart(themeDataMap, themes, themeColorMap) {
+  destroyChart('chart-ct-posts');
+  const ctx = $('chart-ct-posts').getContext('2d');
+  state.charts['chart-ct-posts'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: themes,
+      datasets: [{
+        label: 'Publications',
+        data: themes.map(t => themeDataMap[t].length),
+        backgroundColor: themes.map(t => themeColorMap[t]),
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ beginAtZero: true, ticks: { precision: 0 } }),
+      },
+    },
+  });
+}
+
+function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
+  destroyChart('chart-ct-impressions');
+  const ctx = $('chart-ct-impressions').getContext('2d');
+  state.charts['chart-ct-impressions'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: themes,
+      datasets: [{
+        label: 'Impressions moy. / post',
+        data: themes.map(t => {
+          const d = themeDataMap[t];
+          return d.length > 0 ? sum(d, 'impressions') / d.length : 0;
+        }),
+        backgroundColor: themes.map(t => themeColorMap[t]),
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${fmtK(item.parsed.y)} impressions / post`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ beginAtZero: true }),
+      },
+    },
+  });
+}
+
+function renderCTPerfChart(themeDataMap, themes, themeColorMap) {
+  destroyChart('chart-ct-perf');
+  const allColors = DATA_COLORS();
+  const ctx = $('chart-ct-perf').getContext('2d');
+  state.charts['chart-ct-perf'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: themes,
+      datasets: [
+        {
+          label: 'Engagement moyen (%)',
+          data: themes.map(t => avg(themeDataMap[t], 'tauxEngagement')),
+          backgroundColor: hexToRgba(allColors[0], 0.9),
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: 'Taux de clics moyen (%)',
+          data: themes.map(t => avg(themeDataMap[t], 'tauxClics')),
+          backgroundColor: hexToRgba(allColors[1], 0.9),
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+        }),
+      },
+    },
+  });
+}
+
+function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
+  destroyChart('chart-ct-trend');
+  const datasets = themes.map((t, i) => {
+    const d = themeDataMap[t];
+    const color = themeColorMap[t];
+    const byMonth = Array.from({ length: 12 }, (_, m) => {
+      const rows = d.filter(r => r.date && r.date.getMonth() === m);
+      return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
+    });
+    return {
+      label: t,
+      data: byMonth,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      pointBackgroundColor: color,
+      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2,
+      tension: 0.3,
+      spanGaps: true,
+    };
+  });
+
+  const ctx = $('chart-ct-trend').getContext('2d');
+  state.charts['chart-ct-trend'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => MONTH_LABELS[items[0].dataIndex],
+            label: (item) => item.parsed.y !== null
+              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`
+              : ` ${item.dataset.label} : —`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+        }),
+      },
+    },
+  });
+}
+
+function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
+  const dA = themeDataMap[themeA];
+  const dB = themeDataMap[themeB];
+
+  const metrics = [
+    { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
+    { label: 'Impressions totales', valA: sum(dA, 'impressions'),                               valB: sum(dB, 'impressions'),                               fmtFn: fmtK   },
+    { label: 'Impressions / post',  valA: dA.length ? sum(dA, 'impressions') / dA.length : 0,  valB: dB.length ? sum(dB, 'impressions') / dB.length : 0,  fmtFn: fmtK   },
+    { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                            valB: avg(dB, 'tauxEngagement'),                            fmtFn: fmtPct },
+    { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                 valB: avg(dB, 'tauxClics'),                                 fmtFn: fmtPct },
+    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
+  ];
+
+  const rows = metrics.map(m => {
+    const delta = m.valA === 0 ? null : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
+    let deltaHtml;
+    if (delta === null) {
+      deltaHtml = `<span class="delta-neutral">—</span>`;
+    } else {
+      const sign = delta >= 0 ? '+' : '';
+      const cls = delta > 0.05 ? 'delta-positive' : delta < -0.05 ? 'delta-negative' : 'delta-neutral';
+      deltaHtml = `<span class="${cls}">${sign}${delta.toFixed(1)} %</span>`;
+    }
+    return `<tr>
+      <td>${escHtml(m.label)}</td>
+      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valA)}</td>
+      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valB)}</td>
+      <td class="text-right">${deltaHtml}</td>
+    </tr>`;
+  }).join('');
+
+  $('ct-delta-table').innerHTML = `
+    <table class="data-table" style="width:100%">
+      <thead>
+        <tr>
+          <th>Métrique</th>
+          <th class="text-right" style="color:${themeColorMap[themeA]}">${escHtml(themeA)}</th>
+          <th class="text-right" style="color:${themeColorMap[themeB]}">${escHtml(themeB)}</th>
           <th class="text-right">Variation</th>
         </tr>
       </thead>
