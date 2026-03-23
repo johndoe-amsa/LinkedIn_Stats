@@ -1829,9 +1829,9 @@ td .engagement-pill--high { color: var(--color-success); }
 }
 
 .ct-delta-split {
-  padding: var(--space-2) var(--space-4) !important;
+  padding: var(--space-2) var(--space-3) !important;
   vertical-align: middle;
-  min-width: 100px;
+  width: 120px;
 }
 
 .ct-split-bar {
@@ -1859,7 +1859,7 @@ td .engagement-pill--high { color: var(--color-success); }
   padding: 2px var(--space-2);
   border-radius: var(--radius-sm);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 400;
   font-family: var(--font-mono);
   background: var(--color-bg-tertiary);
 }
