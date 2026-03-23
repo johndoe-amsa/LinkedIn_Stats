@@ -502,7 +502,7 @@ const TAB_META = {
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
   laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
   statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
-  comparaison:      { label: 'Comparaison',                 title: 'Analyse multi-années' },
+  comparaison:      { label: 'Comparaison Annuelle',         title: 'Analyse multi-années' },
   'compare-themes': { label: 'Comparaison Thèmes',          title: 'Comparaison entre thèmes' },
 };
 
@@ -1774,10 +1774,6 @@ function renderComparaison(data) {
   });
 
   renderCompareKPIs(yearDataMap, selected, yearColorMap);
-  renderComparePostsChart(yearDataMap, selected, yearColorMap);
-  renderCompareImpressionsChart(yearDataMap, selected, yearColorMap);
-  renderComparePerfChart(yearDataMap, selected, yearColorMap);
-  renderCompareTrendChart(yearDataMap, selected, yearColorMap);
 
   const deltaSection = $('compare-delta-section');
   if (selected.length === 2) {
@@ -1787,6 +1783,11 @@ function renderComparaison(data) {
   } else {
     deltaSection.hidden = true;
   }
+
+  renderComparePostsChart(yearDataMap, selected, yearColorMap);
+  renderCompareDistImpressionsChart(yearDataMap, selected, yearColorMap);
+  renderCompareRadarChart(yearDataMap, selected, yearColorMap);
+  renderCompareTrendChart(yearDataMap, selected, yearColorMap);
 }
 
 function renderYearPills(allYears, yearColorMap) {
@@ -1877,24 +1878,44 @@ function renderComparePostsChart(yearDataMap, years, yearColorMap) {
   });
 }
 
-function renderCompareImpressionsChart(yearDataMap, years, yearColorMap) {
-  destroyChart('chart-compare-impressions');
-  const ctx = $('chart-compare-impressions').getContext('2d');
-  state.charts['chart-compare-impressions'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(String),
-      datasets: [{
-        label: 'Impressions moy. / post',
-        data: years.map(y => {
-          const d = yearDataMap[y];
-          return d.length > 0 ? sum(d, 'impressions') / d.length : 0;
-        }),
-        backgroundColor: years.map(y => yearColorMap[y]),
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
-    },
+function renderCompareDistImpressionsChart(yearDataMap, years, yearColorMap) {
+  destroyChart('chart-compare-dist-impressions');
+
+  // One scatter dataset per year (one dot = one post)
+  const scatterDatasets = years.map((y, i) => ({
+    label: String(y),
+    type: 'scatter',
+    data: yearDataMap[y].map((post, idx) => ({
+      x: i + ((idx % 9) - 4) * 0.04,  // deterministic jitter ±0.16
+      y: post.impressions,
+      pub: post.publication,
+    })),
+    backgroundColor: hexToRgba(yearColorMap[y], 0.65),
+    borderColor: 'transparent',
+    pointRadius: 5,
+    pointHoverRadius: 7,
+  }));
+
+  // Average marker: short horizontal dashed segment per year
+  const avgDatasets = years.map((y, i) => {
+    const mean = yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0;
+    return {
+      label: `_avg_${y}`,
+      type: 'line',
+      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      borderColor: yearColorMap[y],
+      borderWidth: 2.5,
+      borderDash: [4, 3],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0,
+    };
+  });
+
+  const ctx = $('chart-compare-dist-impressions').getContext('2d');
+  state.charts['chart-compare-dist-impressions'] = new Chart(ctx, {
+    type: 'scatter',
+    data: { datasets: [...scatterDatasets, ...avgDatasets] },
     options: {
       responsive: true,
       maintainAspectRatio: true,
@@ -1902,65 +1923,104 @@ function renderCompareImpressionsChart(yearDataMap, years, yearColorMap) {
         legend: { display: false },
         tooltip: {
           ...tooltipBase(),
+          filter: (item) => !item.dataset.label.startsWith('_avg_'),
           callbacks: {
-            title: (items) => String(items[0].label),
-            label: (item) => ` ${fmtK(item.parsed.y)} impressions / post`,
+            title: (items) => {
+              const raw = items[0].raw;
+              return raw.pub ? truncate(raw.pub, 44) : String(years[Math.round(items[0].parsed.x)]);
+            },
+            label: (item) => ` ${fmtK(item.parsed.y)} impressions`,
           },
         },
       },
       scales: {
-        x: scaleX(),
-        y: scaleY({ beginAtZero: true }),
+        x: {
+          type: 'linear',
+          min: -0.7,
+          max: years.length - 0.3,
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            stepSize: 1,
+            color: C.muted(),
+            callback: (v) => {
+              const idx = Math.round(v);
+              return years[idx] !== undefined ? String(years[idx]) : '';
+            },
+          },
+        },
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => fmtK(v) },
+        }),
       },
     },
   });
 }
 
-function renderComparePerfChart(yearDataMap, years, yearColorMap) {
-  destroyChart('chart-compare-perf');
-  const allColors = DATA_COLORS();
-  const ctx = $('chart-compare-perf').getContext('2d');
-  state.charts['chart-compare-perf'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(String),
-      datasets: [
-        {
-          label: 'Engagement moyen (%)',
-          data: years.map(y => avg(yearDataMap[y], 'tauxEngagement')),
-          backgroundColor: hexToRgba(allColors[0], 0.9),
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-        {
-          label: 'Taux de clics moyen (%)',
-          data: years.map(y => avg(yearDataMap[y], 'tauxClics')),
-          backgroundColor: hexToRgba(allColors[1], 0.9),
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-      ],
-    },
+function renderCompareRadarChart(yearDataMap, years, yearColorMap) {
+  destroyChart('chart-compare-radar');
+
+  const radarMetrics = [
+    { label: 'Engagement',        getValue: (y) => avg(yearDataMap[y], 'tauxEngagement'),                                                    fmt: fmtPct },
+    { label: 'Taux de clics',     getValue: (y) => avg(yearDataMap[y], 'tauxClics'),                                                         fmt: fmtPct },
+    { label: 'Impressions/post',  getValue: (y) => yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0,   fmt: fmtK   },
+    { label: 'Interactions/post', getValue: (y) => avg(yearDataMap[y], 'interactions'),                                                      fmt: (v) => v.toFixed(1) },
+  ];
+
+  // Raw values indexed as [metricIndex][yearIndex]
+  const rawVals = radarMetrics.map(m => years.map(y => m.getValue(y)));
+
+  // Normalize each metric to 0–100 (winner = 100)
+  const normalized = rawVals.map(vals => {
+    const maxVal = Math.max(...vals);
+    return vals.map(v => maxVal > 0 ? (v / maxVal) * 100 : 0);
+  });
+
+  const datasets = years.map((y, yi) => ({
+    label: String(y),
+    data: radarMetrics.map((_, mi) => normalized[mi][yi]),
+    backgroundColor: hexToRgba(yearColorMap[y], 0.15),
+    borderColor: yearColorMap[y],
+    borderWidth: 2,
+    pointBackgroundColor: yearColorMap[y],
+    pointRadius: 4,
+    pointHoverRadius: 6,
+  }));
+
+  const ctx = $('chart-compare-radar').getContext('2d');
+  state.charts['chart-compare-radar'] = new Chart(ctx, {
+    type: 'radar',
+    data: { labels: radarMetrics.map(m => m.label), datasets },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
+      aspectRatio: 2,
       plugins: {
         legend: legendSpec('top', 'end'),
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title: (items) => `Année ${items[0].label}`,
-            label: (item) => ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`,
+            title: (items) => radarMetrics[items[0].dataIndex].label,
+            label: (item) => {
+              const raw = rawVals[item.dataIndex][item.datasetIndex];
+              return ` ${years[item.datasetIndex]} : ${radarMetrics[item.dataIndex].fmt(raw)}`;
+            },
           },
         },
       },
       scales: {
-        x: scaleX(),
-        y: scaleY({
-          beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
-        }),
+        r: {
+          min: 0,
+          max: 100,
+          grid:       { color: C.dataGrid() },
+          angleLines: { color: C.dataGrid() },
+          ticks:      { display: false, stepSize: 25 },
+          pointLabels: {
+            color: C.muted(),
+            font:  { size: 12, family: "'Geist', system-ui, sans-serif" },
+          },
+        },
       },
     },
   });
@@ -2024,6 +2084,8 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
 function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
   const dA = yearDataMap[yearA];
   const dB = yearDataMap[yearB];
+  const colorA = yearColorMap[yearA];
+  const colorB = yearColorMap[yearB];
 
   const metrics = [
     { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
@@ -2035,20 +2097,36 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
   ];
 
   const rows = metrics.map(m => {
-    const delta = m.valA === 0 ? null : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-    let deltaHtml;
-    if (delta === null) {
-      deltaHtml = `<span class="delta-neutral">—</span>`;
+    /* Proportional split bar — minimum 3% per side so it's always visible */
+    const total = m.valA + m.valB;
+    const pctA  = total > 0 ? Math.max((m.valA / total) * 100, 3) : 50;
+    const pctB  = total > 0 ? Math.max((m.valB / total) * 100, 3) : 50;
+
+    /* Advantage badge: who wins and by how much */
+    let badgeHtml;
+    if (m.valA === 0 && m.valB === 0) {
+      badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">—</span>`;
+    } else if (Math.abs(m.valA - m.valB) / Math.max(Math.abs(m.valA), Math.abs(m.valB)) <= 0.005) {
+      badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
+    } else if (m.valA >= m.valB) {
+      const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">${yearA}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
     } else {
-      const sign = delta >= 0 ? '+' : '';
-      const cls = delta > 0.05 ? 'delta-positive' : delta < -0.05 ? 'delta-negative' : 'delta-neutral';
-      deltaHtml = `<span class="${cls}">${sign}${delta.toFixed(1)} %</span>`;
+      const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">${yearB}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
     }
+
     return `<tr>
-      <td>${escHtml(m.label)}</td>
-      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valA)}</td>
-      <td class="text-right" style="font-variant-numeric:tabular-nums;font-family:var(--font-mono)">${m.fmtFn(m.valB)}</td>
-      <td class="text-right">${deltaHtml}</td>
+      <td class="ct-delta-metric">${escHtml(m.label)}</td>
+      <td class="ct-delta-val text-right">${m.fmtFn(m.valA)}</td>
+      <td class="ct-delta-split">
+        <div class="ct-split-bar">
+          <div class="ct-split-bar__seg" style="width:${pctA.toFixed(1)}%;background:${colorA}"></div>
+          <div class="ct-split-bar__seg" style="width:${pctB.toFixed(1)}%;background:${colorB}"></div>
+        </div>
+      </td>
+      <td class="ct-delta-val text-right">${m.fmtFn(m.valB)}</td>
+      <td class="ct-delta-adv text-right">${badgeHtml}</td>
     </tr>`;
   }).join('');
 
@@ -2057,9 +2135,14 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
       <thead>
         <tr>
           <th>Métrique</th>
-          <th class="text-right" style="color:${yearColorMap[yearA]}">${yearA}</th>
-          <th class="text-right" style="color:${yearColorMap[yearB]}">${yearB}</th>
-          <th class="text-right">Variation</th>
+          <th class="text-right">
+            <span class="ct-th-theme" style="--theme-color:${colorA}"><span class="ct-th-dot"></span>${yearA}</span>
+          </th>
+          <th class="ct-delta-split-th">Répartition</th>
+          <th class="text-right">
+            <span class="ct-th-theme" style="--theme-color:${colorB}"><span class="ct-th-dot"></span>${yearB}</span>
+          </th>
+          <th class="text-right">Avantage</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>
