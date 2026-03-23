@@ -2233,22 +2233,42 @@ function renderCTPostsChart(themeDataMap, themes, themeColorMap) {
 
 function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
   destroyChart('chart-ct-impressions');
+
+  // One scatter dataset per theme (one dot = one post)
+  const scatterDatasets = themes.map((t, i) => ({
+    label: t,
+    type: 'scatter',
+    data: themeDataMap[t].map((post, idx) => ({
+      x: i + ((idx % 9) - 4) * 0.04,  // deterministic jitter ±0.16
+      y: post.impressions,
+      pub: post.publication,
+    })),
+    backgroundColor: hexToRgba(themeColorMap[t], 0.65),
+    borderColor: 'transparent',
+    pointRadius: 5,
+    pointHoverRadius: 7,
+  }));
+
+  // Average marker: short horizontal segment per theme
+  const avgDatasets = themes.map((t, i) => {
+    const mean = themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0;
+    return {
+      label: `_avg_${t}`,
+      type: 'line',
+      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      borderColor: themeColorMap[t],
+      borderWidth: 2.5,
+      borderDash: [4, 3],
+      pointRadius: 0,
+      showLine: true,
+      tension: 0,
+    };
+  });
+
   const ctx = $('chart-ct-impressions').getContext('2d');
   state.charts['chart-ct-impressions'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: themes,
-      datasets: [{
-        label: 'Impressions moy. / post',
-        data: themes.map(t => {
-          const d = themeDataMap[t];
-          return d.length > 0 ? sum(d, 'impressions') / d.length : 0;
-        }),
-        backgroundColor: themes.map(t => themeColorMap[t]),
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
-    },
+    type: 'scatter',
+    data: { datasets: [...scatterDatasets, ...avgDatasets] },
     options: {
       responsive: true,
       maintainAspectRatio: true,
@@ -2256,15 +2276,36 @@ function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
         legend: { display: false },
         tooltip: {
           ...tooltipBase(),
+          filter: (item) => !item.dataset.label.startsWith('_avg_'),
           callbacks: {
-            title: (items) => items[0].label,
-            label: (item) => ` ${fmtK(item.parsed.y)} impressions / post`,
+            title: (items) => {
+              const raw = items[0].raw;
+              return raw.pub ? truncate(raw.pub, 44) : themes[Math.round(items[0].parsed.x)];
+            },
+            label: (item) => ` ${fmtK(item.parsed.y)} impressions`,
           },
         },
       },
       scales: {
-        x: scaleX(),
-        y: scaleY({ beginAtZero: true }),
+        x: {
+          type: 'linear',
+          min: -0.7,
+          max: themes.length - 0.3,
+          grid: { display: false },
+          border: { display: false },
+          ticks: {
+            stepSize: 1,
+            color: C.muted(),
+            callback: (v) => {
+              const idx = Math.round(v);
+              return themes[idx] !== undefined ? themes[idx] : '';
+            },
+          },
+        },
+        y: scaleY({
+          beginAtZero: true,
+          ticks: { callback: (v) => fmtK(v) },
+        }),
       },
     },
   });
@@ -2272,49 +2313,67 @@ function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
 
 function renderCTPerfChart(themeDataMap, themes, themeColorMap) {
   destroyChart('chart-ct-perf');
-  const allColors = DATA_COLORS();
+
+  const radarMetrics = [
+    { label: 'Engagement',       getValue: (t) => avg(themeDataMap[t], 'tauxEngagement'),                                                   fmt: fmtPct },
+    { label: 'Taux de clics',    getValue: (t) => avg(themeDataMap[t], 'tauxClics'),                                                        fmt: fmtPct },
+    { label: 'Impressions/post', getValue: (t) => themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0, fmt: fmtK   },
+    { label: 'Interactions/post',getValue: (t) => avg(themeDataMap[t], 'interactions'),                                                     fmt: (v) => v.toFixed(1) },
+  ];
+
+  // Raw values indexed as [metricIndex][themeIndex]
+  const rawVals = radarMetrics.map(m => themes.map(t => m.getValue(t)));
+
+  // Normalize each metric to 0–100 (winner = 100)
+  const normalized = rawVals.map(vals => {
+    const maxVal = Math.max(...vals);
+    return vals.map(v => maxVal > 0 ? (v / maxVal) * 100 : 0);
+  });
+
+  const datasets = themes.map((t, ti) => ({
+    label: t,
+    data: radarMetrics.map((_, mi) => normalized[mi][ti]),
+    backgroundColor: hexToRgba(themeColorMap[t], 0.15),
+    borderColor: themeColorMap[t],
+    borderWidth: 2,
+    pointBackgroundColor: themeColorMap[t],
+    pointRadius: 4,
+    pointHoverRadius: 6,
+  }));
+
   const ctx = $('chart-ct-perf').getContext('2d');
   state.charts['chart-ct-perf'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: themes,
-      datasets: [
-        {
-          label: 'Engagement moyen (%)',
-          data: themes.map(t => avg(themeDataMap[t], 'tauxEngagement')),
-          backgroundColor: hexToRgba(allColors[0], 0.9),
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-        {
-          label: 'Taux de clics moyen (%)',
-          data: themes.map(t => avg(themeDataMap[t], 'tauxClics')),
-          backgroundColor: hexToRgba(allColors[1], 0.9),
-          borderRadius: 4,
-          borderSkipped: false,
-        },
-      ],
-    },
+    type: 'radar',
+    data: { labels: radarMetrics.map(m => m.label), datasets },
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
+      aspectRatio: 2,
       plugins: {
         legend: legendSpec('top', 'end'),
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title: (items) => items[0].label,
-            label: (item) => ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`,
+            title: (items) => radarMetrics[items[0].dataIndex].label,
+            label: (item) => {
+              const raw = rawVals[item.dataIndex][item.datasetIndex];
+              return ` ${themes[item.datasetIndex]} : ${radarMetrics[item.dataIndex].fmt(raw)}`;
+            },
           },
         },
       },
       scales: {
-        x: scaleX(),
-        y: scaleY({
-          beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
-        }),
+        r: {
+          min: 0,
+          max: 100,
+          grid:       { color: C.dataGrid() },
+          angleLines: { color: C.dataGrid() },
+          ticks:      { display: false, stepSize: 25 },
+          pointLabels: {
+            color: C.muted(),
+            font:  { size: 12, family: "'Geist', system-ui, sans-serif" },
+          },
+        },
       },
     },
   });
