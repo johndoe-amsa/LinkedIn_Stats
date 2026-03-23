@@ -205,7 +205,7 @@
           </button>
           <button class="tab-btn" role="tab" data-tab="comparaison" aria-selected="false">
             <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
-            Comparaison
+            Comparaison Annuelle
           </button>
           <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false">
             <i data-lucide="palette" aria-hidden="true"></i>
@@ -550,6 +550,21 @@
             <!-- KPI cards per year -->
             <div class="compare-kpis" id="compare-kpis" aria-label="KPIs par année"></div>
 
+            <!-- Delta table (2 years only) — displayed first like Comparaison Thèmes -->
+            <section id="compare-delta-section">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Analyse différentielle</p>
+                    <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body chart-card__body--table">
+                  <div class="table-wrapper" id="compare-delta-table"></div>
+                </div>
+              </div>
+            </section>
+
             <!-- Charts -->
             <section class="charts-grid" aria-label="Graphiques de comparaison">
 
@@ -566,29 +581,29 @@
                 </div>
               </div>
 
-              <!-- Avg impressions per post -->
+              <!-- Impressions distribution scatter -->
               <div class="chart-card">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Portée moyenne</p>
-                    <h3 class="chart-card__title">Impressions moyennes / post</h3>
+                    <p class="chart-card__label">Portée</p>
+                    <h3 class="chart-card__title">Distribution des impressions par post</h3>
                   </div>
                 </div>
                 <div class="chart-card__body">
-                  <canvas id="chart-compare-impressions" aria-label="Impressions moyennes par post et par année"></canvas>
+                  <canvas id="chart-compare-dist-impressions" aria-label="Distribution des impressions par post et par année"></canvas>
                 </div>
               </div>
 
-              <!-- Grouped performance -->
+              <!-- Radar performance profile -->
               <div class="chart-card chart-card--wide">
                 <div class="chart-card__header">
                   <div>
                     <p class="chart-card__label">Taux de performance</p>
-                    <h3 class="chart-card__title">Engagement & Clics par année</h3>
+                    <h3 class="chart-card__title">Profil de performance</h3>
                   </div>
                 </div>
                 <div class="chart-card__body">
-                  <canvas id="chart-compare-perf" aria-label="Taux d'engagement et de clics comparés par année"></canvas>
+                  <canvas id="chart-compare-radar" aria-label="Profil radar multi-dimensionnel de performance par année"></canvas>
                 </div>
               </div>
 
@@ -605,21 +620,6 @@
                 </div>
               </div>
 
-            </section>
-
-            <!-- Delta table (2 years only) -->
-            <section id="compare-delta-section" hidden>
-              <div class="chart-card chart-card--wide">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Analyse différentielle</p>
-                    <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
-                  </div>
-                </div>
-                <div class="chart-card__body chart-card__body--table">
-                  <div class="table-wrapper" id="compare-delta-table"></div>
-                </div>
-              </div>
             </section>
 
           </div><!-- /#compare-content -->
