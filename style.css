@@ -2155,12 +2155,11 @@ td .engagement-pill--high { color: var(--color-success); }
   gap: var(--space-8);
 }
 
-/* ─── Analyse Thème — Sélecteur ──────────────────────────────── */
-.ts-selector-bar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  max-width: 380px;
+/* ─── Analyse Thème — Sélecteur (bandeau) ────────────────────── */
+/* Réutilise .compare-controls + .ct-selector + .ct-selector__select */
+/* Ajuste la largeur minimale du select pour le mode Analyse */
+#ct-analyse .ct-selector__select {
+  min-width: 220px;
 }
 
 
