@@ -2661,6 +2661,7 @@ function renderThemeStats(data) {
   renderTSTrendChart(posts);
   renderTSMediaChart(posts);
   renderTSTopFlop(posts);
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
 
 function renderTSSelector(allThemes) {
