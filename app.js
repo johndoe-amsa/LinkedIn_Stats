@@ -2626,6 +2626,7 @@ function renderThemePanel(data) {
     $('tab-section-title').textContent = 'Comparaison entre thèmes';
     renderCompareThemes(data);
   }
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
 
 function renderTSModeToggle() {
@@ -2689,9 +2690,7 @@ function renderTSKPIs(posts, allData) {
   const globalAvgImp = avg(allData, 'impressions');
   const globalAvgEng = avg(allData, 'tauxEngagement');
   const globalAvgClic= avg(allData, 'tauxClics');
-  const globalTotalImp = allData.reduce((a, d) => a + (d.impressions || 0), 0);
 
-  const totalImp  = posts.reduce((a, d) => a + (d.impressions || 0), 0);
   const avgImp    = avg(posts, 'impressions');
   const avgEng    = avg(posts, 'tauxEngagement');
   const avgClic   = avg(posts, 'tauxClics');
@@ -2705,8 +2704,6 @@ function renderTSKPIs(posts, allData) {
     return `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ égal au global</span>`;
   }
 
-  const pctOfTotal = globalTotalImp > 0 ? ((totalImp / globalTotalImp) * 100).toFixed(1) : '0';
-
   container.innerHTML = `
     <div class="kpi-card">
       <div class="kpi-card__header">
@@ -2715,14 +2712,6 @@ function renderTSKPIs(posts, allData) {
       </div>
       <p class="kpi-card__value">${fmt(posts.length)}</p>
       <p class="kpi-card__sub">posts dans ce thème</p>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-card__header">
-        <p class="kpi-card__label">Impressions totales</p>
-        <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
-      </div>
-      <p class="kpi-card__value">${fmtK(totalImp)}</p>
-      <p class="kpi-card__sub">${pctOfTotal}% des impressions globales</p>
     </div>
     <div class="kpi-card">
       <div class="kpi-card__header">
