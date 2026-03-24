@@ -2090,3 +2090,137 @@ td .engagement-pill--high { color: var(--color-success); }
   stroke-width: 2;
   transition: opacity var(--duration-fast) var(--ease-out);
 }
+
+
+/* ─── Analyse Thème — Mode toggle ───────────────────────────── */
+.ct-mode-bar {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.ct-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-4);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out),
+              color     var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.ct-mode-toggle svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.ct-mode-toggle:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.ct-mode-toggle.is-active {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+
+.ct-mode-toggle:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+
+/* ─── Analyse Thème — Sélecteur ──────────────────────────────── */
+.ts-selector-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-6);
+  max-width: 380px;
+}
+
+
+/* ─── Analyse Thème — Delta badge KPI ───────────────────────── */
+.ts-kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  margin-top: var(--space-2);
+}
+
+.ts-kpi-delta--up {
+  background: rgba(0, 112, 243, 0.08);
+  color: var(--color-success);
+}
+
+.ts-kpi-delta--down {
+  background: rgba(238, 0, 0, 0.08);
+  color: var(--color-error);
+}
+
+.ts-kpi-delta--neutral {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-muted);
+}
+
+
+/* ─── Analyse Thème — Grille Top/Flop ───────────────────────── */
+.ts-topflop-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-6);
+}
+
+@media (max-width: 768px) {
+  .ts-topflop-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ts-topflop__pub {
+  max-width: 200px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+
+/* ─── Badges success / error (Top, Viral, Faible) ───────────── */
+.badge--success {
+  background: rgba(0, 112, 243, 0.08);
+  color: var(--color-success);
+}
+
+.badge--error {
+  background: rgba(238, 0, 0, 0.08);
+  color: var(--color-error);
+}
+
+
+/* ─── Empty state mini (inline dans une carte) ──────────────── */
+.empty-state--mini {
+  padding: var(--space-8) var(--space-4);
+}
+
+.empty-state--mini .empty-state__title {
+  font-size: 14px;
+}
+
+.empty-state--mini .empty-state__desc {
+  font-size: 13px;
+}

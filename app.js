@@ -38,6 +38,10 @@ const state = {
   /* Comparaison Thèmes tab: selected themes */
   compareThemes: [],
 
+  /* Thèmes tab: mode toggle + selected theme for analyse */
+  themeMode:  'analyse',   // 'analyse' | 'compare'
+  themeStats: '',          // selected theme in analyse mode
+
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
 };
@@ -354,6 +358,14 @@ function initDashboard() {
     });
   });
 
+  /* Thèmes tab — mode toggle (Analyse / Comparaison) */
+  document.querySelectorAll('.ct-mode-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.themeMode = btn.dataset.mode;
+      renderThemePanel(state.filteredData);
+    });
+  });
+
   /* Heatmap Jour × Heure toggle */
   document.querySelectorAll('.heatmap-jh-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -484,6 +496,9 @@ function resetDashboard() {
   state.heatmapMetric = 'engagement';
   state.heatmapJHMetric = 'impressions';
   state.compareYears = [];
+  state.compareThemes = [];
+  state.themeMode  = 'analyse';
+  state.themeStats = '';
   state.charts = {};
 
   $('dashboard-screen').hidden = true;
@@ -503,7 +518,7 @@ const TAB_META = {
   laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
   statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
   comparaison:      { label: 'Comparaison Annuelle',         title: 'Analyse multi-années' },
-  'compare-themes': { label: 'Comparaison Thèmes',          title: 'Comparaison entre thèmes' },
+  'compare-themes': { label: 'Thèmes',                      title: 'Analyse & comparaison de thèmes' },
 };
 
 function switchTab(tabId) {
@@ -535,7 +550,7 @@ function renderActiveTab() {
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatistiques(data); break;
     case 'comparaison':     renderComparaison(data);    break;
-    case 'compare-themes':  renderCompareThemes(data);  break;
+    case 'compare-themes':  renderThemePanel(data);      break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
@@ -2583,6 +2598,546 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
       </thead>
       <tbody>${rows}</tbody>
     </table>`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB 8: ANALYSE THÈME (mode analyse du panel Thèmes)
+   ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Point d'entrée — dispatche vers renderThemeStats() ou renderCompareThemes()
+ * selon state.themeMode.
+ */
+function renderThemePanel(data) {
+  renderTSModeToggle();
+
+  const analyseSection = $('ct-analyse');
+  const compareSection = $('ct-compare');
+
+  if (state.themeMode === 'analyse') {
+    if (analyseSection) analyseSection.hidden = false;
+    if (compareSection) compareSection.hidden = true;
+    $('tab-section-title').textContent = 'Analyse détaillée d\'un thème';
+    renderThemeStats(data);
+  } else {
+    if (analyseSection) analyseSection.hidden = true;
+    if (compareSection) compareSection.hidden = false;
+    $('tab-section-title').textContent = 'Comparaison entre thèmes';
+    renderCompareThemes(data);
+  }
+}
+
+function renderTSModeToggle() {
+  const bar = $('ct-mode-bar');
+  if (!bar) return;
+  bar.querySelectorAll('.ct-mode-toggle').forEach(btn => {
+    const active = btn.dataset.mode === state.themeMode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active);
+  });
+}
+
+/* ── Orchestrateur mode Analyse ───────────────────────────── */
+function renderThemeStats(data) {
+  const allThemes = [...new Set(
+    data.filter(d => d.theme && d.theme !== '—').map(d => d.theme)
+  )].sort((a, b) => a.localeCompare(b, 'fr'));
+
+  renderTSSelector(allThemes);
+
+  const hasTheme = state.themeStats && allThemes.includes(state.themeStats);
+  $('ts-empty').hidden   = hasTheme;
+  $('ts-content').hidden = !hasTheme;
+
+  if (!hasTheme) return;
+
+  const posts = data.filter(d => d.theme === state.themeStats);
+
+  renderTSKPIs(posts, data);
+  renderTSScatterChart(posts);
+  renderTSHourChart(posts);
+  renderTSTrendChart(posts);
+  renderTSMediaChart(posts);
+  renderTSTopFlop(posts);
+}
+
+function renderTSSelector(allThemes) {
+  const sel = $('ts-theme-select');
+  if (!sel) return;
+
+  const prev = state.themeStats;
+  const validPrev = allThemes.includes(prev) ? prev : '';
+
+  sel.innerHTML = `<option value="">— Choisir un thème —</option>` +
+    allThemes.map(t => `<option value="${escHtml(t)}"${t === validPrev ? ' selected' : ''}>${escHtml(t)}</option>`).join('');
+
+  /* Bind once — remove old listeners by cloning */
+  const fresh = sel.cloneNode(true);
+  sel.parentNode.replaceChild(fresh, sel);
+  fresh.addEventListener('change', () => {
+    state.themeStats = fresh.value;
+    renderThemeStats(state.filteredData);
+  });
+}
+
+/* ── KPIs ─────────────────────────────────────────────────── */
+function renderTSKPIs(posts, allData) {
+  const container = $('ts-kpis');
+  if (!container) return;
+
+  const globalAvgImp = avg(allData, 'impressions');
+  const globalAvgEng = avg(allData, 'tauxEngagement');
+  const globalAvgClic= avg(allData, 'tauxClics');
+  const globalTotalImp = allData.reduce((a, d) => a + (d.impressions || 0), 0);
+
+  const totalImp  = posts.reduce((a, d) => a + (d.impressions || 0), 0);
+  const avgImp    = avg(posts, 'impressions');
+  const avgEng    = avg(posts, 'tauxEngagement');
+  const avgClic   = avg(posts, 'tauxClics');
+
+  function deltaBadge(val, ref, unit = '') {
+    if (!ref || ref === 0) return '';
+    const diff = ((val - ref) / ref) * 100;
+    const abs  = Math.abs(diff).toFixed(1);
+    if (diff > 5)  return `<span class="ts-kpi-delta ts-kpi-delta--up">▲ +${abs}% vs global</span>`;
+    if (diff < -5) return `<span class="ts-kpi-delta ts-kpi-delta--down">▼ −${abs}% vs global</span>`;
+    return `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ égal au global</span>`;
+  }
+
+  const pctOfTotal = globalTotalImp > 0 ? ((totalImp / globalTotalImp) * 100).toFixed(1) : '0';
+
+  container.innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <p class="kpi-card__label">Publications</p>
+        <div class="kpi-card__icon"><i data-lucide="file-text" aria-hidden="true"></i></div>
+      </div>
+      <p class="kpi-card__value">${fmt(posts.length)}</p>
+      <p class="kpi-card__sub">posts dans ce thème</p>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <p class="kpi-card__label">Impressions totales</p>
+        <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
+      </div>
+      <p class="kpi-card__value">${fmtK(totalImp)}</p>
+      <p class="kpi-card__sub">${pctOfTotal}% des impressions globales</p>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <p class="kpi-card__label">Impressions / post</p>
+        <div class="kpi-card__icon"><i data-lucide="bar-chart-2" aria-hidden="true"></i></div>
+      </div>
+      <p class="kpi-card__value">${fmtK(avgImp)}</p>
+      ${deltaBadge(avgImp, globalAvgImp)}
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <p class="kpi-card__label">Engagement moyen</p>
+        <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
+      </div>
+      <p class="kpi-card__value">${fmtPct(avgEng)}</p>
+      ${deltaBadge(avgEng, globalAvgEng)}
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__header">
+        <p class="kpi-card__label">Taux de clics moyen</p>
+        <div class="kpi-card__icon"><i data-lucide="mouse-pointer-click" aria-hidden="true"></i></div>
+      </div>
+      <p class="kpi-card__value">${fmtPct(avgClic)}</p>
+      ${deltaBadge(avgClic, globalAvgClic)}
+    </div>
+  `;
+}
+
+/* ── Scatter : Impressions × Engagement ───────────────────── */
+function renderTSScatterChart(posts) {
+  destroyChart('chart-ts-scatter');
+  const canvas = $('chart-ts-scatter');
+  if (!canvas) return;
+
+  const color = DATA_COLORS()[0];
+
+  const scatterData = posts.map(p => ({
+    x: p.impressions || 0,
+    y: p.tauxEngagement || 0,
+    pub: p.publication || '',
+    dateStr: p.date ? p.date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—',
+  }));
+
+  const medImp = median(posts.map(p => p.impressions || 0));
+  const medEng = median(posts.map(p => p.tauxEngagement || 0));
+
+  const maxImp = Math.max(...posts.map(p => p.impressions || 0)) * 1.05;
+  const maxEng = Math.max(...posts.map(p => p.tauxEngagement || 0)) * 1.1;
+
+  const ctx = canvas.getContext('2d');
+  state.charts['chart-ts-scatter'] = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: state.themeStats,
+        data: scatterData,
+        backgroundColor: hexToRgba(color, 0.7),
+        borderColor: color,
+        borderWidth: 1,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].raw.dateStr,
+            label: (item) => [
+              ` ${fmtK(item.raw.x)} impressions  ·  ${fmtPct(item.raw.y)} engagement`,
+              ` "${truncate(item.raw.pub, 60)}"`,
+            ],
+          },
+        },
+        annotation: {
+          annotations: {
+            lineVertical: {
+              type: 'line',
+              xMin: medImp,
+              xMax: medImp,
+              borderColor: C.border(),
+              borderWidth: 1,
+              borderDash: [4, 4],
+            },
+            lineHorizontal: {
+              type: 'line',
+              yMin: medEng,
+              yMax: medEng,
+              borderColor: C.border(),
+              borderWidth: 1,
+              borderDash: [4, 4],
+            },
+            labelViral: {
+              type: 'label',
+              xValue: maxImp * 0.95,
+              yValue: maxEng * 0.95,
+              content: ['Viral'],
+              color: C.subtle(),
+              font: { size: 11, style: 'italic' },
+              textAlign: 'right',
+            },
+            labelNiche: {
+              type: 'label',
+              xValue: medImp * 0.08,
+              yValue: maxEng * 0.95,
+              content: ['Niche'],
+              color: C.subtle(),
+              font: { size: 11, style: 'italic' },
+              textAlign: 'left',
+            },
+            labelReach: {
+              type: 'label',
+              xValue: maxImp * 0.95,
+              yValue: medEng * 0.1,
+              content: ['Reach'],
+              color: C.subtle(),
+              font: { size: 11, style: 'italic' },
+              textAlign: 'right',
+            },
+            labelFaible: {
+              type: 'label',
+              xValue: medImp * 0.08,
+              yValue: medEng * 0.1,
+              content: ['Faible'],
+              color: C.subtle(),
+              font: { size: 11, style: 'italic' },
+              textAlign: 'left',
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ...scaleX({ ticks: { callback: (v) => fmtK(v) } }),
+          title: { display: true, text: 'Impressions', color: C.muted(), font: { size: 12 } },
+          max: maxImp,
+        },
+        y: {
+          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          title: { display: true, text: 'Engagement (%)', color: C.muted(), font: { size: 12 } },
+          max: maxEng,
+        },
+      },
+    },
+  });
+}
+
+/* ── Bar : Meilleure heure ─────────────────────────────────── */
+function renderTSHourChart(posts) {
+  destroyChart('chart-ts-hour');
+  const canvas   = $('chart-ts-hour');
+  const fallback = $('ts-hour-fallback');
+
+  const withHour = posts.filter(p => p.heure !== null && p.heure !== undefined);
+
+  if (withHour.length === 0) {
+    if (canvas)   canvas.hidden   = true;
+    if (fallback) fallback.hidden = false;
+    return;
+  }
+  if (canvas)   canvas.hidden   = false;
+  if (fallback) fallback.hidden = true;
+
+  const byHour = {};
+  withHour.forEach(p => {
+    const h = p.heure;
+    if (!byHour[h]) byHour[h] = [];
+    byHour[h].push(p.tauxEngagement || 0);
+  });
+
+  const hours  = Object.keys(byHour).map(Number).sort((a, b) => a - b);
+  const values = hours.map(h => avg(byHour[h], 0) || byHour[h].reduce((s, v) => s + v, 0) / byHour[h].length);
+  const maxVal = Math.max(...values);
+
+  const baseColor = DATA_COLORS()[0];
+  const bgColors  = values.map(v => v === maxVal ? baseColor : hexToRgba(baseColor, 0.35));
+
+  const labels = hours.map(h => `${String(h).padStart(2, '0')}h`);
+
+  const ctx = canvas.getContext('2d');
+  state.charts['chart-ts-hour'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Engagement moyen',
+        data: values,
+        backgroundColor: bgColors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => `${labels[items[0].dataIndex]} — ${byHour[hours[items[0].dataIndex]].length} post(s)`,
+            label: (item)  => ` Engagement moyen : ${fmtPct(item.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+      },
+    },
+  });
+}
+
+/* ── Line : Évolution mensuelle ───────────────────────────── */
+function renderTSTrendChart(posts) {
+  destroyChart('chart-ts-trend');
+  const canvas = $('chart-ts-trend');
+  if (!canvas) return;
+
+  const color = DATA_COLORS()[0];
+
+  const byMonth = Array.from({ length: 12 }, (_, m) => {
+    const rows = posts.filter(r => r.date && r.date.getMonth() === m);
+    return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
+  });
+
+  const ctx = canvas.getContext('2d');
+  state.charts['chart-ts-trend'] = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: MONTH_LABELS,
+      datasets: [{
+        label: 'Engagement moyen',
+        data: byMonth,
+        borderColor: color,
+        backgroundColor: 'transparent',
+        pointBackgroundColor: color,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        borderWidth: 2,
+        tension: 0.3,
+        spanGaps: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title:  (items) => MONTH_LABELS[items[0].dataIndex],
+            label:  (item)  => item.parsed.y !== null
+              ? ` Engagement : ${fmtPct(item.parsed.y)}`
+              : ' Aucun post ce mois',
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+      },
+    },
+  });
+}
+
+/* ── Bar groupé : Performance par média ───────────────────── */
+function renderTSMediaChart(posts) {
+  destroyChart('chart-ts-media');
+  const canvas   = $('chart-ts-media');
+  const fallback = $('ts-media-fallback');
+
+  const validPosts = posts.filter(p => p.media && p.media !== '—');
+  const mediaTypes = [...new Set(validPosts.map(p => p.media))].sort();
+
+  if (mediaTypes.length < 2) {
+    if (canvas)   canvas.hidden   = true;
+    if (fallback) fallback.hidden = false;
+    return;
+  }
+  if (canvas)   canvas.hidden   = false;
+  if (fallback) fallback.hidden = true;
+
+  const colors = DATA_COLORS();
+  const avgImps = mediaTypes.map(m => {
+    const group = validPosts.filter(p => p.media === m);
+    return avg(group, 'impressions') / 1000;
+  });
+  const avgEngs = mediaTypes.map(m => {
+    const group = validPosts.filter(p => p.media === m);
+    return avg(group, 'tauxEngagement');
+  });
+
+  const ctx = canvas.getContext('2d');
+  state.charts['chart-ts-media'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: mediaTypes,
+      datasets: [
+        {
+          label: 'Impressions moy. (k)',
+          data: avgImps,
+          backgroundColor: hexToRgba(colors[0], 0.85),
+          borderRadius: 4,
+          yAxisID: 'yImp',
+        },
+        {
+          label: 'Engagement moy. (%)',
+          data: avgEngs,
+          backgroundColor: hexToRgba(colors[1], 0.85),
+          borderRadius: 4,
+          yAxisID: 'yEng',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            label: (item) => item.datasetIndex === 0
+              ? ` Impressions : ${item.parsed.y.toFixed(1)}k`
+              : ` Engagement : ${fmtPct(item.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        yImp: {
+          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)}k` } }),
+          position: 'left',
+        },
+        yEng: {
+          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          position: 'right',
+          grid: { display: false },
+        },
+      },
+    },
+  });
+}
+
+/* ── Table Top 5 / Flop 5 ─────────────────────────────────── */
+function renderTSTopFlop(posts) {
+  const container = $('ts-topflop');
+  if (!container) return;
+
+  const medEng = median(posts.map(p => p.tauxEngagement || 0));
+  const medImp = median(posts.map(p => p.impressions    || 0));
+
+  function badges(p) {
+    const out = [];
+    if ((p.impressions    || 0) > 2 * medImp) out.push(`<span class="badge badge--success">Viral</span>`);
+    if ((p.tauxEngagement || 0) > 2 * medEng) out.push(`<span class="badge badge--success">Top</span>`);
+    if (medEng > 0 && (p.tauxEngagement || 0) < 0.5 * medEng) out.push(`<span class="badge badge--error">Faible</span>`);
+    return out.join(' ');
+  }
+
+  function tableHtml(rows, title) {
+    const rowsHtml = rows.map(p => {
+      const dateStr = p.date ? p.date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+      return `<tr>
+        <td>${escHtml(dateStr)}</td>
+        <td class="ts-topflop__pub">${escHtml(truncate(p.publication || '—', 60))}</td>
+        <td>${fmtK(p.impressions || 0)}${badges(p) ? ' ' + badges(p) : ''}</td>
+        <td>${fmtPct(p.tauxEngagement || 0)}</td>
+        <td>${fmtPct(p.tauxClics || 0)}</td>
+      </tr>`;
+    }).join('');
+
+    return `
+      <div class="chart-card">
+        <div class="chart-card__header">
+          <div>
+            <p class="chart-card__label">${title === 'Top 5' ? 'Meilleures performances' : 'Moins bonnes performances'}</p>
+            <h3 class="chart-card__title">${title}</h3>
+          </div>
+        </div>
+        <div class="chart-card__body chart-card__body--table">
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Publication</th>
+                  <th>Impressions</th>
+                  <th>Engagement</th>
+                  <th>Clics</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  const sorted      = [...posts].sort((a, b) => (b.tauxEngagement || 0) - (a.tauxEngagement || 0));
+  const top5        = sorted.slice(0, 5);
+  const flop5       = [...posts].sort((a, b) => (a.tauxEngagement || 0) - (b.tauxEngagement || 0)).slice(0, 5);
+
+  container.innerHTML = `
+    <div class="ts-topflop-grid">
+      ${tableHtml(top5,  'Top 5')}
+      ${tableHtml(flop5, 'Flop 5')}
+    </div>`;
 }
 
 
