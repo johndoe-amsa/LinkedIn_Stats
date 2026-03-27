@@ -941,6 +941,123 @@ code, kbd {
   width: 100% !important;
 }
 
+/* ─── 13b. Chart Info Popover ─────────────────────────────── */
+.chart-info-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.chart-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition:
+    color        var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    background   var(--duration-fast) var(--ease-out);
+}
+
+.chart-info-btn:hover,
+.chart-info-wrapper:hover .chart-info-btn {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+  background: var(--color-bg-tertiary);
+}
+
+.chart-info-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.chart-info-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.5px;
+}
+
+.chart-info-popover {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: 300px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  padding: var(--space-4);
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition:
+    opacity   var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.chart-info-wrapper:hover .chart-info-popover,
+.chart-info-btn:focus-visible ~ .chart-info-popover {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.chart-info-popover__title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  margin-bottom: var(--space-2);
+}
+
+.chart-info-popover__body {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: var(--space-3);
+}
+
+.chart-info-popover__section {
+  margin-bottom: var(--space-2);
+}
+
+.chart-info-popover__section:last-child {
+  margin-bottom: 0;
+}
+
+.chart-info-popover__section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+
+.chart-info-popover__text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-info-popover {
+    transition: opacity var(--duration-fast) var(--ease-out);
+    transform: none;
+  }
+  .chart-info-wrapper:hover .chart-info-popover,
+  .chart-info-btn:focus-visible ~ .chart-info-popover {
+    transform: none;
+  }
+}
+
 
 /* ─── 14. Stacked / Heatmap Toggle ────────────────────────── */
 .stacked-toggle,
