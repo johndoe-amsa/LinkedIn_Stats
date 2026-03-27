@@ -201,11 +201,7 @@
           </button>
           <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false">
             <i data-lucide="calendar-days" aria-hidden="true"></i>
-            Statistiques
-          </button>
-          <button class="tab-btn" role="tab" data-tab="comparaison" aria-selected="false">
-            <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
-            Comparaison Annuelle
+            Années
           </button>
           <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false">
             <i data-lucide="layers" aria-hidden="true"></i>
@@ -472,159 +468,179 @@
         </div>
 
         <!-- ══════════════════════════════════════════
-             TAB 5 — STATISTIQUES PAR ANNÉE
+             TAB 5 — ANNÉES (Tendances + Comparaison)
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-statistiques" role="tabpanel">
-          <section class="charts-grid" aria-label="Statistiques par année">
 
-            <!-- Cumulative line chart -->
-            <div class="chart-card">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Publications cumulées</p>
-                  <h3 class="chart-card__title">Progression YTD par année</h3>
-                </div>
-              </div>
-              <div class="chart-card__body">
-                <canvas id="chart-ytd-cumul" aria-label="Courbe cumulative des publications par année et par mois"></canvas>
-              </div>
-            </div>
-
-            <!-- Bar chart per year -->
-            <div class="chart-card">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Volume annuel</p>
-                  <h3 class="chart-card__title">Publications par année</h3>
-                </div>
-              </div>
-              <div class="chart-card__body">
-                <canvas id="chart-yearly-total" aria-label="Nombre total de publications par année"></canvas>
-              </div>
-            </div>
-
-            <!-- Heatmap Jour × Heure -->
-            <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Timing des publications</p>
-                  <h3 class="chart-card__title">Meilleures heures de performance</h3>
-                </div>
-                <div class="chart-card__actions">
-                  <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
-                  <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
-                </div>
-              </div>
-              <div class="chart-card__body chart-card__body--table">
-                <div id="heatmap-jour-heure" style="overflow-x: auto;"></div>
-              </div>
-            </div>
-
-          </section>
-        </div>
-
-        <!-- ══════════════════════════════════════════
-             TAB 6 — COMPARAISON MULTI-ANNÉES
-        ══════════════════════════════════════════ -->
-        <div class="tab-panel" id="panel-comparaison" role="tabpanel">
-
-          <!-- Year selector -->
-          <div class="compare-controls">
-            <div>
-              <p class="section-label">Périodes</p>
-              <h3 class="compare-controls__title">Sélectionnez les années à comparer</h3>
-            </div>
-            <div class="year-pills" id="compare-year-pills" role="group" aria-label="Sélection des années à comparer"></div>
+          <!-- Mode toggle : Tendances / Comparaison -->
+          <div class="ct-mode-bar" id="sy-mode-bar" role="group" aria-label="Mode d'analyse annuelle">
+            <button class="ct-mode-toggle sy-mode-toggle is-active" data-mode="tendances" type="button" aria-pressed="true">
+              <i data-lucide="trending-up" aria-hidden="true"></i>
+              Tendances
+            </button>
+            <button class="ct-mode-toggle sy-mode-toggle" data-mode="compare" type="button" aria-pressed="false">
+              <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
+              <span id="sy-compare-btn-label">Comparaison</span>
+            </button>
           </div>
 
-          <!-- Empty state -->
-          <div class="empty-state" id="compare-empty" hidden>
-            <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
-            <p class="empty-state__title">Sélectionnez au moins 2 années</p>
-            <p class="empty-state__desc">Activez les années à comparer via les pills ci-dessus.</p>
-          </div>
+          <!-- ─── MODE TENDANCES ─── -->
+          <div id="sy-tendances">
+            <section class="charts-grid" aria-label="Statistiques par année">
 
-          <!-- Main comparison content -->
-          <div id="compare-content">
-
-            <!-- KPI cards per year -->
-            <div class="compare-kpis" id="compare-kpis" aria-label="KPIs par année"></div>
-
-            <!-- Delta table (2 years only) — displayed first like Comparaison Thèmes -->
-            <section id="compare-delta-section">
-              <div class="chart-card chart-card--wide">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Analyse différentielle</p>
-                    <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
-                  </div>
-                </div>
-                <div class="chart-card__body chart-card__body--table">
-                  <div class="table-wrapper" id="compare-delta-table"></div>
-                </div>
-              </div>
-            </section>
-
-            <!-- Charts -->
-            <section class="charts-grid" aria-label="Graphiques de comparaison">
-
-              <!-- Publications count -->
+              <!-- Cumulative line chart -->
               <div class="chart-card">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Volume de contenu</p>
+                    <p class="chart-card__label">Publications cumulées</p>
+                    <h3 class="chart-card__title">Progression YTD par année</h3>
+                  </div>
+                  <div class="chart-card__actions">
+                    <button class="btn btn--secondary" id="sy-goto-compare" type="button" title="Comparer les années entre elles">
+                      Comparer <i data-lucide="arrow-right" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-ytd-cumul" aria-label="Courbe cumulative des publications par année et par mois"></canvas>
+                </div>
+              </div>
+
+              <!-- Bar chart per year -->
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Volume annuel</p>
                     <h3 class="chart-card__title">Publications par année</h3>
                   </div>
                 </div>
                 <div class="chart-card__body">
-                  <canvas id="chart-compare-posts" aria-label="Nombre de publications par année"></canvas>
+                  <canvas id="chart-yearly-total" aria-label="Nombre total de publications par année"></canvas>
                 </div>
               </div>
 
-              <!-- Impressions distribution scatter -->
-              <div class="chart-card">
+              <!-- Heatmap Jour × Heure -->
+              <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Portée</p>
-                    <h3 class="chart-card__title">Distribution des impressions par post</h3>
+                    <p class="chart-card__label">Timing des publications</p>
+                    <h3 class="chart-card__title">Meilleures heures de performance</h3>
+                  </div>
+                  <div class="chart-card__actions">
+                    <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
+                    <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
                   </div>
                 </div>
-                <div class="chart-card__body">
-                  <canvas id="chart-compare-dist-impressions" aria-label="Distribution des impressions par post et par année"></canvas>
-                </div>
-              </div>
-
-              <!-- Radar performance profile -->
-              <div class="chart-card chart-card--wide">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Taux de performance</p>
-                    <h3 class="chart-card__title">Profil de performance</h3>
-                  </div>
-                </div>
-                <div class="chart-card__body">
-                  <canvas id="chart-compare-radar" aria-label="Profil radar multi-dimensionnel de performance par année"></canvas>
-                </div>
-              </div>
-
-              <!-- Monthly trend overlay -->
-              <div class="chart-card chart-card--wide">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Tendance mensuelle</p>
-                    <h3 class="chart-card__title">Engagement moyen par mois</h3>
-                  </div>
-                </div>
-                <div class="chart-card__body">
-                  <canvas id="chart-compare-trend" aria-label="Évolution mensuelle du taux d'engagement par année"></canvas>
+                <div class="chart-card__body chart-card__body--table">
+                  <div id="heatmap-jour-heure" style="overflow-x: auto;"></div>
                 </div>
               </div>
 
             </section>
+          </div><!-- /#sy-tendances -->
 
-          </div><!-- /#compare-content -->
+          <!-- ─── MODE COMPARAISON ─── -->
+          <div id="sy-compare" hidden>
 
-        </div><!-- /#panel-comparaison -->
+            <!-- Year selector -->
+            <div class="compare-controls">
+              <div>
+                <p class="section-label">Périodes</p>
+                <h3 class="compare-controls__title">Sélectionnez les années à comparer</h3>
+              </div>
+              <div class="year-pills" id="compare-year-pills" role="group" aria-label="Sélection des années à comparer"></div>
+            </div>
+
+            <!-- Empty state -->
+            <div class="empty-state" id="compare-empty" hidden>
+              <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
+              <p class="empty-state__title">Sélectionnez au moins 2 années</p>
+              <p class="empty-state__desc">Activez les années à comparer via les pills ci-dessus.</p>
+            </div>
+
+            <!-- Main comparison content -->
+            <div id="compare-content">
+
+              <!-- KPI cards per year -->
+              <div class="compare-kpis" id="compare-kpis" aria-label="KPIs par année"></div>
+
+              <!-- Delta table (2 years only) -->
+              <section id="compare-delta-section">
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Analyse différentielle</p>
+                      <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body chart-card__body--table">
+                    <div class="table-wrapper" id="compare-delta-table"></div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Charts -->
+              <section class="charts-grid" aria-label="Graphiques de comparaison">
+
+                <!-- Publications count -->
+                <div class="chart-card">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Volume de contenu</p>
+                      <h3 class="chart-card__title">Publications par année</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body">
+                    <canvas id="chart-compare-posts" aria-label="Nombre de publications par année"></canvas>
+                  </div>
+                </div>
+
+                <!-- Impressions distribution scatter -->
+                <div class="chart-card">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Portée</p>
+                      <h3 class="chart-card__title">Distribution des impressions par post</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body">
+                    <canvas id="chart-compare-dist-impressions" aria-label="Distribution des impressions par post et par année"></canvas>
+                  </div>
+                </div>
+
+                <!-- Radar performance profile -->
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Taux de performance</p>
+                      <h3 class="chart-card__title">Profil de performance</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body">
+                    <canvas id="chart-compare-radar" aria-label="Profil radar multi-dimensionnel de performance par année"></canvas>
+                  </div>
+                </div>
+
+                <!-- Monthly trend overlay -->
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Tendance mensuelle</p>
+                      <h3 class="chart-card__title">Engagement moyen par mois</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body">
+                    <canvas id="chart-compare-trend" aria-label="Évolution mensuelle du taux d'engagement par année"></canvas>
+                  </div>
+                </div>
+
+              </section>
+
+            </div><!-- /#compare-content -->
+
+          </div><!-- /#sy-compare -->
+
+        </div><!-- /#panel-statistiques -->
 
         <!-- ══════════════════════════════════════════
              TAB 7 — THÈMES (Analyse + Comparaison)
