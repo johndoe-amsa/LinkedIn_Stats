@@ -3365,70 +3365,215 @@ function renderTSMediaChart(posts) {
   });
 }
 
-/* ── Table Top 5 / Flop 5 ─────────────────────────────────── */
+/* ── Leaderboard table for Theme Analysis ────────────────── */
+const tsLeaderState = {
+  searchQuery: '',
+  sortCol: 'engagement',
+  sortDir: 'desc',
+  page: 1,
+  pageSize: 20,
+};
+
 function renderTSTopFlop(posts) {
   const container = $('ts-topflop');
   if (!container) return;
 
-  const medEng = median(posts.map(p => p.tauxEngagement || 0));
-  const medImp = median(posts.map(p => p.impressions    || 0));
-
-  function badges(p) {
-    const out = [];
-    if ((p.impressions    || 0) > 2 * medImp) out.push(`<span class="badge badge--success">Viral</span>`);
-    if ((p.tauxEngagement || 0) > 2 * medEng) out.push(`<span class="badge badge--success">Top</span>`);
-    if (medEng > 0 && (p.tauxEngagement || 0) < 0.5 * medEng) out.push(`<span class="badge badge--error">Faible</span>`);
-    return out.join(' ');
-  }
-
-  function tableHtml(rows, title) {
-    const rowsHtml = rows.map(p => {
-      const dateStr = p.date ? p.date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
-      return `<tr>
-        <td>${escHtml(dateStr)}</td>
-        <td class="ts-topflop__pub">${escHtml(truncate(p.publication || '—', 60))}</td>
-        <td>${fmtK(p.impressions || 0)}${badges(p) ? ' ' + badges(p) : ''}</td>
-        <td>${fmtPct(p.tauxEngagement || 0)}</td>
-        <td>${fmtPct(p.tauxClics || 0)}</td>
-      </tr>`;
-    }).join('');
-
-    return `
-      <div class="chart-card">
-        <div class="chart-card__header">
-          <div>
-            <p class="chart-card__label">${title === 'Top 5' ? 'Meilleures performances' : 'Moins bonnes performances'}</p>
-            <h3 class="chart-card__title">${title}</h3>
-          </div>
-        </div>
-        <div class="chart-card__body chart-card__body--table">
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Publication</th>
-                  <th>Impressions</th>
-                  <th>Engagement</th>
-                  <th>Clics</th>
-                </tr>
-              </thead>
-              <tbody>${rowsHtml}</tbody>
-            </table>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  const sorted      = [...posts].sort((a, b) => (b.tauxEngagement || 0) - (a.tauxEngagement || 0));
-  const top5        = sorted.slice(0, 5);
-  const flop5       = [...posts].sort((a, b) => (a.tauxEngagement || 0) - (b.tauxEngagement || 0)).slice(0, 5);
+  tsLeaderState.searchQuery = '';
+  tsLeaderState.page = 1;
 
   container.innerHTML = `
-    <div class="ts-topflop-grid">
-      ${tableHtml(top5,  'Top 5')}
-      ${tableHtml(flop5, 'Flop 5')}
-    </div>`;
+    <section class="table-section" aria-label="Classement des publications du thème">
+      <div class="table-section__header">
+        <div class="table-section__title-group">
+          <p class="section-label">Classement</p>
+          <h2 class="section-title">Toutes les publications</h2>
+        </div>
+        <div class="table-section__controls">
+          <div class="search-field">
+            <i data-lucide="search" aria-hidden="true"></i>
+            <input
+              type="search"
+              id="ts-table-search"
+              class="search-field__input"
+              placeholder="Rechercher une publication…"
+              aria-label="Rechercher dans les publications"
+            />
+          </div>
+          <span class="table-count" id="ts-table-count"></span>
+        </div>
+      </div>
+
+      <div class="table-wrapper" role="region" aria-label="Tableau scrollable">
+        <table class="data-table" id="ts-posts-table" aria-label="Publications du thème">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="date" tabindex="0" aria-sort="none">
+                Date <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable col-pub" data-col="publication" tabindex="0" aria-sort="none">
+                Publication <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th>Média</th>
+              <th class="sortable text-right" data-col="impressions" tabindex="0" aria-sort="none">
+                Impressions <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
+                Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
+                Engagement <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="ts-table-body"></tbody>
+        </table>
+      </div>
+
+      <div class="empty-state" id="ts-table-empty" hidden>
+        <i data-lucide="search-x" aria-hidden="true"></i>
+        <p class="empty-state__title">Aucun résultat</p>
+        <p class="empty-state__desc">Aucune publication ne correspond à votre recherche.</p>
+        <button type="button" class="btn btn--secondary btn--sm" id="ts-clear-search-btn">
+          Réinitialiser la recherche
+        </button>
+      </div>
+
+      <div class="pagination" id="ts-pagination">
+        <span class="pagination__info" id="ts-pagination-info"></span>
+        <div class="pagination__controls">
+          <button type="button" class="btn btn--ghost btn--sm" id="ts-page-prev" disabled aria-label="Page précédente">
+            <i data-lucide="chevron-left" aria-hidden="true"></i>
+          </button>
+          <span class="pagination__current" id="ts-pagination-current"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="ts-page-next" aria-label="Page suivante">
+            <i data-lucide="chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </section>`;
+
+  const searchInput = document.getElementById('ts-table-search');
+  const clearBtn    = document.getElementById('ts-clear-search-btn');
+  const prevBtn     = document.getElementById('ts-page-prev');
+  const nextBtn     = document.getElementById('ts-page-next');
+
+  searchInput.addEventListener('input', () => {
+    tsLeaderState.searchQuery = searchInput.value;
+    tsLeaderState.page = 1;
+    renderTSTable(posts);
+  });
+
+  clearBtn.addEventListener('click', () => {
+    tsLeaderState.searchQuery = '';
+    searchInput.value = '';
+    tsLeaderState.page = 1;
+    renderTSTable(posts);
+  });
+
+  prevBtn.addEventListener('click', () => { tsLeaderState.page--; renderTSTable(posts); });
+  nextBtn.addEventListener('click', () => { tsLeaderState.page++; renderTSTable(posts); });
+
+  document.querySelectorAll('#ts-posts-table th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const col = th.dataset.col;
+      if (tsLeaderState.sortCol === col) {
+        tsLeaderState.sortDir = tsLeaderState.sortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        tsLeaderState.sortCol = col;
+        tsLeaderState.sortDir = 'desc';
+      }
+      tsLeaderState.page = 1;
+      renderTSTable(posts);
+    });
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); th.click(); }
+    });
+  });
+
+  renderTSTable(posts);
+}
+
+function renderTSTable(posts) {
+  const q = tsLeaderState.searchQuery.toLowerCase().trim();
+
+  let data = posts.filter(row => {
+    if (!q) return true;
+    return (
+      (row.publication || '').toLowerCase().includes(q) ||
+      (row.media || '').toLowerCase().includes(q)
+    );
+  });
+
+  data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
+
+  const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
+  const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
+  const clicsValues = data.map(d => d.tauxClics).sort((a, b) => a - b);
+
+  const p10 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.1)] : -Infinity;
+  const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
+
+  const engP10   = p10(engValues),   engP90   = p90(engValues);
+  const imprP10  = p10(imprValues),  imprP90  = p90(imprValues);
+  const clicsP10 = p10(clicsValues), clicsP90 = p90(clicsValues);
+
+  function cellClass(val, low, high) {
+    if (val >= high) return 'cell--top';
+    if (val <= low)  return 'cell--bottom';
+    return '';
+  }
+
+  document.querySelectorAll('#ts-posts-table th.sortable').forEach(th => {
+    th.classList.toggle('is-sorted', th.dataset.col === tsLeaderState.sortCol);
+    th.setAttribute('aria-sort', th.dataset.col === tsLeaderState.sortCol
+      ? (tsLeaderState.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+    const icon = th.querySelector('.sort-icon');
+    if (icon) icon.textContent = th.dataset.col === tsLeaderState.sortCol
+      ? (tsLeaderState.sortDir === 'asc' ? '↑' : '↓') : '↕';
+  });
+
+  const total = posts.length;
+  document.getElementById('ts-table-count').textContent = q
+    ? `${data.length} / ${total} résultat${data.length !== 1 ? 's' : ''}`
+    : `${total} publication${total !== 1 ? 's' : ''}`;
+
+  const tableEmpty   = document.getElementById('ts-table-empty');
+  const tableWrapper = document.getElementById('ts-table-body').closest('.table-wrapper');
+  tableEmpty.hidden = data.length > 0;
+  if (tableWrapper) tableWrapper.style.display = data.length === 0 ? 'none' : '';
+
+  const totalPages = Math.max(1, Math.ceil(data.length / tsLeaderState.pageSize));
+  if (tsLeaderState.page > totalPages) tsLeaderState.page = totalPages;
+  const start    = (tsLeaderState.page - 1) * tsLeaderState.pageSize;
+  const end      = Math.min(start + tsLeaderState.pageSize, data.length);
+  const pageData = data.slice(start, end);
+
+  document.getElementById('ts-pagination-info').textContent    = data.length > 0 ? `${start + 1}–${end} sur ${data.length}` : '';
+  document.getElementById('ts-pagination-current').textContent = data.length > 0 ? `Page ${tsLeaderState.page} / ${totalPages}` : '';
+  document.getElementById('ts-page-prev').disabled = tsLeaderState.page <= 1;
+  document.getElementById('ts-page-next').disabled = tsLeaderState.page >= totalPages;
+  document.getElementById('ts-pagination').style.display = data.length > tsLeaderState.pageSize ? '' : 'none';
+
+  document.getElementById('ts-table-body').innerHTML = pageData.map(row => `
+    <tr>
+      <td style="white-space:nowrap;font-variant-numeric:tabular-nums;font-family:var(--font-mono);font-size:13px;">
+        ${formatDisplayDate(row.date)}
+      </td>
+      <td class="col-pub">
+        <span class="pub-title" title="${escHtml(row.publication)}">
+          ${escHtml(row.publication) || '<em style="color:var(--color-text-subtle)">Sans titre</em>'}
+        </span>
+      </td>
+      <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
+      <td class="text-right ${cellClass(row.impressions, imprP10, imprP90)}">${fmt(row.impressions)}</td>
+      <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
+      <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
+        <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
+          ${fmtPct(row.tauxEngagement)}
+        </span>
+      </td>
+    </tr>
+  `).join('');
 }
 
 
