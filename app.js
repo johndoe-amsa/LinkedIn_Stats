@@ -532,7 +532,7 @@ function resetDashboard() {
    ═══════════════════════════════════════════════════════════════ */
 
 const TAB_META = {
-  bilan:         { label: 'Le Bilan',                   title: 'Synthèse du compte' },
+  bilan:         { label: 'Résumé',                      title: 'Synthèse du compte' },
   matrice:       { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
   laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
