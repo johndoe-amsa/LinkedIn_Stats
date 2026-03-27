@@ -2080,35 +2080,61 @@ function renderCompareKPIs(yearDataMap, years, yearColorMap) {
 
 function renderComparePostsChart(yearDataMap, years, yearColorMap) {
   destroyChart('chart-compare-posts');
+  if (!years.length) return;
+
+  /* Build monthly counts then cumulative sums for each selected year */
+  const datasets = years.map((year, i) => {
+    const monthly = new Array(12).fill(0);
+    yearDataMap[year].forEach(d => {
+      if (d.date) monthly[d.date.getMonth()]++;
+    });
+
+    /* Cumulative sum, trimmed at last month with data */
+    let lastNonZero = 11;
+    while (lastNonZero > 0 && monthly[lastNonZero] === 0) lastNonZero--;
+    const cumul = [];
+    let acc = 0;
+    for (let m = 0; m <= lastNonZero; m++) {
+      acc += monthly[m];
+      cumul.push(acc);
+    }
+
+    const color = yearColorMap[year];
+    return {
+      label: String(year),
+      data: cumul,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      pointBackgroundColor: color,
+      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2,
+      tension: 0.3,
+    };
+  });
+
   const ctx = $('chart-compare-posts').getContext('2d');
   state.charts['chart-compare-posts'] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: years.map(String),
-      datasets: [{
-        label: 'Publications',
-        data: years.map(y => yearDataMap[y].length),
-        backgroundColor: years.map(y => yearColorMap[y]),
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
-    },
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
     options: {
       responsive: true,
       maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: legendSpec('top', 'end'),
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title: (items) => String(items[0].label),
-            label: (item) => ` ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
+            title: (items) => MONTH_LABELS[items[0].dataIndex],
+            label: (item) => ` ${item.dataset.label} : ${item.parsed.y} publication${item.parsed.y > 1 ? 's' : ''}`,
           },
         },
       },
       scales: {
-        x: scaleX(),
-        y: scaleY({ beginAtZero: true, ticks: { precision: 0 } }),
+        x: scaleX({ ticks: { color: C.muted() } }),
+        y: scaleY({ beginAtZero: true, ticks: { color: C.muted(), stepSize: 1, precision: 0 } }),
       },
     },
   });
