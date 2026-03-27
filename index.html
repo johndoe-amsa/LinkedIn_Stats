@@ -519,6 +519,32 @@
                 </div>
               </div>
 
+              <!-- Impressions par année (dual-axis) -->
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Portée annuelle</p>
+                    <h3 class="chart-card__title">Impressions par année</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-yearly-impressions" aria-label="Total et moyenne des impressions par année"></canvas>
+                </div>
+              </div>
+
+              <!-- Engagement & Clics par année (grouped bar) -->
+              <div class="chart-card">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Performance annuelle</p>
+                    <h3 class="chart-card__title">Engagement & Clics par année</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-yearly-eng-clicks" aria-label="Taux d'engagement et taux de clics moyens par année"></canvas>
+                </div>
+              </div>
+
               <!-- Heatmap Jour × Heure -->
               <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
                 <div class="chart-card__header">
@@ -698,6 +724,21 @@
                   </div>
                   <div class="chart-card__body chart-card__body--tall">
                     <canvas id="chart-ts-scatter" aria-label="Scatter plot impressions vs engagement par post"></canvas>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Scatter Impressions × Réactions -->
+              <section>
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Portée vs réactions concrètes</p>
+                      <h3 class="chart-card__title">Impressions × Réactions</h3>
+                    </div>
+                  </div>
+                  <div class="chart-card__body chart-card__body--tall">
+                    <canvas id="chart-scatter-reactions" aria-label="Scatter plot impressions vs nombre de réactions par post"></canvas>
                   </div>
                 </div>
               </section>

@@ -1591,6 +1591,8 @@ const MONTH_LABELS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'ao
 function renderStatistiques(data) {
   renderYtdCumulChart(data);
   renderYearlyTotalChart(data);
+  renderYearlyImpressionsChart(data);
+  renderYearlyEngClicksChart(data);
   renderHeatmapJourHeure(data);
 }
 
@@ -1748,6 +1750,157 @@ function renderYearlyTotalChart(data) {
   });
 }
 
+
+function renderYearlyImpressionsChart(data) {
+  destroyChart('chart-yearly-impressions');
+  if (!data.length) return;
+
+  const byYear = {};
+  data.forEach(d => {
+    if (!d.date) return;
+    const y = d.date.getFullYear();
+    if (!byYear[y]) byYear[y] = { total: 0, count: 0 };
+    byYear[y].total += (d.impressions || 0);
+    byYear[y].count++;
+  });
+
+  const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+  const totals   = years.map(y => byYear[y].total);
+  const averages = years.map(y => Math.round(byYear[y].total / byYear[y].count));
+
+  const [d1, d2] = DATA_COLORS();
+
+  const ctx = $('chart-yearly-impressions').getContext('2d');
+  state.charts['chart-yearly-impressions'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [
+        {
+          label: 'Total impressions',
+          type: 'bar',
+          data: totals,
+          backgroundColor: d1,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Moy. par post',
+          type: 'line',
+          data: averages,
+          borderColor: d2,
+          borderWidth: 2,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: d2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => item.dataset.label === 'Moy. par post'
+              ? ` Moy. par post : ${fmt(item.raw)}`
+              : ` Total : ${fmtK(item.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { color: C.muted() } }),
+        y: { ...scaleY({ ticks: { callback: (v) => fmtK(v) } }), position: 'left' },
+        y1: {
+          position: 'right',
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), callback: (v) => fmtK(v) },
+          beginAtZero: true,
+        },
+      },
+    },
+  });
+}
+
+function renderYearlyEngClicksChart(data) {
+  destroyChart('chart-yearly-eng-clicks');
+  if (!data.length) return;
+
+  const byYear = {};
+  data.forEach(d => {
+    if (!d.date) return;
+    const y = d.date.getFullYear();
+    if (!byYear[y]) byYear[y] = { eng: [], clics: [] };
+    if (d.tauxEngagement != null) byYear[y].eng.push(d.tauxEngagement);
+    if (d.tauxClics     != null) byYear[y].clics.push(d.tauxClics);
+  });
+
+  const years   = Object.keys(byYear).map(Number).sort((a, b) => a - b);
+  const avgEng  = years.map(y => {
+    const arr = byYear[y].eng;
+    return arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : 0;
+  });
+  const avgClics = years.map(y => {
+    const arr = byYear[y].clics;
+    return arr.length ? +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2) : 0;
+  });
+
+  const [d1, , d3] = DATA_COLORS();
+
+  const ctx = $('chart-yearly-eng-clicks').getContext('2d');
+  state.charts['chart-yearly-eng-clicks'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: years.map(String),
+      datasets: [
+        {
+          label: "Taux d'engagement",
+          data: avgEng,
+          backgroundColor: d1,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+        {
+          label: 'Taux de clics',
+          data: avgClics,
+          backgroundColor: d3,
+          borderRadius: 4,
+          borderSkipped: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].label,
+            label: (item) => ` ${item.dataset.label} : ${fmtPct(item.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { color: C.muted() } }),
+        y: scaleY({ ticks: { callback: (v) => fmtPct(v) } }),
+      },
+    },
+  });
+}
 
 const JOURS_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 const JOURS_ORDER  = [1, 2, 3, 4, 5, 6, 0]; // Lun–Dim (JS: 0=Dim)
@@ -2725,6 +2878,7 @@ function renderThemeStats(data) {
 
   renderTSKPIs(posts, data);
   renderTSScatterChart(posts);
+  renderScatterReactionsChart(posts);
   renderTSHourChart(posts);
   renderTSTrendChart(posts);
   renderTSMediaChart(posts);
@@ -2926,6 +3080,85 @@ function renderTSScatterChart(posts) {
           ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
           title: { display: true, text: 'Engagement (%)', color: C.muted(), font: { size: 12 } },
           max: maxEng,
+        },
+      },
+    },
+  });
+}
+
+/* ── Scatter : Impressions × Réactions ────────────────────── */
+function renderScatterReactionsChart(posts) {
+  destroyChart('chart-scatter-reactions');
+  const canvas = $('chart-scatter-reactions');
+  if (!canvas) return;
+
+  const color = DATA_COLORS()[1];
+
+  const scatterData = posts.map(p => ({
+    x: p.impressions || 0,
+    y: p.reactions   || 0,
+    pub:     p.publication || '',
+    dateStr: p.date
+      ? p.date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : '—',
+  }));
+
+  const medImp  = median(posts.map(p => p.impressions || 0));
+  const maxImp  = Math.max(...posts.map(p => p.impressions || 0)) * 1.05;
+  const maxReac = Math.max(...posts.map(p => p.reactions   || 0)) * 1.1;
+
+  const ctx = canvas.getContext('2d');
+  state.charts['chart-scatter-reactions'] = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: state.themeStats,
+        data: scatterData,
+        backgroundColor: hexToRgba(color, 0.7),
+        borderColor: color,
+        borderWidth: 1,
+        pointRadius: 5,
+        pointHoverRadius: 7,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => items[0].raw.dateStr,
+            label: (item) => [
+              ` ${fmtK(item.raw.x)} impressions  ·  ${item.raw.y} réaction${item.raw.y > 1 ? 's' : ''}`,
+              ` "${truncate(item.raw.pub, 60)}"`,
+            ],
+          },
+        },
+        annotation: {
+          annotations: {
+            lineVertical: {
+              type: 'line',
+              xMin: medImp,
+              xMax: medImp,
+              borderColor: C.border(),
+              borderWidth: 1,
+              borderDash: [4, 4],
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ...scaleX({ ticks: { callback: (v) => fmtK(v) } }),
+          title: { display: true, text: 'Impressions', color: C.muted(), font: { size: 12 } },
+          max: maxImp,
+        },
+        y: {
+          ...scaleY({ ticks: { precision: 0 } }),
+          title: { display: true, text: 'Réactions', color: C.muted(), font: { size: 12 } },
+          max: maxReac,
         },
       },
     },
