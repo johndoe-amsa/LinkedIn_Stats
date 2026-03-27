@@ -38,6 +38,9 @@ const state = {
   /* Comparaison Thèmes tab: selected themes */
   compareThemes: [],
 
+  /* Années tab: mode toggle */
+  statsMode: 'tendances',  // 'tendances' | 'compare'
+
   /* Thèmes tab: mode toggle + selected theme for analyse */
   themeMode:  'analyse',   // 'analyse' | 'compare'
   themeStats: '',          // selected theme in analyse mode
@@ -358,6 +361,23 @@ function initDashboard() {
     });
   });
 
+  /* Années tab — mode toggle (Tendances / Comparaison) */
+  document.querySelectorAll('.sy-mode-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.statsMode = btn.dataset.mode;
+      renderStatsPanel(state.filteredData);
+    });
+  });
+
+  /* Années tab — CTA "Comparer →" depuis le chart YTD */
+  const gotoCompareBtn = document.getElementById('sy-goto-compare');
+  if (gotoCompareBtn) {
+    gotoCompareBtn.addEventListener('click', () => {
+      state.statsMode = 'compare';
+      renderStatsPanel(state.filteredData);
+    });
+  }
+
   /* Thèmes tab — mode toggle (Analyse / Comparaison) */
   document.querySelectorAll('.ct-mode-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -516,8 +536,7 @@ const TAB_META = {
   matrice:       { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
   entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
   laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
-  statistiques:  { label: 'Statistiques',                title: 'Publications par année' },
-  comparaison:      { label: 'Comparaison Annuelle',         title: 'Analyse multi-années' },
+  statistiques:  { label: 'Années',                      title: 'Tendances annuelles' },
   'compare-themes': { label: 'Thèmes',                      title: 'Analyse & comparaison de thèmes' },
 };
 
@@ -548,8 +567,7 @@ function renderActiveTab() {
     case 'matrice':     renderMatrice(data); break;
     case 'entonnoir':   renderEntonnoir(data); break;
     case 'laboratoire':  renderLaboratoire(data); break;
-    case 'statistiques': renderStatistiques(data); break;
-    case 'comparaison':     renderComparaison(data);    break;
+    case 'statistiques': renderStatsPanel(data); break;
     case 'compare-themes':  renderThemePanel(data);      break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
@@ -1511,8 +1529,62 @@ function sortData(data, col, dir) {
 
 
 /* ═══════════════════════════════════════════════════════════════
-   TAB 5: STATISTIQUES PAR ANNÉE
+   TAB 5: ANNÉES (Tendances + Comparaison)
    ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * Builds a stable year→color mapping from DATA_COLORS().
+ * Shared by both modes so colors are consistent across Tendances and Comparaison.
+ */
+function buildYearColorMap(data) {
+  const allYears = [...new Set(data.filter(d => d.date).map(d => d.date.getFullYear()))].sort((a, b) => a - b);
+  const colors = DATA_COLORS();
+  const map = {};
+  allYears.forEach((y, i) => { map[y] = colors[i % colors.length]; });
+  return { allYears, yearColorMap: map };
+}
+
+/**
+ * Point d'entrée — dispatche vers renderStatistiques() ou renderComparaison()
+ * selon state.statsMode.
+ */
+function renderStatsPanel(data) {
+  renderStatsModeToggle(data);
+
+  const tendancesSection = document.getElementById('sy-tendances');
+  const compareSection   = document.getElementById('sy-compare');
+
+  if (state.statsMode === 'tendances') {
+    if (tendancesSection) tendancesSection.hidden = false;
+    if (compareSection)   compareSection.hidden   = true;
+    $('tab-section-title').textContent = 'Tendances annuelles';
+    renderStatistiques(data);
+  } else {
+    if (tendancesSection) tendancesSection.hidden = true;
+    if (compareSection)   compareSection.hidden   = false;
+    $('tab-section-title').textContent = 'Comparaison multi-années';
+    renderComparaison(data);
+  }
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+}
+
+function renderStatsModeToggle(data) {
+  const bar = document.getElementById('sy-mode-bar');
+  if (!bar) return;
+
+  bar.querySelectorAll('.sy-mode-toggle').forEach(btn => {
+    const active = btn.dataset.mode === state.statsMode;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-pressed', active);
+  });
+
+  /* Badge dynamique sur le bouton Comparaison */
+  const badgeEl = document.getElementById('sy-compare-btn-label');
+  if (badgeEl && data) {
+    const count = state.compareYears.length;
+    badgeEl.textContent = count >= 2 ? `Comparaison · ${count}` : 'Comparaison';
+  }
+}
 
 const MONTH_LABELS = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc'];
 
@@ -1537,7 +1609,7 @@ function renderYtdCumulChart(data) {
   });
 
   const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
-  const colors = DATA_COLORS();
+  const { yearColorMap } = buildYearColorMap(data);
   const pointShapes = POINT_STYLES;
 
   const datasets = years.map((year, i) => {
@@ -1555,7 +1627,7 @@ function renderYtdCumulChart(data) {
     while (lastNonZero > 0 && byYear[year][lastNonZero] === 0) lastNonZero--;
     const trimmed = cumul.slice(0, lastNonZero + 1);
 
-    const color = colors[i % colors.length];
+    const color = yearColorMap[year];
     return {
       label: String(year),
       data: trimmed,
@@ -1613,7 +1685,7 @@ function renderYearlyTotalChart(data) {
 
   const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
   const counts = years.map(y => byYear[y]);
-  const colors = DATA_COLORS();
+  const { yearColorMap } = buildYearColorMap(data);
 
   const ctx = $('chart-yearly-total').getContext('2d');
   state.charts['chart-yearly-total'] = new Chart(ctx, {
@@ -1623,7 +1695,7 @@ function renderYearlyTotalChart(data) {
       datasets: [{
         label: 'Publications',
         data: counts,
-        backgroundColor: years.map((_, i) => colors[i % colors.length]),
+        backgroundColor: years.map(y => yearColorMap[y]),
         borderRadius: 4,
         borderSkipped: false,
       }],
@@ -1759,7 +1831,7 @@ function renderHeatmapJourHeure(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderComparaison(data) {
-  const allYears = [...new Set(data.filter(d => d.date).map(d => d.date.getFullYear()))].sort((a, b) => a - b);
+  const { allYears, yearColorMap } = buildYearColorMap(data);
 
   /* Init or prune selected years */
   if (state.compareYears.length === 0 || state.compareYears.every(y => !allYears.includes(y))) {
@@ -1767,11 +1839,6 @@ function renderComparaison(data) {
   } else {
     state.compareYears = state.compareYears.filter(y => allYears.includes(y));
   }
-
-  /* Stable color map: year → color, keyed by position in allYears (never changes) */
-  const colors = DATA_COLORS();
-  const yearColorMap = {};
-  allYears.forEach((y, i) => { yearColorMap[y] = colors[i % colors.length]; });
 
   renderYearPills(allYears, yearColorMap);
 
@@ -1822,6 +1889,7 @@ function renderYearPills(allYears, yearColorMap) {
       } else {
         state.compareYears.push(y);
       }
+      renderStatsModeToggle(state.filteredData);
       renderComparaison(state.filteredData);
     });
   });
