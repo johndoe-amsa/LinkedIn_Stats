@@ -628,7 +628,7 @@ function applyQuickDateFilter(preset) {
 
   const dates = state.rawData.map(d => d.date).filter(Boolean);
   if (dates.length === 0) return;
-  const toDate   = new Date(Math.max(...dates));
+  const toDate   = new Date();
   const dataMin  = new Date(Math.min(...dates));
   let   fromDate = new Date(toDate);
 
