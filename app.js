@@ -617,9 +617,20 @@ function clearQuickDateActive() {
 }
 
 function applyQuickDateFilter(preset) {
-  const fmt = (d) => d.toISOString().split('T')[0];
-  const toDate = filterDateTo.max ? new Date(filterDateTo.max) : new Date();
-  let fromDate = new Date(toDate);
+  /* Use local date components to avoid UTC timezone shift (toISOString would
+     convert midnight local time to the previous day in UTC+ zones). */
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const dates = state.rawData.map(d => d.date).filter(Boolean);
+  if (dates.length === 0) return;
+  const toDate   = new Date(Math.max(...dates));
+  const dataMin  = new Date(Math.min(...dates));
+  let   fromDate = new Date(toDate);
 
   if (preset === '30d') {
     fromDate.setDate(fromDate.getDate() - 29);
@@ -631,7 +642,6 @@ function applyQuickDateFilter(preset) {
     fromDate.setDate(fromDate.getDate() + 1);
   }
 
-  const dataMin = filterDateFrom.min ? new Date(filterDateFrom.min) : fromDate;
   if (fromDate < dataMin) fromDate = dataMin;
 
   filterDateFrom.value = fmt(fromDate);
