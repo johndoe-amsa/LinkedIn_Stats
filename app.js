@@ -2206,14 +2206,15 @@ function renderCompareDistImpressionsChart(yearDataMap, years, yearColorMap) {
     label: String(y),
     type: 'scatter',
     data: yearDataMap[y].map((post, idx) => ({
-      x: i + ((idx % 9) - 4) * 0.04,  // deterministic jitter ±0.16
+      x: i + ((idx % 9) - 4) * 0.07,  // deterministic jitter ±0.28
       y: post.impressions,
       pub: post.publication,
     })),
     backgroundColor: hexToRgba(yearColorMap[y], 0.65),
-    borderColor: 'transparent',
-    pointRadius: 5,
-    pointHoverRadius: 7,
+    borderColor: C.bg(),
+    borderWidth: 1,
+    pointRadius: 4,
+    pointHoverRadius: 6,
   }));
 
   // Average marker: short horizontal dashed segment per year
@@ -2642,14 +2643,15 @@ function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
     label: t,
     type: 'scatter',
     data: themeDataMap[t].map((post, idx) => ({
-      x: i + ((idx % 9) - 4) * 0.04,  // deterministic jitter ±0.16
+      x: i + ((idx % 9) - 4) * 0.07,  // deterministic jitter ±0.28
       y: post.impressions,
       pub: post.publication,
     })),
     backgroundColor: hexToRgba(themeColorMap[t], 0.65),
-    borderColor: 'transparent',
-    pointRadius: 5,
-    pointHoverRadius: 7,
+    borderColor: C.bg(),
+    borderWidth: 1,
+    pointRadius: 4,
+    pointHoverRadius: 6,
   }));
 
   // Average marker: short horizontal segment per theme
