@@ -332,8 +332,11 @@ function initDashboard() {
   /* Event listeners */
   filterTheme.addEventListener('change', applyFilters);
   filterMedia.addEventListener('change', applyFilters);
-  filterDateFrom.addEventListener('change', applyFilters);
-  filterDateTo.addEventListener('change', applyFilters);
+  filterDateFrom.addEventListener('change', () => { clearQuickDateActive(); applyFilters(); });
+  filterDateTo.addEventListener('change', () => { clearQuickDateActive(); applyFilters(); });
+  document.querySelectorAll('.date-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyQuickDateFilter(btn.dataset.preset));
+  });
   resetFiltersBtn.addEventListener('click', resetFilters);
 
   /* Tabs */
@@ -605,6 +608,49 @@ function resetFilters() {
   filterMedia.value = '';
   filterDateFrom.value = '';
   filterDateTo.value = '';
+  clearQuickDateActive();
+  applyFilters();
+}
+
+function clearQuickDateActive() {
+  document.querySelectorAll('.date-quick-btn').forEach(btn => btn.classList.remove('is-active'));
+}
+
+function applyQuickDateFilter(preset) {
+  /* Use local date components to avoid UTC timezone shift (toISOString would
+     convert midnight local time to the previous day in UTC+ zones). */
+  const fmt = (d) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const dates = state.rawData.map(d => d.date).filter(Boolean);
+  if (dates.length === 0) return;
+  const toDate   = new Date();
+  const dataMin  = new Date(Math.min(...dates));
+  let   fromDate = new Date(toDate);
+
+  if (preset === '30d') {
+    fromDate.setDate(fromDate.getDate() - 29);
+  } else if (preset === '3m') {
+    fromDate.setMonth(fromDate.getMonth() - 3);
+    fromDate.setDate(fromDate.getDate() + 1);
+  } else if (preset === '1y') {
+    fromDate.setFullYear(fromDate.getFullYear() - 1);
+    fromDate.setDate(fromDate.getDate() + 1);
+  }
+
+  if (fromDate < dataMin) fromDate = dataMin;
+
+  filterDateFrom.value = fmt(fromDate);
+  filterDateTo.value   = fmt(toDate);
+
+  clearQuickDateActive();
+  document.querySelectorAll(`.date-quick-btn[data-preset="${preset}"]`)
+    .forEach(btn => btn.classList.add('is-active'));
+
   applyFilters();
 }
 
