@@ -688,6 +688,55 @@ code, kbd {
 }
 
 
+/* ─── 9b. Quick Date Filters ─────────────────────────────── */
+.date-quick-filters {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.date-quick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-sans);
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition:
+    opacity       var(--duration-fast) var(--ease-out),
+    border-color  var(--duration-fast) var(--ease-out),
+    color         var(--duration-fast) var(--ease-out),
+    background    var(--duration-fast) var(--ease-out),
+    transform     var(--duration-fast) var(--ease-out);
+}
+
+.date-quick-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.date-quick-btn:active {
+  transform: scale(0.97);
+}
+
+.date-quick-btn:focus-visible {
+  outline: 2px solid var(--color-border-focus);
+  outline-offset: 2px;
+}
+
+.date-quick-btn.is-active {
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-color: var(--color-text);
+}
+
 /* ─── 10. Tab Bar ──────────────────────────────────────────── */
 .tab-bar {
   display: flex;

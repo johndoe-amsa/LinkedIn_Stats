@@ -332,8 +332,11 @@ function initDashboard() {
   /* Event listeners */
   filterTheme.addEventListener('change', applyFilters);
   filterMedia.addEventListener('change', applyFilters);
-  filterDateFrom.addEventListener('change', applyFilters);
-  filterDateTo.addEventListener('change', applyFilters);
+  filterDateFrom.addEventListener('change', () => { clearQuickDateActive(); applyFilters(); });
+  filterDateTo.addEventListener('change', () => { clearQuickDateActive(); applyFilters(); });
+  document.querySelectorAll('.date-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyQuickDateFilter(btn.dataset.preset));
+  });
   resetFiltersBtn.addEventListener('click', resetFilters);
 
   /* Tabs */
@@ -605,6 +608,39 @@ function resetFilters() {
   filterMedia.value = '';
   filterDateFrom.value = '';
   filterDateTo.value = '';
+  clearQuickDateActive();
+  applyFilters();
+}
+
+function clearQuickDateActive() {
+  document.querySelectorAll('.date-quick-btn').forEach(btn => btn.classList.remove('is-active'));
+}
+
+function applyQuickDateFilter(preset) {
+  const fmt = (d) => d.toISOString().split('T')[0];
+  const toDate = filterDateTo.max ? new Date(filterDateTo.max) : new Date();
+  let fromDate = new Date(toDate);
+
+  if (preset === '30d') {
+    fromDate.setDate(fromDate.getDate() - 29);
+  } else if (preset === '3m') {
+    fromDate.setMonth(fromDate.getMonth() - 3);
+    fromDate.setDate(fromDate.getDate() + 1);
+  } else if (preset === '1y') {
+    fromDate.setFullYear(fromDate.getFullYear() - 1);
+    fromDate.setDate(fromDate.getDate() + 1);
+  }
+
+  const dataMin = filterDateFrom.min ? new Date(filterDateFrom.min) : fromDate;
+  if (fromDate < dataMin) fromDate = dataMin;
+
+  filterDateFrom.value = fmt(fromDate);
+  filterDateTo.value   = fmt(toDate);
+
+  clearQuickDateActive();
+  document.querySelectorAll(`.date-quick-btn[data-preset="${preset}"]`)
+    .forEach(btn => btn.classList.add('is-active'));
+
   applyFilters();
 }
 
