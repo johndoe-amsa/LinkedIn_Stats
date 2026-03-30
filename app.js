@@ -662,6 +662,16 @@ function applyQuickDateFilter(preset) {
 Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 
+// Returns a scriptable pointRadius that shows only the last non-null data point
+function lastPointRadius(visibleRadius = 4) {
+  return (ctx) => {
+    const data = ctx.dataset.data;
+    let lastIdx = data.length - 1;
+    while (lastIdx > 0 && (data[lastIdx] === null || data[lastIdx] === undefined)) lastIdx--;
+    return ctx.dataIndex === lastIdx ? visibleRadius : 0;
+  };
+}
+
 function destroyChart(id) {
   if (state.charts[id]) {
     state.charts[id].destroy();
@@ -945,9 +955,10 @@ function renderTimelineChart(data) {
           borderWidth: 2,
           backgroundColor: 'transparent',
           pointBackgroundColor: d2,
-          pointRadius: sorted.length > 20 ? 0 : 4,
-          pointHoverRadius: 6,
-          tension: 0.35,
+          pointStyle: 'circle',
+          pointRadius: lastPointRadius(),
+          pointHoverRadius: 4,
+          tension: 0,
           yAxisID: 'y1',
           order: 1,
         }
@@ -1682,11 +1693,11 @@ function renderYtdCumulChart(data) {
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
-      pointStyle: pointShapes[i % pointShapes.length],
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      pointStyle: 'circle',
+      pointRadius: lastPointRadius(),
+      pointHoverRadius: 4,
       borderWidth: 2,
-      tension: 0.3,
+      tension: 0,
     };
   });
 
@@ -1840,9 +1851,10 @@ function renderYearlyImpressionsChart(data) {
           borderWidth: 2,
           backgroundColor: 'transparent',
           pointBackgroundColor: d2,
-          pointRadius: 5,
-          pointHoverRadius: 7,
-          tension: 0.3,
+          pointStyle: 'circle',
+          pointRadius: lastPointRadius(),
+          pointHoverRadius: 4,
+          tension: 0,
           yAxisID: 'y1',
           order: 1,
         },
@@ -2152,11 +2164,11 @@ function renderComparePostsChart(yearDataMap, years, yearColorMap) {
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
-      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      pointStyle: 'circle',
+      pointRadius: lastPointRadius(),
+      pointHoverRadius: 4,
       borderWidth: 2,
-      tension: 0.3,
+      tension: 0,
     };
   });
 
@@ -2349,11 +2361,11 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
-      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      pointStyle: 'circle',
+      pointRadius: lastPointRadius(),
+      pointHoverRadius: 4,
       borderWidth: 2,
-      tension: 0.3,
+      tension: 0,
       spanGaps: true,
     };
   });
@@ -2785,11 +2797,11 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
-      pointStyle: POINT_STYLES[i % POINT_STYLES.length],
-      pointRadius: 4,
-      pointHoverRadius: 6,
+      pointStyle: 'circle',
+      pointRadius: lastPointRadius(),
+      pointHoverRadius: 4,
       borderWidth: 2,
-      tension: 0.3,
+      tension: 0,
       spanGaps: true,
     };
   });
@@ -3327,10 +3339,11 @@ function renderTSTrendChart(posts) {
         borderColor: color,
         backgroundColor: 'transparent',
         pointBackgroundColor: color,
-        pointRadius: 4,
-        pointHoverRadius: 6,
+        pointStyle: 'circle',
+        pointRadius: lastPointRadius(),
+        pointHoverRadius: 4,
         borderWidth: 2,
-        tension: 0.3,
+        tension: 0,
         spanGaps: true,
       }],
     },
