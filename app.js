@@ -952,7 +952,7 @@ function renderTimelineChart(data) {
           type: 'line',
           data: engagementValues,
           borderColor: d2,
-          borderWidth: 1.5,
+          borderWidth: 2,
           backgroundColor: 'transparent',
           pointBackgroundColor: d2,
           pointStyle: 'circle',
@@ -1696,7 +1696,7 @@ function renderYtdCumulChart(data) {
       pointStyle: 'circle',
       pointRadius: lastPointRadius(),
       pointHoverRadius: 4,
-      borderWidth: 1.5,
+      borderWidth: 2,
       tension: 0,
     };
   });
@@ -1848,7 +1848,7 @@ function renderYearlyImpressionsChart(data) {
           type: 'line',
           data: averages,
           borderColor: d2,
-          borderWidth: 1.5,
+          borderWidth: 2,
           backgroundColor: 'transparent',
           pointBackgroundColor: d2,
           pointStyle: 'circle',
@@ -2167,7 +2167,7 @@ function renderComparePostsChart(yearDataMap, years, yearColorMap) {
       pointStyle: 'circle',
       pointRadius: lastPointRadius(),
       pointHoverRadius: 4,
-      borderWidth: 1.5,
+      borderWidth: 2,
       tension: 0,
     };
   });
@@ -2364,7 +2364,7 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
       pointStyle: 'circle',
       pointRadius: lastPointRadius(),
       pointHoverRadius: 4,
-      borderWidth: 1.5,
+      borderWidth: 2,
       tension: 0,
       spanGaps: true,
     };
@@ -2800,7 +2800,7 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
       pointStyle: 'circle',
       pointRadius: lastPointRadius(),
       pointHoverRadius: 4,
-      borderWidth: 1.5,
+      borderWidth: 2,
       tension: 0,
       spanGaps: true,
     };
@@ -3342,7 +3342,7 @@ function renderTSTrendChart(posts) {
         pointStyle: 'circle',
         pointRadius: lastPointRadius(),
         pointHoverRadius: 4,
-        borderWidth: 1.5,
+        borderWidth: 2,
         tension: 0,
         spanGaps: true,
       }],
