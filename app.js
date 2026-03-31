@@ -183,7 +183,13 @@ function parseNum(val) {
 
 function parsePct(val) {
   if (val == null || val === '') return 0;
-  return parseFloat(String(val).replace(/\s/g, '').replace('%', '').replace(',', '.')) || 0;
+  const str = String(val).replace(/\s/g, '');
+  if (str.includes('%')) {
+    // Already expressed as a percentage (e.g. "5 %" from CSV exports)
+    return parseFloat(str.replace('%', '').replace(',', '.')) || 0;
+  }
+  // SheetJS returns Excel percentage cells as decimals (0.05 = 5%) — multiply back to %
+  return (parseFloat(str.replace(',', '.')) || 0) * 100;
 }
 
 function parseHeure(val) {
