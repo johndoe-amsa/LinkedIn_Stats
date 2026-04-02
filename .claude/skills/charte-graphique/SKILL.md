@@ -55,10 +55,11 @@ Lire le fichier approprié **avant** de générer ou auditer :
 Le HTML généré sera typiquement rendu comme **artifact** (fichier `.html` autonome dans `/mnt/user-data/outputs`). En conséquence :
 
 - Chaque fichier HTML doit être **autonome** : inclure le bloc `:root` complet et tous les styles inline dans un `<style>`.
-- **Police Geist :** toujours inclure le lien CDN dans le `<head>` :
+- **Police Geist :** toujours inclure les liens Google Fonts dans le `<head>` :
   ```html
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
   ```
   Si le réseau n'est pas disponible, le fallback `system-ui, -apple-system, sans-serif` s'applique via la pile `var(--font-sans)`.
 

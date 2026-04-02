@@ -10,16 +10,19 @@
   --color-bg-secondary: #FAFAFA;
   --color-bg-tertiary:  #F2F2F2;
 
-  --color-text:         #000000;
+  --color-text:         #111111;
   --color-text-muted:   #666666;
   --color-text-subtle:  #999999;
+
+  --color-accent:       #000000;
+  --color-accent-text:  #FFFFFF;
 
   --color-border:       #EAEAEA;
   --color-border-strong:#000000;
   --color-border-focus: #000000;
 
   /* Sémantiques */
-  --color-success:  #0070F3;
+  --color-success:  #16A34A;
   --color-error:    #EE0000;
   --color-warning:  #F5A623;
 
@@ -68,6 +71,21 @@
   --duration-slow: 300ms;
   --ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Échelle typographique */
+  --text-h1-size: 42px; --text-h1-weight: 700; --text-h1-lh: 1.1; --text-h1-ls: -0.04em;
+  --text-h2-size: 28px; --text-h2-weight: 600; --text-h2-lh: 1.2; --text-h2-ls: -0.03em;
+  --text-h3-size: 20px; --text-h3-weight: 600; --text-h3-lh: 1.3; --text-h3-ls: -0.02em;
+  --text-body-size: 16px; --text-body-weight: 400; --text-body-lh: 1.5;
+  --text-small-size: 14px; --text-small-weight: 400; --text-small-lh: 1.5;
+  --text-label-size: 12px; --text-label-weight: 500; --text-label-lh: 1; --text-label-ls: 0.05em;
+  --text-code-size: 13px; --text-code-weight: 400; --text-code-lh: 1.6;
+
+  /* Z-Index (couches exclusivement) */
+  --z-dropdown: 100;
+  --z-modal:    200;
+  --z-toast:    300;
+  --z-tooltip:  400;
 }
 
 /* Dark mode — via system preference (default) or manual toggle */
@@ -80,6 +98,9 @@
     --color-text:         #EDEDED;
     --color-text-muted:   #888888;
     --color-text-subtle:  #555555;
+
+    --color-accent:       #EDEDED;
+    --color-accent-text:  #000000;
 
     --color-border:       #333333;
     --color-border-strong:#FFFFFF;
@@ -109,6 +130,9 @@
   --color-text:         #EDEDED;
   --color-text-muted:   #888888;
   --color-text-subtle:  #555555;
+
+  --color-accent:       #EDEDED;
+  --color-accent-text:  #000000;
 
   --color-border:       #333333;
   --color-border-strong:#FFFFFF;
@@ -290,7 +314,7 @@ code, kbd {
   top: 0;
   background: var(--backdrop-bg);
   backdrop-filter: var(--backdrop);
-  z-index: 100;
+  z-index: var(--z-dropdown);
 }
 
 .upload-header__brand {
@@ -478,7 +502,7 @@ code, kbd {
   background: var(--backdrop-bg);
   backdrop-filter: var(--backdrop);
   border-bottom: 1px solid var(--color-border);
-  z-index: 100;
+  z-index: var(--z-dropdown);
 }
 
 .nav__brand {
@@ -905,7 +929,7 @@ code, kbd {
 .kpi-card__trend svg {
   width: 12px;
   height: 12px;
-  stroke-width: 2.5;
+  stroke-width: 2;
 }
 
 .kpi-card__trend--up   { color: var(--color-success); }
@@ -1043,7 +1067,7 @@ code, kbd {
   border-radius: var(--radius-lg);
   box-shadow: var(--elevation-2);
   padding: var(--space-4);
-  z-index: 50;
+  z-index: var(--z-dropdown);
   pointer-events: none;
   opacity: 0;
   transform: translateY(4px);
@@ -1083,7 +1107,7 @@ code, kbd {
 }
 
 .chart-info-popover__section-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
   color: var(--color-text);
@@ -1181,7 +1205,7 @@ code, kbd {
 
 .heatmap-count {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-text-subtle);
   font-weight: 400;
   margin-top: 2px;
@@ -1198,7 +1222,7 @@ code, kbd {
 
 .heatmap-jh-table th {
   background: var(--color-bg-tertiary);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -1221,7 +1245,7 @@ code, kbd {
   text-align: center;
   font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   vertical-align: middle;
   min-width: 36px;
 }
@@ -1245,12 +1269,12 @@ code, kbd {
 
 .heatmap-jh-cell--value {
   font-weight: 400;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .heatmap-jh-count {
   display: block;
-  font-size: 9px;
+  font-size: 12px;
   color: var(--color-text-subtle);
   font-weight: 400;
   margin-top: 1px;
@@ -1298,7 +1322,7 @@ code, kbd {
 }
 
 .cell--top {
-  background: rgba(0,112,243,0.06);
+  background: rgba(22,163,74,0.06);
 }
 
 .cell--bottom {
@@ -1412,7 +1436,7 @@ code, kbd {
 }
 
 .podium-card__stat-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--color-text-subtle);
@@ -1607,16 +1631,15 @@ code, kbd {
   gap: 4px;
   padding: 2px 8px;
   border-radius: var(--radius-sm);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .badge--neutral {
-  background: transparent;
+  background: var(--color-bg-tertiary);
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
 }
 
 /* Engagement pill */
@@ -1936,7 +1959,7 @@ td .engagement-pill--high { color: var(--color-success); }
 }
 
 .compare-kpi-item__label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2015,7 +2038,7 @@ td .engagement-pill--high { color: var(--color-success); }
 .ct-split-bar__seg {
   height: 100%;
   min-width: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .ct-delta-adv {
@@ -2342,7 +2365,7 @@ td .engagement-pill--high { color: var(--color-success); }
 }
 
 .ts-kpi-delta--up {
-  background: rgba(0, 112, 243, 0.08);
+  background: rgba(22, 163, 74, 0.08);
   color: var(--color-success);
 }
 
