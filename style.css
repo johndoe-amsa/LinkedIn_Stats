@@ -10,9 +10,12 @@
   --color-bg-secondary: #FAFAFA;
   --color-bg-tertiary:  #F2F2F2;
 
-  --color-text:         #000000;
+  --color-text:         #111111;
   --color-text-muted:   #666666;
   --color-text-subtle:  #999999;
+
+  --color-accent:       #000000;
+  --color-accent-text:  #FFFFFF;
 
   --color-border:       #EAEAEA;
   --color-border-strong:#000000;
@@ -96,6 +99,9 @@
     --color-text-muted:   #888888;
     --color-text-subtle:  #555555;
 
+    --color-accent:       #EDEDED;
+    --color-accent-text:  #000000;
+
     --color-border:       #333333;
     --color-border-strong:#FFFFFF;
     --color-border-focus: #FFFFFF;
@@ -124,6 +130,9 @@
   --color-text:         #EDEDED;
   --color-text-muted:   #888888;
   --color-text-subtle:  #555555;
+
+  --color-accent:       #EDEDED;
+  --color-accent-text:  #000000;
 
   --color-border:       #333333;
   --color-border-strong:#FFFFFF;
@@ -920,7 +929,7 @@ code, kbd {
 .kpi-card__trend svg {
   width: 12px;
   height: 12px;
-  stroke-width: 2.5;
+  stroke-width: 2;
 }
 
 .kpi-card__trend--up   { color: var(--color-success); }
@@ -1260,7 +1269,7 @@ code, kbd {
 
 .heatmap-jh-cell--value {
   font-weight: 400;
-  border-radius: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .heatmap-jh-count {
@@ -1629,9 +1638,8 @@ code, kbd {
 }
 
 .badge--neutral {
-  background: transparent;
+  background: var(--color-bg-tertiary);
   color: var(--color-text-muted);
-  border: 1px solid var(--color-border);
 }
 
 /* Engagement pill */
@@ -2030,7 +2038,7 @@ td .engagement-pill--high { color: var(--color-success); }
 .ct-split-bar__seg {
   height: 100%;
   min-width: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .ct-delta-adv {
