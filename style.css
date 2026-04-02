@@ -19,7 +19,7 @@
   --color-border-focus: #000000;
 
   /* Sémantiques */
-  --color-success:  #0070F3;
+  --color-success:  #16A34A;
   --color-error:    #EE0000;
   --color-warning:  #F5A623;
 
@@ -1298,7 +1298,7 @@ code, kbd {
 }
 
 .cell--top {
-  background: rgba(0,112,243,0.06);
+  background: rgba(22,163,74,0.06);
 }
 
 .cell--bottom {
@@ -2342,7 +2342,7 @@ td .engagement-pill--high { color: var(--color-success); }
 }
 
 .ts-kpi-delta--up {
-  background: rgba(0, 112, 243, 0.08);
+  background: rgba(22, 163, 74, 0.08);
   color: var(--color-success);
 }
 
