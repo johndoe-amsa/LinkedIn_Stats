@@ -58,6 +58,29 @@
         <p class="upload-hero__desc">Importez votre export CSV LinkedIn pour visualiser vos performances, croiser thèmes et formats, et définir votre stratégie éditoriale.</p>
       </div>
 
+      <div class="url-connect">
+        <label class="url-connect__label" for="url-input">Lien Dropbox public</label>
+        <div class="url-connect__row">
+          <input
+            type="url"
+            id="url-input"
+            class="url-connect__input"
+            placeholder="https://www.dropbox.com/..."
+            spellcheck="false"
+            autocomplete="off"
+          />
+          <button type="button" id="url-connect-btn" class="btn btn--primary url-connect__btn">
+            Connecter
+          </button>
+        </div>
+        <div id="url-error" class="upload-error" hidden>
+          <i data-lucide="alert-circle" aria-hidden="true"></i>
+          <span id="url-error-msg"></span>
+        </div>
+      </div>
+
+      <div class="upload-divider"><span>ou</span></div>
+
       <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
         <input type="file" id="file-input" accept=".csv,.xlsx,.xls" hidden aria-label="Sélectionner un fichier CSV ou Excel" />
         <div class="drop-zone__icon">
