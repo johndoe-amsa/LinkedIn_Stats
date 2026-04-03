@@ -7,7 +7,7 @@
 'use strict';
 
 /* ─── Config ────────────────────────────────────────────────── */
-const DEFAULT_DROPBOX_URL = ''; // à remplir avec le lien Dropbox par défaut
+const DEFAULT_DROPBOX_URL = 'https://www.dropbox.com/scl/fi/glzvc60uahoarrttcqnpe/Classeur-V2.xlsx?rlkey=cl7sqper88s6ox0wyzsrceaxj&st=7cmov2j9&dl=0';
 
 /* ─── State ─────────────────────────────────────────────────── */
 const state = {
@@ -276,7 +276,9 @@ function showUrlError(msg) {
 }
 
 function toDropboxDirectUrl(url) {
-  return url.replace(/[?&]dl=0/, '').replace(/\?$/, '') + '?dl=1';
+  const u = new URL(url.replace('www.dropbox.com', 'dl.dropboxusercontent.com'));
+  u.searchParams.delete('dl');
+  return u.toString();
 }
 
 async function handleUrl(url) {
