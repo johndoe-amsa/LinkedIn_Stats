@@ -444,6 +444,72 @@ code, kbd {
   text-align: center;
 }
 
+/* ─── URL Connect ───────────────────────────────────────────── */
+.url-connect {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  animation: enter var(--duration-base) var(--ease-out);
+}
+
+.url-connect__label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.url-connect__row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.url-connect__input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color var(--duration-base);
+}
+
+.url-connect__input:focus {
+  outline: none;
+  border-color: var(--color-border-strong);
+}
+
+.url-connect__input::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.url-connect__btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.upload-divider {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: 13px;
+}
+
+.upload-divider::before,
+.upload-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
 .upload-error {
   display: flex;
   align-items: center;

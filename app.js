@@ -6,6 +6,9 @@
 
 'use strict';
 
+/* ─── Config ────────────────────────────────────────────────── */
+const DEFAULT_DROPBOX_URL = 'https://www.dropbox.com/scl/fi/glzvc60uahoarrttcqnpe/Classeur-V2.xlsx?rlkey=cl7sqper88s6ox0wyzsrceaxj&st=7cmov2j9&dl=0';
+
 /* ─── State ─────────────────────────────────────────────────── */
 const state = {
   rawData: [],
@@ -267,6 +270,43 @@ function showUploadError(msg) {
   $('upload-error-msg').textContent = msg;
 }
 
+function showUrlError(msg) {
+  $('url-error').hidden = false;
+  $('url-error-msg').textContent = msg;
+}
+
+function toDropboxDirectUrl(url) {
+  const u = new URL(url.replace('www.dropbox.com', 'dl.dropboxusercontent.com'));
+  u.searchParams.delete('dl');
+  return u.toString();
+}
+
+async function handleUrl(url) {
+  $('upload-error').hidden = true;
+  $('url-error').hidden = true;
+  const btn = $('url-connect-btn');
+  btn.disabled = true;
+  btn.textContent = 'Chargement…';
+
+  try {
+    const directUrl = toDropboxDirectUrl(url.trim());
+    const response = await fetch(directUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const buffer = await response.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const filename = url.split('/').pop().split('?')[0] || 'dropbox-file.xlsx';
+    finalizeParsedData(parseRows(rows), filename);
+  } catch {
+    showUrlError('Impossible de charger le fichier. Vérifiez que le lien est public et valide.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Connecter';
+  }
+}
+
 function finalizeParsedData(data, filename) {
   if (data.length === 0) {
     showUploadError('Aucune ligne valide trouvée. Vérifiez le format du fichier.');
@@ -461,6 +501,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* Theme toggle */
   initThemeToggle();
+
+  /* URL connect */
+  const urlInput      = $('url-input');
+  const urlConnectBtn = $('url-connect-btn');
+  if (DEFAULT_DROPBOX_URL) urlInput.value = DEFAULT_DROPBOX_URL;
+  urlConnectBtn.addEventListener('click', () => {
+    const url = urlInput.value.trim();
+    if (url) handleUrl(url);
+  });
+  urlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') urlConnectBtn.click();
+  });
 
   /* Upload interactions */
   const dropZone  = $('drop-zone');
