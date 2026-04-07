@@ -7,7 +7,7 @@
 'use strict';
 
 /* ─── Config ────────────────────────────────────────────────── */
-const DEFAULT_DROPBOX_URL = 'https://www.dropbox.com/scl/fi/glzvc60uahoarrttcqnpe/Classeur-V2.xlsx?rlkey=cl7sqper88s6ox0wyzsrceaxj&st=7cmov2j9&dl=0';
+const DEFAULT_DROPBOX_URL = 'https://www.dropbox.com/scl/fi/7o46j9pe859l3i4xlbqws/BDD-Stats-LinkedIn.xlsx?rlkey=qhww9jiegen7lo8qime9pf53k&st=qwb10pmw&dl=0';
 
 /* ─── State ─────────────────────────────────────────────────── */
 const state = {
