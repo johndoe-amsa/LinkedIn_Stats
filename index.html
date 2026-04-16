@@ -237,6 +237,10 @@
             <i data-lucide="filter" aria-hidden="true"></i>
             Entonnoir
           </button>
+          <button class="tab-btn" role="tab" data-tab="abonnes" aria-selected="false">
+            <i data-lucide="users" aria-hidden="true"></i>
+            Abonnés
+          </button>
         </div>
 
 
@@ -976,6 +980,92 @@
           </div><!-- /#ct-compare -->
 
         </div><!-- /#panel-compare-themes -->
+
+        <!-- ══════════════════════════════════════════
+             TAB — ABONNÉS
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-abonnes" role="tabpanel">
+
+          <!-- État vide si pas de feuille abonnés -->
+          <div class="empty-state" id="abonnes-empty" hidden>
+            <i data-lucide="users" aria-hidden="true"></i>
+            <p class="empty-state__title">Aucune donnée d'abonnés</p>
+            <p class="empty-state__desc">Ajoutez une feuille <strong>Abonnés</strong> dans votre fichier Excel avec les colonnes <code>Date</code> et <code>Abonnés</code>.</p>
+          </div>
+
+          <!-- Contenu principal -->
+          <div id="abonnes-content" hidden style="display:flex;flex-direction:column;gap:var(--space-8)">
+
+            <!-- KPIs -->
+            <section class="kpis" aria-label="Indicateurs abonnés">
+              <div class="kpi-card" id="kpi-ab-total">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Abonnés actuels</p>
+                  <div class="kpi-card__icon"><i data-lucide="users" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-total-sub"></p>
+              </div>
+
+              <div class="kpi-card" id="kpi-ab-gain">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Croissance totale</p>
+                  <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-gain-sub"></p>
+              </div>
+
+              <div class="kpi-card" id="kpi-ab-pct">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Croissance en %</p>
+                  <div class="kpi-card__icon"><i data-lucide="percent" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-pct-sub"></p>
+              </div>
+
+              <div class="kpi-card" id="kpi-ab-avg">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Gain moyen mensuel</p>
+                  <div class="kpi-card__icon"><i data-lucide="calendar-plus" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-avg-sub"></p>
+              </div>
+            </section>
+
+            <!-- Courbe d'évolution -->
+            <section class="charts-grid" aria-label="Évolution des abonnés">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Progression dans le temps</p>
+                    <h3 class="chart-card__title">Évolution du nombre d'abonnés</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-abonnes-line" aria-label="Courbe d'évolution des abonnés"></canvas>
+                </div>
+              </div>
+
+              <!-- Gain entre chaque relevé -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Variation mensuelle</p>
+                    <h3 class="chart-card__title">Gains et pertes d'abonnés par mois</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-abonnes-delta" aria-label="Variation du nombre d'abonnés entre chaque relevé"></canvas>
+                </div>
+              </div>
+            </section>
+
+          </div><!-- /#abonnes-content -->
+
+        </div><!-- /#panel-abonnes -->
 
       </div><!-- /.dashboard-main -->
     </main>

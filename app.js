@@ -14,6 +14,7 @@ const state = {
   rawData: [],
   filteredData: [],
   filename: '',
+  subscriberData: [],  /* [{ date, abonnes }] — feuille "Abonnés" du fichier Excel */
 
   /* Filters */
   filters: { theme: '', media: '', dateFrom: null, dateTo: null },
@@ -156,6 +157,44 @@ function $(id) { return document.getElementById(id); }
    CSV PARSING & UPLOAD
    ═══════════════════════════════════════════════════════════════ */
 
+/* Trouve la feuille "Abonnés" dans le classeur (insensible à la casse / accents) */
+function findSubscriberSheet(workbook) {
+  const normalize = s => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const target = ['abonnes', 'abonnés', 'subscribers', 'abonne'];
+  const name = workbook.SheetNames.find(n => target.includes(normalize(n)));
+  return name ? workbook.Sheets[name] : null;
+}
+
+/* Parse la feuille abonnés.
+   Colonnes attendues : Date | Abo Sponso | Abo Orga | Total Abo
+   Rétrocompatible : si les colonnes détaillées sont absentes, tente
+   de lire une colonne générique "Abonnés" pour le total. */
+function parseSubscriberRows(rows) {
+  if (!rows || rows.length === 0) return [];
+  const norm = s => String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[\s_-]+/g, '');
+  const header = Object.keys(rows[0]);
+  const find = (...keys) => header.find(h => keys.some(k => norm(h) === k || norm(h).includes(k)));
+
+  const colDate    = find('date');
+  const colSponso  = find('abosponso', 'sponso', 'sponsorise', 'sponsored');
+  const colOrga    = find('aboorga', 'orga', 'organique', 'organic');
+  const colTotal   = find('totalabo', 'total', 'abonnes', 'subscribers', 'abonne', 'nb');
+
+  if (!colDate || !colTotal) return [];
+
+  return rows
+    .map(r => ({
+      date:      parseDate(r[colDate]),
+      abonnes:   parseNum(r[colTotal]),
+      aboSponso: colSponso ? parseNum(r[colSponso]) : null,
+      aboOrga:   colOrga   ? parseNum(r[colOrga])   : null,
+    }))
+    .filter(r => r.date && !isNaN(r.date.getTime()) && r.abonnes > 0)
+    .sort((a, b) => a.date - b.date);
+}
+
 function parseDate(val) {
   if (!val) return null;
   /* SheetJS already returns a JS Date object for Excel date cells */
@@ -297,8 +336,10 @@ async function handleUrl(url) {
     const workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    const subSheet = findSubscriberSheet(workbook);
+    const subRows  = subSheet ? XLSX.utils.sheet_to_json(subSheet, { defval: '' }) : [];
     const filename = url.split('/').pop().split('?')[0] || 'dropbox-file.xlsx';
-    finalizeParsedData(parseRows(rows), filename);
+    finalizeParsedData(parseRows(rows), parseSubscriberRows(subRows), filename);
   } catch {
     showUrlError('Impossible de charger le fichier. Vérifiez que le lien est public et valide.');
   } finally {
@@ -307,13 +348,14 @@ async function handleUrl(url) {
   }
 }
 
-function finalizeParsedData(data, filename) {
+function finalizeParsedData(data, subscriberData, filename) {
   if (data.length === 0) {
     showUploadError('Aucune ligne valide trouvée. Vérifiez le format du fichier.');
     return;
   }
   state.rawData = data;
   state.filteredData = [...data];
+  state.subscriberData = subscriberData || [];
   state.filename = filename;
   $('upload-screen').hidden = true;
   $('dashboard-screen').hidden = false;
@@ -334,7 +376,9 @@ function handleFile(file) {
         const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-        finalizeParsedData(parseRows(rows), file.name);
+        const subSheet = findSubscriberSheet(workbook);
+        const subRows  = subSheet ? XLSX.utils.sheet_to_json(subSheet, { defval: '' }) : [];
+        finalizeParsedData(parseRows(rows), parseSubscriberRows(subRows), file.name);
       } catch {
         showUploadError('Erreur lors de la lecture du fichier Excel.');
       }
@@ -349,7 +393,7 @@ function handleFile(file) {
       header: true,
       skipEmptyLines: true,
       complete(results) {
-        finalizeParsedData(parseRows(results.data), file.name);
+        finalizeParsedData(parseRows(results.data), [], file.name);
       },
       error() {
         showUploadError('Erreur lors de la lecture du fichier CSV.');
@@ -566,6 +610,7 @@ function resetDashboard() {
 
   state.rawData = [];
   state.filteredData = [];
+  state.subscriberData = [];
   state.filename = '';
   state.filters = { theme: '', media: '', dateFrom: null, dateTo: null };
   state.activeTab = 'bilan';
@@ -593,12 +638,13 @@ function resetDashboard() {
    ═══════════════════════════════════════════════════════════════ */
 
 const TAB_META = {
-  bilan:         { label: 'Résumé',                      title: 'Synthèse du compte' },
-  matrice:       { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
-  entonnoir:     { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
-  laboratoire:   { label: 'La Liste',                    title: 'Tops & Flops' },
-  statistiques:  { label: 'Années',                      title: 'Tendances annuelles' },
+  bilan:            { label: 'Résumé',                      title: 'Synthèse du compte' },
+  matrice:          { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
+  entonnoir:        { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
+  laboratoire:      { label: 'La Liste',                    title: 'Tops & Flops' },
+  statistiques:     { label: 'Années',                      title: 'Tendances annuelles' },
   'compare-themes': { label: 'Thèmes',                      title: 'Analyse & comparaison de thèmes' },
+  abonnes:          { label: 'Abonnés',                     title: 'Évolution des abonnés' },
 };
 
 function switchTab(tabId) {
@@ -630,6 +676,7 @@ function renderActiveTab() {
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatsPanel(data); break;
     case 'compare-themes':  renderThemePanel(data);      break;
+    case 'abonnes':         renderAbonnesPanel();        break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 }
@@ -3747,6 +3794,162 @@ function groupBy(arr, key) {
   });
   return map;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   TAB — ABONNÉS
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderAbonnesPanel() {
+  const { dateFrom, dateTo } = state.filters;
+  const data = state.subscriberData.filter(d => {
+    if (dateFrom && d.date < dateFrom) return false;
+    if (dateTo   && d.date > dateTo)   return false;
+    return true;
+  });
+  const empty   = $('abonnes-empty');
+  const content = $('abonnes-content');
+
+  if (!data || data.length === 0) {
+    empty.hidden   = false;
+    content.hidden = true;
+    return;
+  }
+  empty.hidden   = true;
+  content.hidden = false;
+
+  /* Format mois court : "janv. 25" */
+  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+
+  /* ── KPIs ── */
+  const first   = data[0];
+  const last    = data[data.length - 1];
+  const gainAbs = last.abonnes - first.abonnes;
+  const gainPct = first.abonnes > 0 ? (gainAbs / first.abonnes) * 100 : 0;
+
+  /* Gain moyen mensuel (chaque relevé = 1 mois) */
+  const deltas   = data.slice(1).map((d, i) => d.abonnes - data[i].abonnes);
+  const avgGain  = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+
+  const setAbKPI = (cardId, value, sub) => {
+    $(cardId).querySelector('.kpi-card__value').textContent = value;
+    const subEl = $(cardId + '-sub');
+    if (subEl) subEl.textContent = sub || '';
+  };
+
+  setAbKPI('kpi-ab-total', fmt(last.abonnes),
+    `Premier relevé : ${fmt(first.abonnes)} (${fmtMois(first.date)})`);
+  setAbKPI('kpi-ab-gain',
+    (gainAbs >= 0 ? '+' : '') + fmt(gainAbs),
+    `${fmtMois(first.date)} → ${fmtMois(last.date)} · ${data.length} relevés`);
+  setAbKPI('kpi-ab-pct',
+    (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
+    `Par rapport au premier relevé (${fmtMois(first.date)})`);
+  setAbKPI('kpi-ab-avg',
+    (avgGain >= 0 ? '+' : '') + fmt(Math.round(avgGain)),
+    `Médiane : ${fmt(Math.round(median(deltas)))} abonnés / mois`);
+
+  /* ── Courbe d'évolution ── */
+  destroyChart('chart-abonnes-line');
+  const labels = data.map(d => fmtMois(d.date));
+  const values = data.map(d => d.abonnes);
+  const color1 = DATA_COLORS()[0];
+
+  state.charts['chart-abonnes-line'] = new Chart($('chart-abonnes-line'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Abonnés',
+        data: values,
+        borderColor: color1,
+        backgroundColor: hexToRgba(color1, 0.12),
+        borderWidth: 2.5,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: color1,
+        fill: true,
+        tension: 0.35,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title:  items => items[0].label,
+            label:  item  => `Abonnés : ${fmt(item.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), maxTicksLimit: 18, maxRotation: 30, font: { size: 11 } },
+        },
+        y: {
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
+        },
+      },
+    },
+  });
+
+  /* ── Variation mensuelle ── */
+  destroyChart('chart-abonnes-delta');
+  const deltaLabels = data.slice(1).map(d => fmtMois(d.date));
+  const deltaColors = deltas.map(d => d >= 0 ? DATA_COLORS()[1] : cssVar('--color-error'));
+
+  state.charts['chart-abonnes-delta'] = new Chart($('chart-abonnes-delta'), {
+    type: 'bar',
+    data: {
+      labels: deltaLabels,
+      datasets: [{
+        label: 'Variation',
+        data: deltas,
+        backgroundColor: deltaColors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title:  items => items[0].label,
+            label:  item  => `Variation : ${item.raw >= 0 ? '+' : ''}${fmt(item.raw)} abonnés`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } },
+        },
+        y: {
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 },
+            callback: v => (v >= 0 ? '+' : '') + fmt(v) },
+        },
+      },
+    },
+  });
+}
+
+
+/* ─── Utilities ──────────────────────────────────────────────── */
 
 function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
 function fmtK(n)    {
