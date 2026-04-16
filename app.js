@@ -3812,21 +3812,19 @@ function renderAbonnesPanel() {
   empty.hidden   = true;
   content.hidden = false;
 
+  /* Format mois court : "janv. 25" */
+  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+
   /* ── KPIs ── */
   const first   = data[0];
   const last    = data[data.length - 1];
   const gainAbs = last.abonnes - first.abonnes;
   const gainPct = first.abonnes > 0 ? (gainAbs / first.abonnes) * 100 : 0;
 
-  /* Gain moyen entre relevés */
-  const deltas = data.slice(1).map((d, i) => d.abonnes - data[i].abonnes);
-  const avgGain = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
+  /* Gain moyen mensuel (chaque relevé = 1 mois) */
+  const deltas   = data.slice(1).map((d, i) => d.abonnes - data[i].abonnes);
+  const avgGain  = deltas.length > 0 ? deltas.reduce((a, b) => a + b, 0) / deltas.length : 0;
 
-  /* Nombre de mois entre le premier et le dernier relevé */
-  const monthsSpan = ((last.date - first.date) / (1000 * 60 * 60 * 24 * 30.44)) || 1;
-  const avgMonthly = gainAbs / monthsSpan;
-
-  /* Remplir les KPI cards */
   const setAbKPI = (cardId, value, sub) => {
     $(cardId).querySelector('.kpi-card__value').textContent = value;
     const subEl = $(cardId + '-sub');
@@ -3834,20 +3832,20 @@ function renderAbonnesPanel() {
   };
 
   setAbKPI('kpi-ab-total', fmt(last.abonnes),
-    `Premier relevé : ${fmt(first.abonnes)} (${formatDisplayDate(first.date)})`);
+    `Premier relevé : ${fmt(first.abonnes)} (${fmtMois(first.date)})`);
   setAbKPI('kpi-ab-gain',
     (gainAbs >= 0 ? '+' : '') + fmt(gainAbs),
-    `Sur ${data.length} relevés — de ${formatDisplayDate(first.date)} à ${formatDisplayDate(last.date)}`);
+    `${fmtMois(first.date)} → ${fmtMois(last.date)} · ${data.length} relevés`);
   setAbKPI('kpi-ab-pct',
     (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
-    `Par rapport au premier relevé`);
+    `Par rapport au premier relevé (${fmtMois(first.date)})`);
   setAbKPI('kpi-ab-avg',
-    (avgMonthly >= 0 ? '+' : '') + fmt(Math.round(avgMonthly)),
-    `Gain moyen par relevé : ${avgGain >= 0 ? '+' : ''}${fmt(Math.round(avgGain))}`);
+    (avgGain >= 0 ? '+' : '') + fmt(Math.round(avgGain)),
+    `Médiane : ${fmt(Math.round(median(deltas)))} abonnés / mois`);
 
   /* ── Courbe d'évolution ── */
   destroyChart('chart-abonnes-line');
-  const labels = data.map(d => formatDisplayDate(d.date));
+  const labels = data.map(d => fmtMois(d.date));
   const values = data.map(d => d.abonnes);
   const color1 = DATA_COLORS()[0];
 
@@ -3861,7 +3859,7 @@ function renderAbonnesPanel() {
         borderColor: color1,
         backgroundColor: hexToRgba(color1, 0.12),
         borderWidth: 2.5,
-        pointRadius: data.length <= 60 ? 4 : 2,
+        pointRadius: 4,
         pointHoverRadius: 6,
         pointBackgroundColor: color1,
         fill: true,
@@ -3886,21 +3884,20 @@ function renderAbonnesPanel() {
         x: {
           grid:   { color: C.dataGrid(), drawTicks: false },
           border: { display: false },
-          ticks:  { color: C.muted(), maxTicksLimit: 12, maxRotation: 0, font: { size: 11 } },
+          ticks:  { color: C.muted(), maxTicksLimit: 18, maxRotation: 30, font: { size: 11 } },
         },
         y: {
           grid:   { color: C.dataGrid(), drawTicks: false },
           border: { display: false },
-          ticks:  { color: C.muted(), font: { size: 11 },
-            callback: v => fmt(v) },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
         },
       },
     },
   });
 
-  /* ── Graphique des gains / pertes entre relevés ── */
+  /* ── Variation mensuelle ── */
   destroyChart('chart-abonnes-delta');
-  const deltaLabels = data.slice(1).map((d, i) => `${formatDisplayDate(data[i].date)} → ${formatDisplayDate(d.date)}`);
+  const deltaLabels = data.slice(1).map(d => fmtMois(d.date));
   const deltaColors = deltas.map(d => d >= 0 ? DATA_COLORS()[1] : cssVar('--color-error'));
 
   state.charts['chart-abonnes-delta'] = new Chart($('chart-abonnes-delta'), {
