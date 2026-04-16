@@ -3800,7 +3800,12 @@ function groupBy(arr, key) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderAbonnesPanel() {
-  const data = state.subscriberData;
+  const { dateFrom, dateTo } = state.filters;
+  const data = state.subscriberData.filter(d => {
+    if (dateFrom && d.date < dateFrom) return false;
+    if (dateTo   && d.date > dateTo)   return false;
+    return true;
+  });
   const empty   = $('abonnes-empty');
   const content = $('abonnes-content');
 
