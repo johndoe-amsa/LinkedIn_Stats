@@ -165,18 +165,32 @@ function findSubscriberSheet(workbook) {
   return name ? workbook.Sheets[name] : null;
 }
 
-/* Parse la feuille abonnés : colonnes Date + Abonnés (flexible) */
+/* Parse la feuille abonnés.
+   Colonnes attendues : Date | Abo Sponso | Abo Orga | Total Abo
+   Rétrocompatible : si les colonnes détaillées sont absentes, tente
+   de lire une colonne générique "Abonnés" pour le total. */
 function parseSubscriberRows(rows) {
   if (!rows || rows.length === 0) return [];
-  const normalize = s => String(s).toLowerCase()
+  const norm = s => String(s).toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '');
+    .replace(/[\s_-]+/g, '');
   const header = Object.keys(rows[0]);
-  const colDate = header.find(h => normalize(h) === 'date');
-  const colAb   = header.find(h => ['abonnes', 'abonnés', 'subscribers', 'abonne', 'nb'].some(k => normalize(h).includes(k)));
-  if (!colDate || !colAb) return [];
+  const find = (...keys) => header.find(h => keys.some(k => norm(h) === k || norm(h).includes(k)));
+
+  const colDate    = find('date');
+  const colSponso  = find('abosponso', 'sponso', 'sponsorise', 'sponsored');
+  const colOrga    = find('aboorga', 'orga', 'organique', 'organic');
+  const colTotal   = find('totalabo', 'total', 'abonnes', 'subscribers', 'abonne', 'nb');
+
+  if (!colDate || !colTotal) return [];
+
   return rows
-    .map(r => ({ date: parseDate(r[colDate]), abonnes: parseNum(r[colAb]) }))
+    .map(r => ({
+      date:      parseDate(r[colDate]),
+      abonnes:   parseNum(r[colTotal]),
+      aboSponso: colSponso ? parseNum(r[colSponso]) : null,
+      aboOrga:   colOrga   ? parseNum(r[colOrga])   : null,
+    }))
     .filter(r => r.date && !isNaN(r.date.getTime()) && r.abonnes > 0)
     .sort((a, b) => a.date - b.date);
 }
