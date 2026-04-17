@@ -4105,10 +4105,21 @@ async function runExport(selectedTabs) {
   const { jsPDF } = window.jspdf;
   const captureTarget = document.querySelector('.dashboard-main');
   const previousTab   = state.activeTab;
+  const prevScrollY   = window.scrollY;
 
-  /* Désactive les animations Chart.js le temps de la capture */
-  const prevAnim = (window.Chart && Chart.defaults && Chart.defaults.animation);
-  if (window.Chart && Chart.defaults) Chart.defaults.animation = false;
+  /* Désactive les animations Chart.js le temps de la capture.
+     On utilise duration:0 (plutôt que false) pour que les callbacks
+     onComplete continuent de se déclencher — certains graphes dessinent
+     leurs étiquettes dans onComplete. */
+  const prevAnimDuration = (window.Chart && Chart.defaults && Chart.defaults.animation)
+    ? Chart.defaults.animation.duration : undefined;
+  if (window.Chart && Chart.defaults) {
+    Chart.defaults.animation = Chart.defaults.animation || {};
+    Chart.defaults.animation.duration = 0;
+  }
+
+  /* Désactive toutes les animations/transitions CSS (fade-in du panel, etc.) */
+  document.body.classList.add('is-exporting');
 
   /* UI — mode "busy" */
   confirmBtn.disabled   = true;
@@ -4125,6 +4136,13 @@ async function runExport(selectedTabs) {
   const bgColor = getComputedStyle(document.body)
     .getPropertyValue('background-color').trim() || '#ffffff';
 
+  /* Attend que toutes les polices soient chargées une bonne fois pour toutes
+     (sinon les métriques de texte changent après coup et html2canvas capture
+     avec de mauvaises positions). */
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+  } catch (_) { /* ignore */ }
+
   try {
     for (let i = 0; i < selectedTabs.length; i++) {
       const tabId = selectedTabs[i];
@@ -4134,15 +4152,32 @@ async function runExport(selectedTabs) {
       progressFill.style.width = `${(i / selectedTabs.length) * 100}%`;
 
       switchTab(tabId);
+
+      /* Remonte en haut pour que html2canvas parte d'un layout propre */
+      window.scrollTo(0, 0);
+
       await waitForRender();
+
+      /* Force tous les charts actifs à finaliser leur animation en cours
+         (au cas où certains auraient été créés avant notre override). */
+      forceFinishChartAnimations();
+
+      /* Un dernier frame après le force-finish */
+      await new Promise(r => requestAnimationFrame(r));
 
       const canvas = await window.html2canvas(captureTarget, {
         backgroundColor: bgColor,
         scale: 2,
         logging: false,
         useCORS: true,
-        windowWidth: captureTarget.scrollWidth,
+        /* Force html2canvas à utiliser la taille réelle du contenu,
+           y compris la portion hors viewport. */
+        width:        captureTarget.scrollWidth,
+        height:       captureTarget.scrollHeight,
+        windowWidth:  captureTarget.scrollWidth,
         windowHeight: captureTarget.scrollHeight,
+        scrollX: 0,
+        scrollY: 0,
       });
 
       addCanvasToPdf(pdf, canvas, i === 0, pageW, pageH);
@@ -4161,11 +4196,28 @@ async function runExport(selectedTabs) {
     console.error('Export PDF failed:', err);
     progressText.textContent = `Erreur lors de l'export : ${err.message || err}`;
   } finally {
-    if (window.Chart && Chart.defaults) Chart.defaults.animation = prevAnim;
+    if (window.Chart && Chart.defaults && Chart.defaults.animation) {
+      Chart.defaults.animation.duration = prevAnimDuration;
+    }
+    document.body.classList.remove('is-exporting');
     confirmBtn.dataset.busy = '0';
     confirmBtn.disabled = false;
     switchTab(previousTab);
+    window.scrollTo(0, prevScrollY);
   }
+}
+
+/* Parcourt les instances Chart.js actives et stoppe toute animation
+   en cours pour figer leur rendu avant la capture. */
+function forceFinishChartAnimations() {
+  if (!window.Chart) return;
+  Object.values(state.charts || {}).forEach(chart => {
+    if (!chart) return;
+    try {
+      if (typeof chart.stop === 'function') chart.stop();
+      if (typeof chart.update === 'function') chart.update('none');
+    } catch (_) { /* ignore */ }
+  });
 }
 
 /* Ajoute un canvas au PDF, en le découpant verticalement s'il dépasse la page */
@@ -4204,12 +4256,15 @@ function addCanvasToPdf(pdf, canvas, isFirst, pageW, pageH) {
   }
 }
 
-/* Laisse le navigateur peindre deux frames + une marge pour que les charts
-   finissent leur layout avant la capture html2canvas. */
+/* Laisse le navigateur peindre plusieurs frames + une marge confortable
+   pour que layout + charts Chart.js soient totalement stabilisés avant
+   la capture html2canvas. */
 function waitForRender() {
   return new Promise(resolve => {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => setTimeout(resolve, 250));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setTimeout(resolve, 500));
+      });
     });
   });
 }

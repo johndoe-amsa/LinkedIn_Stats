@@ -2682,3 +2682,16 @@ td .engagement-pill--high { color: var(--color-success); }
   font-size: var(--text-small-size);
   color: var(--color-text-muted);
 }
+
+/* Pendant la capture PDF : désactive toute animation/transition pour
+   éviter qu'html2canvas ne fige l'état mi-animé (opacité partielle,
+   transform non terminé, fade-in de panel, etc.) */
+body.is-exporting,
+body.is-exporting *,
+body.is-exporting *::before,
+body.is-exporting *::after {
+  animation-duration: 0s !important;
+  animation-delay:    0s !important;
+  transition-duration: 0s !important;
+  transition-delay:    0s !important;
+}
