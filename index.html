@@ -25,6 +25,10 @@
   <!-- SheetJS — lecture des fichiers Excel (.xlsx / .xls) -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- html2canvas + jsPDF — export PDF du dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
   <link rel="stylesheet" href="style.css" />
 
   <!-- Apply saved theme immediately to prevent flash -->
@@ -137,6 +141,10 @@
       <div class="nav__actions">
         <button type="button" class="theme-toggle" id="theme-toggle-nav" aria-label="Changer le thème clair/sombre">
           <i data-lucide="moon" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" id="export-btn">
+          <i data-lucide="download" aria-hidden="true"></i>
+          Exporter
         </button>
         <button type="button" class="btn btn--secondary btn--sm" id="reset-btn">
           <i data-lucide="upload" aria-hidden="true"></i>
@@ -1069,6 +1077,48 @@
 
       </div><!-- /.dashboard-main -->
     </main>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       EXPORT MODAL
+  ══════════════════════════════════════════════ -->
+  <div id="export-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="export-modal-title" aria-modal="true">
+    <div class="modal__backdrop" data-modal-close></div>
+    <div class="modal__content">
+      <div class="modal__header">
+        <div>
+          <p class="section-label">Export PDF</p>
+          <h2 class="modal__title" id="export-modal-title">Exporter le rapport</h2>
+        </div>
+        <button type="button" class="modal__close" data-modal-close aria-label="Fermer la fenêtre">
+          <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="modal__body">
+        <p class="modal__desc">Sélectionnez les onglets à inclure. Les filtres actifs sont conservés.</p>
+
+        <label class="export-tab-row export-tab-row--all">
+          <input type="checkbox" id="export-select-all" checked />
+          <span>Tout sélectionner</span>
+        </label>
+
+        <div class="export-tab-list" id="export-tab-list"></div>
+
+        <div class="export-progress" id="export-progress" hidden>
+          <div class="export-progress__bar"><div class="export-progress__fill" id="export-progress-fill"></div></div>
+          <p class="export-progress__text" id="export-progress-text">Préparation…</p>
+        </div>
+      </div>
+
+      <div class="modal__footer">
+        <button type="button" class="btn btn--ghost btn--sm" data-modal-close>Annuler</button>
+        <button type="button" class="btn btn--primary btn--sm" id="export-confirm-btn">
+          <i data-lucide="download" aria-hidden="true"></i>
+          Exporter le PDF
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

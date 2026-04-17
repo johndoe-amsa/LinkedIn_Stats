@@ -521,6 +521,9 @@ function initDashboard() {
   /* Reset dashboard */
   resetBtn.addEventListener('click', resetDashboard);
 
+  /* Export PDF */
+  initExport();
+
   applyFilters();
 }
 
@@ -3988,4 +3991,225 @@ function hexToRgba(hex, alpha) {
   const g = parseInt(full.slice(2, 4), 16);
   const b = parseInt(full.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${alpha})`;
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   EXPORT PDF — sélection d'onglets + assemblage multi-pages
+   ═══════════════════════════════════════════════════════════════ */
+
+const EXPORT_TAB_ORDER = [
+  'bilan',
+  'laboratoire',
+  'statistiques',
+  'compare-themes',
+  'matrice',
+  'entonnoir',
+  'abonnes',
+];
+
+const EXPORT_TAB_LABELS = {
+  bilan:            'Résumé',
+  laboratoire:      'Liste des publications',
+  statistiques:     'Années',
+  'compare-themes': 'Thèmes',
+  matrice:          'Matrice Stratégique',
+  entonnoir:        'Entonnoir',
+  abonnes:          'Abonnés',
+};
+
+function initExport() {
+  const exportBtn     = $('export-btn');
+  const modal         = $('export-modal');
+  const tabList       = $('export-tab-list');
+  const selectAll     = $('export-select-all');
+  const confirmBtn    = $('export-confirm-btn');
+
+  if (!exportBtn || !modal) return;
+
+  /* Render checkboxes */
+  tabList.innerHTML = EXPORT_TAB_ORDER.map(tabId => `
+    <label class="export-tab-row">
+      <input type="checkbox" class="export-tab-cb" data-tab="${tabId}" checked />
+      <span>${EXPORT_TAB_LABELS[tabId]}</span>
+    </label>
+  `).join('');
+
+  const getCheckboxes = () => tabList.querySelectorAll('.export-tab-cb');
+
+  const syncSelectAll = () => {
+    const boxes = [...getCheckboxes()];
+    const allChecked = boxes.every(cb => cb.checked);
+    const noneChecked = boxes.every(cb => !cb.checked);
+    selectAll.checked = allChecked;
+    selectAll.indeterminate = !allChecked && !noneChecked;
+    confirmBtn.disabled = noneChecked;
+  };
+
+  selectAll.addEventListener('change', () => {
+    getCheckboxes().forEach(cb => { cb.checked = selectAll.checked; });
+    syncSelectAll();
+  });
+
+  tabList.addEventListener('change', (e) => {
+    if (e.target.classList.contains('export-tab-cb')) syncSelectAll();
+  });
+
+  /* Open / close modal */
+  exportBtn.addEventListener('click', () => openExportModal());
+  modal.addEventListener('click', (e) => {
+    if (e.target.matches('[data-modal-close]')) closeExportModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) closeExportModal();
+  });
+
+  confirmBtn.addEventListener('click', async () => {
+    const selected = [...getCheckboxes()]
+      .filter(cb => cb.checked)
+      .map(cb => cb.dataset.tab);
+    if (selected.length === 0) return;
+    await runExport(selected);
+  });
+
+  function openExportModal() {
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    /* Reset state */
+    getCheckboxes().forEach(cb => { cb.checked = true; });
+    syncSelectAll();
+    $('export-progress').hidden = true;
+    confirmBtn.disabled = false;
+    lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  }
+
+  function closeExportModal() {
+    if (confirmBtn.dataset.busy === '1') return;  /* ne pas fermer pendant l'export */
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+async function runExport(selectedTabs) {
+  const confirmBtn = $('export-confirm-btn');
+  const progress   = $('export-progress');
+  const progressFill = $('export-progress-fill');
+  const progressText = $('export-progress-text');
+
+  if (!window.jspdf || !window.html2canvas) {
+    progress.hidden = false;
+    progressText.textContent = 'Bibliothèques d\'export indisponibles (vérifiez votre connexion).';
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const captureTarget = document.querySelector('.dashboard-main');
+  const previousTab   = state.activeTab;
+
+  /* Désactive les animations Chart.js le temps de la capture */
+  const prevAnim = (window.Chart && Chart.defaults && Chart.defaults.animation);
+  if (window.Chart && Chart.defaults) Chart.defaults.animation = false;
+
+  /* UI — mode "busy" */
+  confirmBtn.disabled   = true;
+  confirmBtn.dataset.busy = '1';
+  progress.hidden       = false;
+  progressFill.style.width = '0%';
+  progressText.textContent = 'Préparation…';
+
+  /* Orientation portrait A4 */
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+
+  const bgColor = getComputedStyle(document.body)
+    .getPropertyValue('background-color').trim() || '#ffffff';
+
+  try {
+    for (let i = 0; i < selectedTabs.length; i++) {
+      const tabId = selectedTabs[i];
+      const label = EXPORT_TAB_LABELS[tabId] || tabId;
+
+      progressText.textContent = `Capture : ${label} (${i + 1}/${selectedTabs.length})`;
+      progressFill.style.width = `${(i / selectedTabs.length) * 100}%`;
+
+      switchTab(tabId);
+      await waitForRender();
+
+      const canvas = await window.html2canvas(captureTarget, {
+        backgroundColor: bgColor,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        windowWidth: captureTarget.scrollWidth,
+        windowHeight: captureTarget.scrollHeight,
+      });
+
+      addCanvasToPdf(pdf, canvas, i === 0, pageW, pageH);
+    }
+
+    progressFill.style.width = '100%';
+    progressText.textContent = 'Enregistrement du PDF…';
+
+    const now = new Date();
+    const stamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    pdf.save(`linkedin-analytics-${stamp}.pdf`);
+
+    progressText.textContent = 'Export terminé ✓';
+    setTimeout(() => { $('export-modal').hidden = true; }, 600);
+  } catch (err) {
+    console.error('Export PDF failed:', err);
+    progressText.textContent = `Erreur lors de l'export : ${err.message || err}`;
+  } finally {
+    if (window.Chart && Chart.defaults) Chart.defaults.animation = prevAnim;
+    confirmBtn.dataset.busy = '0';
+    confirmBtn.disabled = false;
+    switchTab(previousTab);
+  }
+}
+
+/* Ajoute un canvas au PDF, en le découpant verticalement s'il dépasse la page */
+function addCanvasToPdf(pdf, canvas, isFirst, pageW, pageH) {
+  const margin  = 24;
+  const usableW = pageW - margin * 2;
+  const usableH = pageH - margin * 2;
+
+  if (!isFirst) pdf.addPage();
+
+  const fullImgH = (canvas.height / canvas.width) * usableW;
+
+  if (fullImgH <= usableH) {
+    pdf.addImage(canvas, 'PNG', margin, margin, usableW, fullImgH, undefined, 'FAST');
+    return;
+  }
+
+  /* Content plus haut qu'une page → on slice verticalement */
+  const sliceSrcH = Math.floor((usableH / usableW) * canvas.width);
+  let srcY = 0;
+  let firstSlice = true;
+
+  while (srcY < canvas.height) {
+    const h = Math.min(sliceSrcH, canvas.height - srcY);
+    const slice = document.createElement('canvas');
+    slice.width  = canvas.width;
+    slice.height = h;
+    slice.getContext('2d').drawImage(
+      canvas, 0, srcY, canvas.width, h, 0, 0, canvas.width, h
+    );
+    const sliceImgH = (h / canvas.width) * usableW;
+    if (!firstSlice) pdf.addPage();
+    pdf.addImage(slice, 'PNG', margin, margin, usableW, sliceImgH, undefined, 'FAST');
+    firstSlice = false;
+    srcY += h;
+  }
+}
+
+/* Laisse le navigateur peindre deux frames + une marge pour que les charts
+   finissent leur layout avant la capture html2canvas. */
+function waitForRender() {
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setTimeout(resolve, 250));
+    });
+  });
 }
