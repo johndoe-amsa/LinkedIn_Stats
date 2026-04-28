@@ -3836,11 +3836,13 @@ function renderAbonnesPanel() {
     if (subEl) subEl.textContent = sub || '';
   };
 
-  setAbKPI('kpi-ab-total', fmt(last.abonnes),
-    `Premier relevé : ${fmt(first.abonnes)} (${fmtMois(first.date)})`);
-  setAbKPI('kpi-ab-gain',
-    (gainAbs >= 0 ? '+' : '') + fmt(gainAbs),
-    `${fmtMois(first.date)} → ${fmtMois(last.date)} · ${data.length} relevés`);
+  /* ── Hero ── */
+  $('ab-hero-count').textContent     = fmt(last.abonnes);
+  const gainEl                       = $('ab-hero-gain');
+  gainEl.textContent                 = (gainAbs >= 0 ? '+' : '') + fmt(gainAbs) + ' abonnés';
+  gainEl.style.color                 = gainAbs >= 0 ? cssVar('--color-success') : cssVar('--color-error');
+  $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
+
   setAbKPI('kpi-ab-pct',
     (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
     `Par rapport au premier relevé (${fmtMois(first.date)})`);
@@ -3864,112 +3866,213 @@ function renderAbonnesPanel() {
       ? `Impressions nécessaires pour gagner 1 abonné`
       : `Aucune croissance sur la période`);
 
-  /* ── Courbe d'évolution ── */
-  destroyChart('chart-abonnes-line');
-  const labels = data.map(d => fmtMois(d.date));
-  const values = data.map(d => d.abonnes);
-  const color1 = DATA_COLORS()[0];
-
-  state.charts['chart-abonnes-line'] = new Chart($('chart-abonnes-line'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Abonnés',
-        data: values,
-        borderColor: color1,
-        backgroundColor: hexToRgba(color1, 0.12),
-        borderWidth: 2.5,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: color1,
-        fill: true,
-        tension: 0.35,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...tooltipBase(),
-          callbacks: {
-            title:  items => items[0].label,
-            label:  item  => `Abonnés : ${fmt(item.raw)}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), maxTicksLimit: 18, maxRotation: 30, font: { size: 11 } },
-        },
-        y: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
-        },
-      },
-    },
-  });
-
-  /* ── Variation mensuelle ── */
-  destroyChart('chart-abonnes-delta');
-  const deltaLabels = data.slice(1).map(d => fmtMois(d.date));
-  const deltaColors = deltas.map(d => d >= 0 ? DATA_COLORS()[1] : cssVar('--color-error'));
-
-  state.charts['chart-abonnes-delta'] = new Chart($('chart-abonnes-delta'), {
-    type: 'bar',
-    data: {
-      labels: deltaLabels,
-      datasets: [{
-        label: 'Variation',
-        data: deltas,
-        backgroundColor: deltaColors,
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...tooltipBase(),
-          callbacks: {
-            title:  items => items[0].label,
-            label:  item  => `Variation : ${item.raw >= 0 ? '+' : ''}${fmt(item.raw)} abonnés`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid:   { display: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } },
-        },
-        y: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), font: { size: 11 },
-            callback: v => (v >= 0 ? '+' : '') + fmt(v) },
-        },
-      },
-    },
-  });
+  /* ── Graphique combiné (évolution + variations) ── */
+  renderAbonnesCombined(data, deltas);
 
   /* ── Overlay impressions / abonnés ── */
   renderAbonnesOverlay(data, postData);
 
-  /* ── Top posts des meilleurs mois ── */
-  renderAbonnesBestMonths(data, postData);
+  /* ── Scatter engagement vs gain d'abonnés ── */
+  renderAbonnesScatter(data, postData);
 }
 
+
+function renderAbonnesCombined(subData, deltas) {
+  destroyChart('chart-abonnes-combined');
+  if (!$('chart-abonnes-combined')) return;
+
+  const fmtMois    = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const [c1, c2]   = DATA_COLORS();
+  const errorColor = cssVar('--color-error');
+
+  const labels      = subData.map(d => fmtMois(d.date));
+  const abonneVals  = subData.map(d => d.abonnes);
+  /* Les deltas ont un élément de moins — on aligne en décalant d'un mois */
+  const deltaVals   = [null, ...deltas];
+  const deltaColors = deltaVals.map(v => v === null ? 'transparent' : v >= 0 ? c1 : errorColor);
+
+  state.charts['chart-abonnes-combined'] = new Chart($('chart-abonnes-combined'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Variation mensuelle',
+          type: 'bar',
+          data: deltaVals,
+          backgroundColor: deltaColors,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Abonnés',
+          type: 'line',
+          data: abonneVals,
+          borderColor: c2,
+          backgroundColor: hexToRgba(c2, 0.08),
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: c2,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => items[0].label,
+            label: ctx => {
+              if (ctx.dataset.label === 'Abonnés') return `Abonnés : ${fmt(ctx.raw)}`;
+              if (ctx.raw === null) return null;
+              return `Variation : ${ctx.raw >= 0 ? '+' : ''}${fmt(ctx.raw)} abonnés`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
+        y: {
+          ...scaleY({ ticks: { callback: v => (v > 0 ? '+' : '') + fmt(v) } }),
+          position: 'left',
+          title: { display: true, text: 'Variation / mois', color: C.muted(), font: { size: 11 } },
+        },
+        y1: {
+          position: 'right',
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
+          beginAtZero: false,
+          title: { display: true, text: 'Total abonnés', color: C.muted(), font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
+function renderAbonnesScatter(subData, postData) {
+  destroyChart('chart-abonnes-scatter');
+  if (!$('chart-abonnes-scatter')) return;
+
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  /* Agrégation des posts par mois */
+  const postsByMonth = {};
+  postData.forEach(p => {
+    const k = monthKey(p.date);
+    if (!postsByMonth[k]) postsByMonth[k] = [];
+    postsByMonth[k].push(p);
+  });
+
+  /* Construction des points : (engagement moyen, gain abonnés) par mois */
+  const points = [];
+  const fmtMoisLong = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+
+  subData.slice(1).forEach((d, i) => {
+    const k     = monthKey(d.date);
+    const posts = postsByMonth[k];
+    if (!posts || posts.length === 0) return;
+    const avgEng = posts.reduce((s, p) => s + p.tauxEngagement, 0) / posts.length;
+    const gain   = d.abonnes - subData[i].abonnes;
+    points.push({ x: +avgEng.toFixed(3), y: gain, label: fmtMoisLong(d.date) });
+  });
+
+  if (points.length < 3) {
+    $('chart-abonnes-scatter').closest('.chart-card__body').innerHTML =
+      `<p style="padding:var(--space-6);color:var(--color-text-subtle);font-size:13px">Pas assez de mois communs entre vos publications et vos relevés d'abonnés (minimum 3).</p>`;
+    return;
+  }
+
+  /* Régression linéaire simple */
+  const n    = points.length;
+  const sumX = points.reduce((s, p) => s + p.x, 0);
+  const sumY = points.reduce((s, p) => s + p.y, 0);
+  const sumXY= points.reduce((s, p) => s + p.x * p.y, 0);
+  const sumX2= points.reduce((s, p) => s + p.x * p.x, 0);
+  const m    = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX) || 0;
+  const b    = (sumY - m * sumX) / n;
+  const minX = Math.min(...points.map(p => p.x));
+  const maxX = Math.max(...points.map(p => p.x));
+  const trendPoints = [{ x: minX, y: m * minX + b }, { x: maxX, y: m * maxX + b }];
+
+  const [c1, c2] = DATA_COLORS();
+
+  state.charts['chart-abonnes-scatter'] = new Chart($('chart-abonnes-scatter'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        {
+          label: 'Mois',
+          data: points,
+          backgroundColor: hexToRgba(c1, 0.75),
+          borderColor: c1,
+          borderWidth: 1.5,
+          pointRadius: 6,
+          pointHoverRadius: 8,
+          order: 2,
+        },
+        {
+          label: 'Tendance',
+          type: 'line',
+          data: trendPoints,
+          borderColor: hexToRgba(c2, 0.6),
+          borderWidth: 1.5,
+          borderDash: [5, 4],
+          backgroundColor: 'transparent',
+          pointRadius: 0,
+          tension: 0,
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'nearest', intersect: true },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            label: ctx => {
+              if (ctx.dataset.label === 'Tendance') return null;
+              const p = ctx.raw;
+              return [
+                `  ${p.label}`,
+                `  Engagement moyen : ${fmtPct(p.x)}`,
+                `  Gain d'abonnés : ${p.y >= 0 ? '+' : ''}${fmt(p.y)}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ...scaleX({}),
+          type: 'linear',
+          title: { display: true, text: 'Engagement moyen des publications (%)', color: C.muted(), font: { size: 11 } },
+          ticks: { color: C.muted(), callback: v => fmtPct(v) },
+        },
+        y: {
+          ...scaleY({}),
+          title: { display: true, text: 'Gain d\'abonnés', color: C.muted(), font: { size: 11 } },
+          ticks: { color: C.muted(), callback: v => (v >= 0 ? '+' : '') + fmt(v) },
+        },
+      },
+    },
+  });
+}
 
 function renderAbonnesOverlay(subData, postData) {
   destroyChart('chart-abonnes-overlay');
@@ -4054,90 +4157,6 @@ function renderAbonnesOverlay(subData, postData) {
   });
 }
 
-function renderAbonnesBestMonths(subData, postData) {
-  const container = $('abonnes-best-months');
-  if (!container) return;
-
-  const noData = msg => {
-    container.innerHTML = `<p style="padding:var(--space-6);color:var(--color-text-subtle);font-size:13px">${msg}</p>`;
-  };
-
-  if (subData.length < 2 || postData.length === 0) {
-    noData('Données insuffisantes pour analyser les publications par période de croissance.');
-    return;
-  }
-
-  const fmtMoisLong = d => d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-  const monthKey    = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-  /* Top 3 mois par gain d'abonnés */
-  const topMonths = subData.slice(1)
-    .map((d, i) => ({ date: d.date, key: monthKey(d.date), gain: d.abonnes - subData[i].abonnes }))
-    .sort((a, b) => b.gain - a.gain)
-    .slice(0, 3);
-
-  /* Posts indexés par mois */
-  const postsByMonth = {};
-  postData.forEach(p => {
-    const k = monthKey(p.date);
-    if (!postsByMonth[k]) postsByMonth[k] = [];
-    postsByMonth[k].push(p);
-  });
-
-  const rankLabels = ['1er', '2e', '3e'];
-  let html = '';
-
-  topMonths.forEach((m, idx) => {
-    const posts = (postsByMonth[m.key] || [])
-      .sort((a, b) => b.tauxEngagement - a.tauxEngagement)
-      .slice(0, 3);
-
-    if (posts.length === 0) return;
-
-    const gainLabel = (m.gain >= 0 ? '+' : '') + fmt(m.gain);
-    const gainColor = m.gain >= 0 ? 'var(--color-success)' : 'var(--color-error)';
-
-    html += `
-      <div style="margin-bottom:var(--space-7)">
-        <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid var(--color-border)">
-          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--color-bg-tertiary);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:2px 8px;color:var(--color-text-muted)">${rankLabels[idx]}</span>
-          <span style="font-size:14px;font-weight:600;color:var(--color-text)">${fmtMoisLong(m.date)}</span>
-          <span style="font-size:13px;font-weight:600;color:${gainColor}">${gainLabel} abonnés</span>
-        </div>
-        <div class="podium">
-          ${posts.map(p => `
-            <div class="podium-card">
-              <p class="podium-card__title" title="${escHtml(p.publication)}">${escHtml(truncate(p.publication, 90))}</p>
-              <div class="podium-card__meta">
-                <span class="podium-card__date">${formatDisplayDate(p.date)}</span>
-                ${p.theme ? `<span class="badge badge--neutral">${escHtml(p.theme)}</span>` : ''}
-              </div>
-              <div class="podium-card__stats">
-                <div class="podium-card__stat">
-                  <span class="podium-card__stat-value">${fmtK(p.impressions)}</span>
-                  <span class="podium-card__stat-label">Impressions</span>
-                </div>
-                <div class="podium-card__stat">
-                  <span class="podium-card__stat-value">${fmtPct(p.tauxEngagement)}</span>
-                  <span class="podium-card__stat-label">Engagement</span>
-                </div>
-                <div class="podium-card__stat">
-                  <span class="podium-card__stat-value">${fmt(p.interactions)}</span>
-                  <span class="podium-card__stat-label">Interactions</span>
-                </div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </div>`;
-  });
-
-  if (html) {
-    container.innerHTML = html;
-  } else {
-    noData('Aucune publication trouvée sur les mois avec la meilleure croissance.');
-  }
-}
 
 
 /* ─── Utilities ──────────────────────────────────────────────── */

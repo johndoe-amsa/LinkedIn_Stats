@@ -996,26 +996,18 @@
           <!-- Contenu principal -->
           <div id="abonnes-content" hidden style="display:flex;flex-direction:column;gap:var(--space-8)">
 
-            <!-- KPIs -->
+            <!-- Hero : total abonnés + croissance -->
+            <div class="ab-hero">
+              <p class="ab-hero__label">Abonnés actuels</p>
+              <p class="ab-hero__count" id="ab-hero-count">—</p>
+              <div class="ab-hero__growth">
+                <span class="ab-hero__growth-value" id="ab-hero-gain">—</span>
+                <span class="ab-hero__growth-sub" id="ab-hero-gain-sub"></span>
+              </div>
+            </div>
+
+            <!-- 4 KPIs -->
             <section class="kpis" aria-label="Indicateurs abonnés">
-              <div class="kpi-card" id="kpi-ab-total">
-                <div class="kpi-card__header">
-                  <p class="kpi-card__label">Abonnés actuels</p>
-                  <div class="kpi-card__icon"><i data-lucide="users" aria-hidden="true"></i></div>
-                </div>
-                <p class="kpi-card__value">—</p>
-                <p class="kpi-card__sub" id="kpi-ab-total-sub"></p>
-              </div>
-
-              <div class="kpi-card" id="kpi-ab-gain">
-                <div class="kpi-card__header">
-                  <p class="kpi-card__label">Croissance totale</p>
-                  <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
-                </div>
-                <p class="kpi-card__value">—</p>
-                <p class="kpi-card__sub" id="kpi-ab-gain-sub"></p>
-              </div>
-
               <div class="kpi-card" id="kpi-ab-pct">
                 <div class="kpi-card__header">
                   <p class="kpi-card__label">Croissance en %</p>
@@ -1053,30 +1045,17 @@
               </div>
             </section>
 
-            <!-- Courbe d'évolution -->
+            <!-- Graphique combiné : évolution + variations mensuelles -->
             <section class="charts-grid" aria-label="Évolution des abonnés">
               <div class="chart-card chart-card--wide">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Progression dans le temps</p>
-                    <h3 class="chart-card__title">Évolution du nombre d'abonnés</h3>
+                    <p class="chart-card__label">Progression & variations</p>
+                    <h3 class="chart-card__title">Évolution et gains mensuels des abonnés</h3>
                   </div>
                 </div>
                 <div class="chart-card__body">
-                  <canvas id="chart-abonnes-line" aria-label="Courbe d'évolution des abonnés"></canvas>
-                </div>
-              </div>
-
-              <!-- Gain entre chaque relevé -->
-              <div class="chart-card chart-card--wide">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Variation mensuelle</p>
-                    <h3 class="chart-card__title">Gains et pertes d'abonnés par mois</h3>
-                  </div>
-                </div>
-                <div class="chart-card__body">
-                  <canvas id="chart-abonnes-delta" aria-label="Variation du nombre d'abonnés entre chaque relevé"></canvas>
+                  <canvas id="chart-abonnes-combined" aria-label="Graphique combiné évolution et variation mensuelle des abonnés"></canvas>
                 </div>
               </div>
             </section>
@@ -1096,15 +1075,17 @@
               </div>
             </section>
 
-            <!-- Top posts des meilleurs mois de croissance -->
-            <div class="chart-card chart-card--wide" id="card-abonnes-best-months">
+            <!-- Corrélation engagement / croissance abonnés -->
+            <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Contenu · Croissance</p>
-                  <h3 class="chart-card__title">Publications lors des meilleures croissances</h3>
+                  <p class="chart-card__label">Engagement · Croissance</p>
+                  <h3 class="chart-card__title">Corrélation entre l'engagement et le gain d'abonnés</h3>
                 </div>
               </div>
-              <div id="abonnes-best-months" style="padding: 0 var(--space-2)"></div>
+              <div class="chart-card__body">
+                <canvas id="chart-abonnes-scatter" aria-label="Scatter engagement mensuel vs gain d'abonnés"></canvas>
+              </div>
             </div>
 
           </div><!-- /#abonnes-content -->
