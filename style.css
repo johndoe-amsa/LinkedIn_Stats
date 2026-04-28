@@ -1396,6 +1396,62 @@ code, kbd {
 }
 
 
+/* ─── Abonnés hero ──────────────────────────────────────────── */
+.ab-hero {
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition:
+    box-shadow   var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.ab-hero:hover {
+  box-shadow: var(--elevation-1);
+  border-color: var(--color-border-strong);
+}
+
+.ab-hero__label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.ab-hero__count {
+  font-size: clamp(48px, 6vw, 80px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--color-text);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-hero__growth {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.ab-hero__growth-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-hero__growth-sub {
+  font-size: 13px;
+  color: var(--color-text-subtle);
+}
+
+
 /* ─── 17. Podium ────────────────────────────────────────────── */
 .podium-section {
   display: flex;

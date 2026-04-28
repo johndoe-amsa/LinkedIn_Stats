@@ -3836,11 +3836,13 @@ function renderAbonnesPanel() {
     if (subEl) subEl.textContent = sub || '';
   };
 
-  setAbKPI('kpi-ab-total', fmt(last.abonnes),
-    `Premier relevé : ${fmt(first.abonnes)} (${fmtMois(first.date)})`);
-  setAbKPI('kpi-ab-gain',
-    (gainAbs >= 0 ? '+' : '') + fmt(gainAbs),
-    `${fmtMois(first.date)} → ${fmtMois(last.date)} · ${data.length} relevés`);
+  /* ── Hero ── */
+  $('ab-hero-count').textContent     = fmt(last.abonnes);
+  const gainEl                       = $('ab-hero-gain');
+  gainEl.textContent                 = (gainAbs >= 0 ? '+' : '') + fmt(gainAbs) + ' abonnés';
+  gainEl.style.color                 = gainAbs >= 0 ? cssVar('--color-success') : cssVar('--color-error');
+  $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
+
   setAbKPI('kpi-ab-pct',
     (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
     `Par rapport au premier relevé (${fmtMois(first.date)})`);
@@ -3848,105 +3850,209 @@ function renderAbonnesPanel() {
     (avgGain >= 0 ? '+' : '') + fmt(Math.round(avgGain)),
     `Médiane : ${fmt(Math.round(median(deltas)))} abonnés / mois`);
 
-  /* ── Courbe d'évolution ── */
-  destroyChart('chart-abonnes-line');
-  const labels = data.map(d => fmtMois(d.date));
-  const values = data.map(d => d.abonnes);
-  const color1 = DATA_COLORS()[0];
+  /* ── KPIs croisés publications / abonnés ── */
+  const postData = state.filteredData;
+  const totalImpressions = postData.reduce((a, d) => a + d.impressions, 0);
 
-  state.charts['chart-abonnes-line'] = new Chart($('chart-abonnes-line'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [{
-        label: 'Abonnés',
-        data: values,
-        borderColor: color1,
-        backgroundColor: hexToRgba(color1, 0.12),
-        borderWidth: 2.5,
-        pointRadius: 4,
-        pointHoverRadius: 6,
-        pointBackgroundColor: color1,
-        fill: true,
-        tension: 0.35,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          ...tooltipBase(),
-          callbacks: {
-            title:  items => items[0].label,
-            label:  item  => `Abonnés : ${fmt(item.raw)}`,
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), maxTicksLimit: 18, maxRotation: 30, font: { size: 11 } },
-        },
-        y: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
-        },
-      },
-    },
-  });
+  const ratioImprAbo = last.abonnes > 0 ? totalImpressions / last.abonnes : 0;
+  setAbKPI('kpi-ab-ratio',
+    fmtK(Math.round(ratioImprAbo)),
+    `${fmtK(totalImpressions)} impressions pour ${fmt(last.abonnes)} abonnés`);
 
-  /* ── Variation mensuelle ── */
-  destroyChart('chart-abonnes-delta');
-  const deltaLabels = data.slice(1).map(d => fmtMois(d.date));
-  const deltaColors = deltas.map(d => d >= 0 ? DATA_COLORS()[1] : cssVar('--color-error'));
+  const convCost = gainAbs > 0 ? Math.round(totalImpressions / gainAbs) : null;
+  setAbKPI('kpi-ab-conversion',
+    convCost !== null ? fmtK(convCost) : '—',
+    convCost !== null
+      ? `Impressions nécessaires pour gagner 1 abonné`
+      : `Aucune croissance sur la période`);
 
-  state.charts['chart-abonnes-delta'] = new Chart($('chart-abonnes-delta'), {
+  /* ── Graphique combiné (évolution + variations) ── */
+  renderAbonnesCombined(data, deltas);
+
+  /* ── Bubble : volume impressions × abonnés par mois ── */
+  renderAbonnesOverlay(data, postData);
+}
+
+
+function renderAbonnesCombined(subData, deltas) {
+  destroyChart('chart-abonnes-combined');
+  if (!$('chart-abonnes-combined')) return;
+
+  const fmtMois    = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const [c1, c2]   = DATA_COLORS();
+  const errorColor = cssVar('--color-error');
+
+  const labels      = subData.map(d => fmtMois(d.date));
+  const abonneVals  = subData.map(d => d.abonnes);
+  /* Les deltas ont un élément de moins — on aligne en décalant d'un mois */
+  const deltaVals   = [null, ...deltas];
+  const deltaColors = deltaVals.map(v => v === null ? 'transparent' : v >= 0 ? c1 : errorColor);
+
+  state.charts['chart-abonnes-combined'] = new Chart($('chart-abonnes-combined'), {
     type: 'bar',
     data: {
-      labels: deltaLabels,
-      datasets: [{
-        label: 'Variation',
-        data: deltas,
-        backgroundColor: deltaColors,
-        borderRadius: 4,
-        borderSkipped: false,
-      }],
+      labels,
+      datasets: [
+        {
+          label: 'Variation mensuelle',
+          type: 'bar',
+          data: deltaVals,
+          backgroundColor: deltaColors,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Abonnés',
+          type: 'line',
+          data: abonneVals,
+          borderColor: c2,
+          backgroundColor: hexToRgba(c2, 0.08),
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: c2,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { display: false },
+        legend: legendSpec('top', 'end'),
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title:  items => items[0].label,
-            label:  item  => `Variation : ${item.raw >= 0 ? '+' : ''}${fmt(item.raw)} abonnés`,
+            title: items => items[0].label,
+            label: ctx => {
+              if (ctx.dataset.label === 'Abonnés') return `Abonnés : ${fmt(ctx.raw)}`;
+              if (ctx.raw === null) return null;
+              return `Variation : ${ctx.raw >= 0 ? '+' : ''}${fmt(ctx.raw)} abonnés`;
+            },
           },
         },
       },
       scales: {
-        x: {
+        x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
+        y: {
+          ...scaleY({ ticks: { callback: v => (v > 0 ? '+' : '') + fmt(v) } }),
+          position: 'left',
+          title: { display: true, text: 'Variation / mois', color: C.muted(), font: { size: 11 } },
+        },
+        y1: {
+          position: 'right',
           grid:   { display: false },
           border: { display: false },
-          ticks:  { color: C.muted(), maxTicksLimit: 12, maxRotation: 30, font: { size: 10 } },
-        },
-        y: {
-          grid:   { color: C.dataGrid(), drawTicks: false },
-          border: { display: false },
-          ticks:  { color: C.muted(), font: { size: 11 },
-            callback: v => (v >= 0 ? '+' : '') + fmt(v) },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
+          beginAtZero: false,
+          title: { display: true, text: 'Total abonnés', color: C.muted(), font: { size: 11 } },
         },
       },
     },
   });
 }
+
+function renderAbonnesOverlay(subData, postData) {
+  destroyChart('chart-abonnes-overlay');
+  if (!$('chart-abonnes-overlay')) return;
+
+  /* Agréger les impressions des posts par mois */
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  const impByMonth = {};
+  postData.forEach(d => {
+    const k = monthKey(d.date);
+    impByMonth[k] = (impByMonth[k] || 0) + d.impressions;
+  });
+
+  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+
+  /* Radius normalisé avec racine carrée pour ne pas écraser les petites valeurs */
+  const impressions = subData.map(d => impByMonth[monthKey(d.date)] || 0);
+  const maxImp = Math.max(...impressions, 1);
+  const toRadius = imp => 5 + Math.sqrt(imp / maxImp) * 26;
+
+  const bubbleData = subData.map((d, i) => ({
+    x:           i,
+    y:           d.abonnes,
+    r:           toRadius(impressions[i]),
+    label:       fmtMois(d.date),
+    impressions: impressions[i],
+  }));
+
+  const [c1] = DATA_COLORS();
+  /* Couleur de chaque bulle : plus foncée = plus d'impressions */
+  const bubbleColors = bubbleData.map(b =>
+    hexToRgba(c1, 0.25 + 0.65 * Math.sqrt((b.impressions || 0) / maxImp))
+  );
+
+  state.charts['chart-abonnes-overlay'] = new Chart($('chart-abonnes-overlay'), {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Mois',
+        data: bubbleData,
+        backgroundColor: bubbleColors,
+        borderColor: bubbleColors.map(c => c.replace(/[\d.]+\)$/, '0.9)')),
+        borderWidth: 1,
+        hoverBorderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'nearest', intersect: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: () => '',
+            label: ctx => {
+              const b = ctx.raw;
+              return [
+                `  ${b.label}`,
+                `  Abonnés : ${fmt(b.y)}`,
+                `  Impressions ce mois : ${b.impressions > 0 ? fmt(b.impressions) : '—'}`,
+              ];
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          min: -0.5,
+          max: subData.length - 0.5,
+          ticks: {
+            color: C.muted(),
+            font: { size: 11 },
+            maxRotation: 30,
+            callback: (v) => {
+              const i = Math.round(v);
+              return subData[i] ? fmtMois(subData[i].date) : '';
+            },
+            stepSize: 1,
+          },
+        },
+        y: {
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
+          title: { display: true, text: 'Abonnés', color: C.muted(), font: { size: 11 } },
+        },
+      },
+    },
+  });
+}
+
 
 
 /* ─── Utilities ──────────────────────────────────────────────── */
