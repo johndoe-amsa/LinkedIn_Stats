@@ -4095,29 +4095,32 @@ function renderAbonnesOverlay(subData, postData) {
   const [c1, c2] = DATA_COLORS();
 
   state.charts['chart-abonnes-overlay'] = new Chart($('chart-abonnes-overlay'), {
-    type: 'bar',
+    type: 'line',
     data: {
       labels,
       datasets: [
         {
           label: 'Impressions',
-          type: 'bar',
           data: impressionValues,
-          backgroundColor: hexToRgba(c1, 0.7),
-          borderRadius: 4,
-          borderSkipped: false,
+          borderColor: c1,
+          backgroundColor: hexToRgba(c1, 0.18),
+          borderWidth: 2,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+          pointBackgroundColor: c1,
+          fill: 'origin',
+          tension: 0.4,
           yAxisID: 'y',
           order: 2,
         },
         {
           label: 'Abonnés',
-          type: 'line',
           data: abonneValues,
           borderColor: c2,
-          backgroundColor: hexToRgba(c2, 0.08),
+          backgroundColor: 'transparent',
           borderWidth: 2.5,
           pointRadius: 3,
-          pointHoverRadius: 5,
+          pointHoverRadius: 6,
           pointBackgroundColor: c2,
           fill: false,
           tension: 0.3,
@@ -4144,7 +4147,11 @@ function renderAbonnesOverlay(subData, postData) {
       },
       scales: {
         x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
-        y: { ...scaleY({ ticks: { callback: v => fmtK(v) } }), position: 'left' },
+        y: {
+          ...scaleY({ ticks: { callback: v => fmtK(v) } }),
+          position: 'left',
+          beginAtZero: true,
+        },
         y1: {
           position: 'right',
           grid:   { display: false },
