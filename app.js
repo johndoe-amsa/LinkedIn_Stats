@@ -3869,11 +3869,8 @@ function renderAbonnesPanel() {
   /* ── Graphique combiné (évolution + variations) ── */
   renderAbonnesCombined(data, deltas);
 
-  /* ── Overlay impressions / abonnés ── */
+  /* ── Bubble : volume impressions × abonnés par mois ── */
   renderAbonnesOverlay(data, postData);
-
-  /* ── Scatter engagement vs gain d'abonnés ── */
-  renderAbonnesScatter(data, postData);
 }
 
 
@@ -3961,97 +3958,67 @@ function renderAbonnesCombined(subData, deltas) {
   });
 }
 
-function renderAbonnesScatter(subData, postData) {
-  destroyChart('chart-abonnes-scatter');
-  if (!$('chart-abonnes-scatter')) return;
+function renderAbonnesOverlay(subData, postData) {
+  destroyChart('chart-abonnes-overlay');
+  if (!$('chart-abonnes-overlay')) return;
 
+  /* Agréger les impressions des posts par mois */
   const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-  /* Agrégation des posts par mois */
-  const postsByMonth = {};
-  postData.forEach(p => {
-    const k = monthKey(p.date);
-    if (!postsByMonth[k]) postsByMonth[k] = [];
-    postsByMonth[k].push(p);
+  const impByMonth = {};
+  postData.forEach(d => {
+    const k = monthKey(d.date);
+    impByMonth[k] = (impByMonth[k] || 0) + d.impressions;
   });
 
-  /* Construction des points : (engagement moyen, gain abonnés) par mois */
-  const points = [];
-  const fmtMoisLong = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
 
-  subData.slice(1).forEach((d, i) => {
-    const k     = monthKey(d.date);
-    const posts = postsByMonth[k];
-    if (!posts || posts.length === 0) return;
-    const avgEng = posts.reduce((s, p) => s + p.tauxEngagement, 0) / posts.length;
-    const gain   = d.abonnes - subData[i].abonnes;
-    points.push({ x: +avgEng.toFixed(3), y: gain, label: fmtMoisLong(d.date) });
-  });
+  /* Radius normalisé avec racine carrée pour ne pas écraser les petites valeurs */
+  const impressions = subData.map(d => impByMonth[monthKey(d.date)] || 0);
+  const maxImp = Math.max(...impressions, 1);
+  const toRadius = imp => 5 + Math.sqrt(imp / maxImp) * 26;
 
-  if (points.length < 3) {
-    $('chart-abonnes-scatter').closest('.chart-card__body').innerHTML =
-      `<p style="padding:var(--space-6);color:var(--color-text-subtle);font-size:13px">Pas assez de mois communs entre vos publications et vos relevés d'abonnés (minimum 3).</p>`;
-    return;
-  }
+  const bubbleData = subData.map((d, i) => ({
+    x:           i,
+    y:           d.abonnes,
+    r:           toRadius(impressions[i]),
+    label:       fmtMois(d.date),
+    impressions: impressions[i],
+  }));
 
-  /* Régression linéaire simple */
-  const n    = points.length;
-  const sumX = points.reduce((s, p) => s + p.x, 0);
-  const sumY = points.reduce((s, p) => s + p.y, 0);
-  const sumXY= points.reduce((s, p) => s + p.x * p.y, 0);
-  const sumX2= points.reduce((s, p) => s + p.x * p.x, 0);
-  const m    = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX) || 0;
-  const b    = (sumY - m * sumX) / n;
-  const minX = Math.min(...points.map(p => p.x));
-  const maxX = Math.max(...points.map(p => p.x));
-  const trendPoints = [{ x: minX, y: m * minX + b }, { x: maxX, y: m * maxX + b }];
+  const [c1] = DATA_COLORS();
+  /* Couleur de chaque bulle : plus foncée = plus d'impressions */
+  const bubbleColors = bubbleData.map(b =>
+    hexToRgba(c1, 0.25 + 0.65 * Math.sqrt((b.impressions || 0) / maxImp))
+  );
 
-  const [c1, c2] = DATA_COLORS();
-
-  state.charts['chart-abonnes-scatter'] = new Chart($('chart-abonnes-scatter'), {
-    type: 'scatter',
+  state.charts['chart-abonnes-overlay'] = new Chart($('chart-abonnes-overlay'), {
+    type: 'bubble',
     data: {
-      datasets: [
-        {
-          label: 'Mois',
-          data: points,
-          backgroundColor: hexToRgba(c1, 0.75),
-          borderColor: c1,
-          borderWidth: 1.5,
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          order: 2,
-        },
-        {
-          label: 'Tendance',
-          type: 'line',
-          data: trendPoints,
-          borderColor: hexToRgba(c2, 0.6),
-          borderWidth: 1.5,
-          borderDash: [5, 4],
-          backgroundColor: 'transparent',
-          pointRadius: 0,
-          tension: 0,
-          order: 1,
-        },
-      ],
+      datasets: [{
+        label: 'Mois',
+        data: bubbleData,
+        backgroundColor: bubbleColors,
+        borderColor: bubbleColors.map(c => c.replace(/[\d.]+\)$/, '0.9)')),
+        borderWidth: 1,
+        hoverBorderWidth: 2,
+      }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: true,
       interaction: { mode: 'nearest', intersect: true },
       plugins: {
-        legend: legendSpec('top', 'end'),
+        legend: { display: false },
         tooltip: {
           ...tooltipBase(),
           callbacks: {
+            title: () => '',
             label: ctx => {
-              if (ctx.dataset.label === 'Tendance') return null;
-              const p = ctx.raw;
+              const b = ctx.raw;
               return [
-                `  ${p.label}`,
-                `  Engagement moyen : ${fmtPct(p.x)}`,
-                `  Gain d'abonnés : ${p.y >= 0 ? '+' : ''}${fmt(p.y)}`,
+                `  ${b.label}`,
+                `  Abonnés : ${fmt(b.y)}`,
+                `  Impressions ce mois : ${b.impressions > 0 ? fmt(b.impressions) : '—'}`,
               ];
             },
           },
@@ -4059,105 +4026,27 @@ function renderAbonnesScatter(subData, postData) {
       },
       scales: {
         x: {
-          ...scaleX({}),
           type: 'linear',
-          title: { display: true, text: 'Engagement moyen des publications (%)', color: C.muted(), font: { size: 11 } },
-          ticks: { color: C.muted(), callback: v => fmtPct(v) },
-        },
-        y: {
-          ...scaleY({}),
-          title: { display: true, text: 'Gain d\'abonnés', color: C.muted(), font: { size: 11 } },
-          ticks: { color: C.muted(), callback: v => (v >= 0 ? '+' : '') + fmt(v) },
-        },
-      },
-    },
-  });
-}
-
-function renderAbonnesOverlay(subData, postData) {
-  destroyChart('chart-abonnes-overlay');
-  if (!$('chart-abonnes-overlay')) return;
-
-  /* Agréger les impressions des posts par mois */
-  const impByMonth = {};
-  postData.forEach(d => {
-    const key = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
-    impByMonth[key] = (impByMonth[key] || 0) + d.impressions;
-  });
-
-  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
-  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-  const labels           = subData.map(d => fmtMois(d.date));
-  const impressionValues = subData.map(d => impByMonth[monthKey(d.date)] || 0);
-  const abonneValues     = subData.map(d => d.abonnes);
-
-  const [c1, c2] = DATA_COLORS();
-
-  state.charts['chart-abonnes-overlay'] = new Chart($('chart-abonnes-overlay'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: 'Impressions',
-          data: impressionValues,
-          borderColor: c1,
-          backgroundColor: hexToRgba(c1, 0.18),
-          borderWidth: 2,
-          pointRadius: 2,
-          pointHoverRadius: 5,
-          pointBackgroundColor: c1,
-          fill: 'origin',
-          tension: 0.4,
-          yAxisID: 'y',
-          order: 2,
-        },
-        {
-          label: 'Abonnés',
-          data: abonneValues,
-          borderColor: c2,
-          backgroundColor: 'transparent',
-          borderWidth: 2.5,
-          pointRadius: 3,
-          pointHoverRadius: 6,
-          pointBackgroundColor: c2,
-          fill: false,
-          tension: 0.3,
-          yAxisID: 'y1',
-          order: 1,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: legendSpec('top', 'end'),
-        tooltip: {
-          ...tooltipBase(),
-          callbacks: {
-            title: items => items[0].label,
-            label: ctx => ctx.dataset.label === 'Abonnés'
-              ? `Abonnés : ${fmt(ctx.raw)}`
-              : `Impressions : ${fmt(ctx.raw)}`,
+          grid:   { color: C.dataGrid(), drawTicks: false },
+          border: { display: false },
+          min: -0.5,
+          max: subData.length - 0.5,
+          ticks: {
+            color: C.muted(),
+            font: { size: 11 },
+            maxRotation: 30,
+            callback: (v) => {
+              const i = Math.round(v);
+              return subData[i] ? fmtMois(subData[i].date) : '';
+            },
+            stepSize: 1,
           },
         },
-      },
-      scales: {
-        x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
         y: {
-          ...scaleY({ ticks: { callback: v => fmtK(v) } }),
-          position: 'left',
-          beginAtZero: true,
-        },
-        y1: {
-          position: 'right',
-          grid:   { display: false },
+          grid:   { color: C.dataGrid(), drawTicks: false },
           border: { display: false },
           ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
-          beginAtZero: false,
+          title: { display: true, text: 'Abonnés', color: C.muted(), font: { size: 11 } },
         },
       },
     },
