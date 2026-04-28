@@ -3848,6 +3848,22 @@ function renderAbonnesPanel() {
     (avgGain >= 0 ? '+' : '') + fmt(Math.round(avgGain)),
     `Médiane : ${fmt(Math.round(median(deltas)))} abonnés / mois`);
 
+  /* ── KPIs croisés publications / abonnés ── */
+  const postData = state.filteredData;
+  const totalImpressions = postData.reduce((a, d) => a + d.impressions, 0);
+
+  const ratioImprAbo = last.abonnes > 0 ? totalImpressions / last.abonnes : 0;
+  setAbKPI('kpi-ab-ratio',
+    fmtK(Math.round(ratioImprAbo)),
+    `${fmtK(totalImpressions)} impressions pour ${fmt(last.abonnes)} abonnés`);
+
+  const convCost = gainAbs > 0 ? Math.round(totalImpressions / gainAbs) : null;
+  setAbKPI('kpi-ab-conversion',
+    convCost !== null ? fmtK(convCost) : '—',
+    convCost !== null
+      ? `Impressions nécessaires pour gagner 1 abonné`
+      : `Aucune croissance sur la période`);
+
   /* ── Courbe d'évolution ── */
   destroyChart('chart-abonnes-line');
   const labels = data.map(d => fmtMois(d.date));
@@ -3946,6 +3962,181 @@ function renderAbonnesPanel() {
       },
     },
   });
+
+  /* ── Overlay impressions / abonnés ── */
+  renderAbonnesOverlay(data, postData);
+
+  /* ── Top posts des meilleurs mois ── */
+  renderAbonnesBestMonths(data, postData);
+}
+
+
+function renderAbonnesOverlay(subData, postData) {
+  destroyChart('chart-abonnes-overlay');
+  if (!$('chart-abonnes-overlay')) return;
+
+  /* Agréger les impressions des posts par mois */
+  const impByMonth = {};
+  postData.forEach(d => {
+    const key = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
+    impByMonth[key] = (impByMonth[key] || 0) + d.impressions;
+  });
+
+  const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  const labels           = subData.map(d => fmtMois(d.date));
+  const impressionValues = subData.map(d => impByMonth[monthKey(d.date)] || 0);
+  const abonneValues     = subData.map(d => d.abonnes);
+
+  const [c1, c2] = DATA_COLORS();
+
+  state.charts['chart-abonnes-overlay'] = new Chart($('chart-abonnes-overlay'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Impressions',
+          type: 'bar',
+          data: impressionValues,
+          backgroundColor: hexToRgba(c1, 0.7),
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Abonnés',
+          type: 'line',
+          data: abonneValues,
+          borderColor: c2,
+          backgroundColor: hexToRgba(c2, 0.08),
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: c2,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => items[0].label,
+            label: ctx => ctx.dataset.label === 'Abonnés'
+              ? `Abonnés : ${fmt(ctx.raw)}`
+              : `Impressions : ${fmt(ctx.raw)}`,
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
+        y: { ...scaleY({ ticks: { callback: v => fmtK(v) } }), position: 'left' },
+        y1: {
+          position: 'right',
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmt(v) },
+          beginAtZero: false,
+        },
+      },
+    },
+  });
+}
+
+function renderAbonnesBestMonths(subData, postData) {
+  const container = $('abonnes-best-months');
+  if (!container) return;
+
+  const noData = msg => {
+    container.innerHTML = `<p style="padding:var(--space-6);color:var(--color-text-subtle);font-size:13px">${msg}</p>`;
+  };
+
+  if (subData.length < 2 || postData.length === 0) {
+    noData('Données insuffisantes pour analyser les publications par période de croissance.');
+    return;
+  }
+
+  const fmtMoisLong = d => d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const monthKey    = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  /* Top 3 mois par gain d'abonnés */
+  const topMonths = subData.slice(1)
+    .map((d, i) => ({ date: d.date, key: monthKey(d.date), gain: d.abonnes - subData[i].abonnes }))
+    .sort((a, b) => b.gain - a.gain)
+    .slice(0, 3);
+
+  /* Posts indexés par mois */
+  const postsByMonth = {};
+  postData.forEach(p => {
+    const k = monthKey(p.date);
+    if (!postsByMonth[k]) postsByMonth[k] = [];
+    postsByMonth[k].push(p);
+  });
+
+  const rankLabels = ['1er', '2e', '3e'];
+  let html = '';
+
+  topMonths.forEach((m, idx) => {
+    const posts = (postsByMonth[m.key] || [])
+      .sort((a, b) => b.tauxEngagement - a.tauxEngagement)
+      .slice(0, 3);
+
+    if (posts.length === 0) return;
+
+    const gainLabel = (m.gain >= 0 ? '+' : '') + fmt(m.gain);
+    const gainColor = m.gain >= 0 ? 'var(--color-success)' : 'var(--color-error)';
+
+    html += `
+      <div style="margin-bottom:var(--space-7)">
+        <div style="display:flex;align-items:center;gap:var(--space-3);margin-bottom:var(--space-4);padding-bottom:var(--space-3);border-bottom:1px solid var(--color-border)">
+          <span style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;background:var(--color-bg-tertiary);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:2px 8px;color:var(--color-text-muted)">${rankLabels[idx]}</span>
+          <span style="font-size:14px;font-weight:600;color:var(--color-text)">${fmtMoisLong(m.date)}</span>
+          <span style="font-size:13px;font-weight:600;color:${gainColor}">${gainLabel} abonnés</span>
+        </div>
+        <div class="podium">
+          ${posts.map(p => `
+            <div class="podium-card">
+              <p class="podium-card__title" title="${escHtml(p.publication)}">${escHtml(truncate(p.publication, 90))}</p>
+              <div class="podium-card__meta">
+                <span class="podium-card__date">${formatDisplayDate(p.date)}</span>
+                ${p.theme ? `<span class="badge badge--neutral">${escHtml(p.theme)}</span>` : ''}
+              </div>
+              <div class="podium-card__stats">
+                <div class="podium-card__stat">
+                  <span class="podium-card__stat-value">${fmtK(p.impressions)}</span>
+                  <span class="podium-card__stat-label">Impressions</span>
+                </div>
+                <div class="podium-card__stat">
+                  <span class="podium-card__stat-value">${fmtPct(p.tauxEngagement)}</span>
+                  <span class="podium-card__stat-label">Engagement</span>
+                </div>
+                <div class="podium-card__stat">
+                  <span class="podium-card__stat-value">${fmt(p.interactions)}</span>
+                  <span class="podium-card__stat-label">Interactions</span>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`;
+  });
+
+  if (html) {
+    container.innerHTML = html;
+  } else {
+    noData('Aucune publication trouvée sur les mois avec la meilleure croissance.');
+  }
 }
 
 

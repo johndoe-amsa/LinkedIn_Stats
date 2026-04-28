@@ -1033,6 +1033,24 @@
                 <p class="kpi-card__value">—</p>
                 <p class="kpi-card__sub" id="kpi-ab-avg-sub"></p>
               </div>
+
+              <div class="kpi-card" id="kpi-ab-ratio">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Impressions / abonné</p>
+                  <div class="kpi-card__icon"><i data-lucide="zap" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-ratio-sub"></p>
+              </div>
+
+              <div class="kpi-card" id="kpi-ab-conversion">
+                <div class="kpi-card__header">
+                  <p class="kpi-card__label">Impressions pour +1 abonné</p>
+                  <div class="kpi-card__icon"><i data-lucide="target" aria-hidden="true"></i></div>
+                </div>
+                <p class="kpi-card__value">—</p>
+                <p class="kpi-card__sub" id="kpi-ab-conversion-sub"></p>
+              </div>
             </section>
 
             <!-- Courbe d'évolution -->
@@ -1062,6 +1080,32 @@
                 </div>
               </div>
             </section>
+
+            <!-- Overlay impressions / abonnés -->
+            <section class="charts-grid" aria-label="Croisement publications et abonnés">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Publications · Abonnés</p>
+                    <h3 class="chart-card__title">Impressions mensuelles et évolution des abonnés</h3>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-abonnes-overlay" aria-label="Graphique croisé impressions mensuelles et courbe abonnés"></canvas>
+                </div>
+              </div>
+            </section>
+
+            <!-- Top posts des meilleurs mois de croissance -->
+            <div class="chart-card chart-card--wide" id="card-abonnes-best-months">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Contenu · Croissance</p>
+                  <h3 class="chart-card__title">Publications lors des meilleures croissances</h3>
+                </div>
+              </div>
+              <div id="abonnes-best-months" style="padding: 0 var(--space-2)"></div>
+            </div>
 
           </div><!-- /#abonnes-content -->
 
