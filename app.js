@@ -3619,9 +3619,20 @@ function renderTSTopFlop(posts) {
               <th class="sortable col-pub" data-col="publication" tabindex="0" aria-sort="none">
                 Publication <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
-              <th>Média</th>
               <th class="sortable text-right" data-col="impressions" tabindex="0" aria-sort="none">
                 Impressions <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="reactions" tabindex="0" aria-sort="none">
+                Réactions <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="commentaires" tabindex="0" aria-sort="none">
+                Commentaires <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="republis" tabindex="0" aria-sort="none">
+                Republi. <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="clics" tabindex="0" aria-sort="none">
+                Clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
                 Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
@@ -3629,6 +3640,7 @@ function renderTSTopFlop(posts) {
               <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
                 Engagement <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
+              <th>Média</th>
             </tr>
           </thead>
           <tbody id="ts-table-body"></tbody>
@@ -3712,16 +3724,24 @@ function renderTSTable(posts) {
 
   data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
 
-  const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
-  const clicsValues = data.map(d => d.tauxClics).sort((a, b) => a - b);
+  const engValues      = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
+  const imprValues     = data.map(d => d.impressions).sort((a, b) => a - b);
+  const reactValues    = data.map(d => d.reactions).sort((a, b) => a - b);
+  const commValues     = data.map(d => d.commentaires).sort((a, b) => a - b);
+  const repValues      = data.map(d => d.republis).sort((a, b) => a - b);
+  const clicsRawValues = data.map(d => d.clics).sort((a, b) => a - b);
+  const clicsValues    = data.map(d => d.tauxClics).sort((a, b) => a - b);
 
   const p10 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.1)] : -Infinity;
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
-  const engP10   = p10(engValues),   engP90   = p90(engValues);
-  const imprP10  = p10(imprValues),  imprP90  = p90(imprValues);
-  const clicsP10 = p10(clicsValues), clicsP90 = p90(clicsValues);
+  const engP10      = p10(engValues),      engP90      = p90(engValues);
+  const imprP10     = p10(imprValues),     imprP90     = p90(imprValues);
+  const reactP10    = p10(reactValues),    reactP90    = p90(reactValues);
+  const commP10     = p10(commValues),     commP90     = p90(commValues);
+  const repP10      = p10(repValues),      repP90      = p90(repValues);
+  const clicsRawP10 = p10(clicsRawValues), clicsRawP90 = p90(clicsRawValues);
+  const clicsP10    = p10(clicsValues),    clicsP90    = p90(clicsValues);
 
   function cellClass(val, low, high) {
     if (val >= high) return 'cell--top';
@@ -3770,14 +3790,18 @@ function renderTSTable(posts) {
           ${escHtml(row.publication) || '<em style="color:var(--color-text-subtle)">Sans titre</em>'}
         </span>
       </td>
-      <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
       <td class="text-right ${cellClass(row.impressions, imprP10, imprP90)}">${fmt(row.impressions)}</td>
+      <td class="text-right ${cellClass(row.reactions, reactP10, reactP90)}">${fmt(row.reactions)}</td>
+      <td class="text-right ${cellClass(row.commentaires, commP10, commP90)}">${fmt(row.commentaires)}</td>
+      <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
+      <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
+      <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
 }
