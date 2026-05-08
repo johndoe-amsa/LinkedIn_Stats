@@ -3658,19 +3658,17 @@ function renderTSTopFlopBlock(posts, allData) {
         <th>Publication</th>
         <th>Média</th>
         <th class="text-right"${headerHelp}>${scoreHeader}</th>
-        <th class="text-right">Engagement</th>
         <th class="text-right">Impressions</th>
       </tr></thead>
       <tbody>${items.map(row => {
         const scoreCell = mode === 'normalized'
-          ? `<span class="engagement-pill ${ratioPillClass(row._ratio)}">${fmtRatio(row._ratio)}</span>`
+          ? `<span class="engagement-pill ${ratioPillClass(row._ratio)}" title="Engagement brut : ${fmtPct(row.tauxEngagement)}">${fmtRatio(row._ratio)}</span>`
           : `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
         return `
         <tr>
           <td class="${cellClass}"><span class="pub-title" title="${escHtml(row.publication)}">${escHtml(truncate(row.publication, 35))}</span></td>
           <td class="${cellClass}">${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
           <td class="text-right ${cellClass}">${scoreCell}</td>
-          <td class="text-right ${cellClass}">${fmtPct(row.tauxEngagement)}</td>
           <td class="text-right ${cellClass}">${fmt(row.impressions)}</td>
         </tr>`;
       }).join('')}

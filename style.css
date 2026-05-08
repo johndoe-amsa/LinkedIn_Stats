@@ -1365,6 +1365,7 @@ code, kbd {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .tops-flops__heading {
@@ -1395,6 +1396,12 @@ code, kbd {
 
 .cell--bottom {
   background: rgba(238,0,0,0.06);
+}
+
+@media (max-width: 1200px) {
+  #ts-topflop-block {
+    grid-template-columns: 1fr;
+  }
 }
 
 
