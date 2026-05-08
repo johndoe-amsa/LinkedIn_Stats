@@ -1142,6 +1142,36 @@ code, kbd {
     transform var(--duration-fast) var(--ease-out);
 }
 
+.chart-info-popover--wide {
+  width: 380px;
+}
+
+.chart-info-popover code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  background: var(--color-bg-tertiary);
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: var(--color-text);
+}
+
+.tf-low-reach-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 6px;
+  vertical-align: -2px;
+  color: var(--color-warning, #f5a623);
+  cursor: help;
+}
+
+.tf-low-reach-icon--inline {
+  width: 12px;
+  height: 12px;
+  margin: 0 2px;
+  vertical-align: -1px;
+}
+
 .chart-info-wrapper:hover .chart-info-popover,
 .chart-info-btn:focus-visible ~ .chart-info-popover {
   opacity: 1;
@@ -1488,6 +1518,25 @@ code, kbd {
 .tf-tooltip__ratio-label {
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+.tf-tooltip__warn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-2);
+  background: rgba(245, 166, 35, 0.1);
+  border: 1px solid rgba(245, 166, 35, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--color-warning, #f5a623);
+}
+
+.tf-tooltip__warn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .tf-tooltip__stats {
