@@ -3645,7 +3645,7 @@ function renderTSTopFlopBlock(posts, allData) {
     return 'engagement-pill--low';
   }
 
-  function buildTable(items, cellClass) {
+  function buildTable(items, cellClass, idxPrefix) {
     const scoreHeader = mode === 'normalized'
       ? 'Score vs format'
       : 'Engagement';
@@ -3660,13 +3660,13 @@ function renderTSTopFlopBlock(posts, allData) {
         <th class="text-right"${headerHelp}>${scoreHeader}</th>
         <th class="text-right">Impressions</th>
       </tr></thead>
-      <tbody>${items.map(row => {
+      <tbody>${items.map((row, i) => {
         const scoreCell = mode === 'normalized'
-          ? `<span class="engagement-pill ${ratioPillClass(row._ratio)}" title="Engagement brut : ${fmtPct(row.tauxEngagement)}">${fmtRatio(row._ratio)}</span>`
+          ? `<span class="engagement-pill ${ratioPillClass(row._ratio)}">${fmtRatio(row._ratio)}</span>`
           : `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
         return `
-        <tr>
-          <td class="${cellClass}"><span class="pub-title" title="${escHtml(row.publication)}">${escHtml(truncate(row.publication, 35))}</span></td>
+        <tr class="tf-row" data-tf-idx="${idxPrefix}-${i}">
+          <td class="${cellClass}"><span class="pub-title">${escHtml(truncate(row.publication, 35))}</span></td>
           <td class="${cellClass}">${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
           <td class="text-right ${cellClass}">${scoreCell}</td>
           <td class="text-right ${cellClass}">${fmt(row.impressions)}</td>
@@ -3688,16 +3688,28 @@ function renderTSTopFlopBlock(posts, allData) {
         <i data-lucide="arrow-up-circle" aria-hidden="true"></i>
         ${topLabel}
       </h4>
-      ${buildTable(top5, 'cell--top')}
+      ${buildTable(top5, 'cell--top', 'top')}
     </div>
     <div class="tops-flops__col">
       <h4 class="tops-flops__heading tops-flops__heading--flop">
         <i data-lucide="arrow-down-circle" aria-hidden="true"></i>
         ${flopLabel}
       </h4>
-      ${buildTable(flop5, 'cell--bottom')}
+      ${buildTable(flop5, 'cell--bottom', 'flop')}
     </div>
   `;
+
+  /* Lookup map for hover tooltip. */
+  const rowsByIdx = {};
+  top5.forEach((p, i)  => { rowsByIdx[`top-${i}`]  = p; });
+  flop5.forEach((p, i) => { rowsByIdx[`flop-${i}`] = p; });
+
+  container.querySelectorAll('tr.tf-row').forEach(tr => {
+    const post = rowsByIdx[tr.dataset.tfIdx];
+    if (!post) return;
+    tr.addEventListener('mouseenter', () => showRowTooltip(tr, post, mode));
+    tr.addEventListener('mouseleave', hideRowTooltip);
+  });
 
   /* Sync visual state of toggle buttons + bind click (idempotent). */
   document.querySelectorAll('.ts-tf-toggle').forEach(btn => {
@@ -3717,6 +3729,110 @@ function renderTSTopFlopBlock(posts, allData) {
   });
 
   if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+}
+
+/* ── Tooltip riche au survol des lignes Top/Flop ── */
+function getRowTooltipEl() {
+  let el = document.getElementById('tf-row-tooltip');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tf-row-tooltip';
+    el.className = 'tf-tooltip';
+    el.setAttribute('role', 'tooltip');
+    el.hidden = true;
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showRowTooltip(rowEl, post, mode) {
+  const tip = getRowTooltipEl();
+
+  const dateStr = post.date
+    ? post.date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : '—';
+  const heureStr = (post.heure !== null && post.heure !== undefined)
+    ? ` · ${String(post.heure).padStart(2, '0')}h`
+    : '';
+  const fullTitle = post.publication && post.publication.trim() ? post.publication : '(sans titre)';
+
+  const ratioBlock = (mode === 'normalized' && post._ratio !== null && isFinite(post._ratio))
+    ? `<div class="tf-tooltip__ratio">
+         <span class="tf-tooltip__ratio-value">${post._ratio.toFixed(2).replace('.', ',')}×</span>
+         <span class="tf-tooltip__ratio-label">vs médiane ${escHtml(post.media)}</span>
+       </div>`
+    : '';
+
+  tip.innerHTML = `
+    <div class="tf-tooltip__head">
+      <p class="tf-tooltip__date">${escHtml(dateStr)}${escHtml(heureStr)}</p>
+      <p class="tf-tooltip__title">${escHtml(fullTitle)}</p>
+      <div class="tf-tooltip__meta">
+        ${post.media !== '—' ? `<span class="badge badge--neutral">${escHtml(post.media)}</span>` : ''}
+        ${post.type && post.type !== '—' ? `<span class="tf-tooltip__type">${escHtml(post.type)}</span>` : ''}
+      </div>
+    </div>
+    ${ratioBlock}
+    <div class="tf-tooltip__stats">
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Impressions</span>
+        <span class="tf-tooltip__stat-value">${fmt(post.impressions)}</span>
+      </div>
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Engagement</span>
+        <span class="tf-tooltip__stat-value">${fmtPct(post.tauxEngagement)}</span>
+      </div>
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Réactions</span>
+        <span class="tf-tooltip__stat-value">${fmt(post.reactions)}</span>
+      </div>
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Commentaires</span>
+        <span class="tf-tooltip__stat-value">${fmt(post.commentaires)}</span>
+      </div>
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Republications</span>
+        <span class="tf-tooltip__stat-value">${fmt(post.republis)}</span>
+      </div>
+      <div class="tf-tooltip__stat">
+        <span class="tf-tooltip__stat-label">Clics</span>
+        <span class="tf-tooltip__stat-value">${fmt(post.clics)}</span>
+      </div>
+    </div>
+  `;
+
+  /* Reveal hors-écran avant la mesure pour obtenir des dimensions valides. */
+  tip.style.left = '-9999px';
+  tip.style.top  = '-9999px';
+  tip.hidden = false;
+
+  /* Position : à droite de la ligne par défaut, sinon à gauche, sinon dessus. */
+  const rect = rowEl.getBoundingClientRect();
+  const tipRect = tip.getBoundingClientRect();
+  const margin  = 12;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  let left = rect.right + margin;
+  let top  = rect.top + rect.height / 2 - tipRect.height / 2;
+
+  if (left + tipRect.width > vw - margin) {
+    left = rect.left - tipRect.width - margin;
+  }
+  if (left < margin) {
+    left = Math.max(margin, Math.min(vw - tipRect.width - margin, rect.left));
+    top  = rect.top - tipRect.height - margin;
+    if (top < margin) top = rect.bottom + margin;
+  }
+  top = Math.max(margin, Math.min(vh - tipRect.height - margin, top));
+
+  tip.style.left = `${left}px`;
+  tip.style.top  = `${top}px`;
+}
+
+function hideRowTooltip() {
+  const tip = document.getElementById('tf-row-tooltip');
+  if (tip) tip.hidden = true;
 }
 
 function renderTSTopFlop(posts) {
