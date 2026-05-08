@@ -49,6 +49,9 @@ const state = {
   themeMode:  'analyse',   // 'analyse' | 'compare'
   themeStats: '',          // selected theme in analyse mode
 
+  /* Thèmes -> Analyse: Top/Flop ranking mode */
+  tsTopFlopMode: 'normalized', // 'normalized' | 'raw'
+
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
 };
@@ -3082,6 +3085,7 @@ function renderThemeStats(data) {
   const posts = data.filter(d => d.theme === state.themeStats);
 
   renderTSKPIs(posts, data);
+  renderTSTopFlopBlock(posts, data);
   renderTSScatterChart(posts);
   renderScatterReactionsChart(posts);
   renderTSHourChart(posts);
@@ -3579,6 +3583,143 @@ const tsLeaderState = {
   page: 1,
   pageSize: 20,
 };
+
+/* ── Top 5 / Flop 5 du thème (entre KPIs et premier graphique) ── */
+function renderTSTopFlopBlock(posts, allData) {
+  const container = $('ts-topflop-block');
+  if (!container) return;
+
+  const MIN_IMPRESSIONS = 100;
+  const eligible = posts.filter(p => p.impressions >= MIN_IMPRESSIONS);
+
+  if (eligible.length < 2) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i data-lucide="bar-chart-2" aria-hidden="true"></i>
+        <p class="empty-state__title">Données insuffisantes</p>
+        <p class="empty-state__desc">Il faut au moins 2 publications avec ≥ ${MIN_IMPRESSIONS} impressions pour établir un classement.</p>
+      </div>`;
+    if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+    return;
+  }
+
+  /* Médianes d'engagement par média sur l'ensemble du dataset (baseline stable). */
+  const medianByMedia = {};
+  const byMediaAll = groupBy(allData.filter(p => p.impressions >= MIN_IMPRESSIONS), 'media');
+  Object.keys(byMediaAll).forEach(m => {
+    medianByMedia[m] = median(byMediaAll[m].map(p => p.tauxEngagement));
+  });
+
+  const mode = state.tsTopFlopMode;
+
+  /* Score : soit normalisé par format, soit brut. */
+  const scored = eligible.map(p => {
+    const baseline = medianByMedia[p.media];
+    const ratio = (baseline && baseline > 0) ? (p.tauxEngagement / baseline) : null;
+    return {
+      ...p,
+      _ratio: ratio,
+      _score: mode === 'normalized'
+        ? (ratio !== null ? ratio : -Infinity)
+        : p.tauxEngagement,
+    };
+  });
+
+  const sorted  = [...scored].sort((a, b) => b._score - a._score);
+  const ranked  = mode === 'normalized'
+    ? sorted.filter(p => p._ratio !== null)
+    : sorted;
+
+  const top5  = ranked.slice(0, Math.min(5, ranked.length));
+  const flop5 = ranked.slice(-Math.min(5, ranked.length)).reverse();
+
+  function fmtRatio(r) {
+    if (r === null || !isFinite(r)) return '—';
+    return `${r.toFixed(2).replace('.', ',')}×`;
+  }
+
+  function ratioPillClass(r) {
+    if (r === null || !isFinite(r)) return 'engagement-pill--low';
+    if (r >= 1.2) return 'engagement-pill--high';
+    if (r >= 0.8) return 'engagement-pill--mid';
+    return 'engagement-pill--low';
+  }
+
+  function buildTable(items, cellClass) {
+    const scoreHeader = mode === 'normalized'
+      ? 'Score vs format'
+      : 'Engagement';
+    const headerHelp  = mode === 'normalized'
+      ? ' title="Taux d\'engagement du post divisé par la médiane des posts de son média"'
+      : '';
+
+    return `<div class="table-wrapper"><table class="data-table">
+      <thead><tr>
+        <th>Publication</th>
+        <th>Média</th>
+        <th class="text-right"${headerHelp}>${scoreHeader}</th>
+        <th class="text-right">Engagement</th>
+        <th class="text-right">Impressions</th>
+      </tr></thead>
+      <tbody>${items.map(row => {
+        const scoreCell = mode === 'normalized'
+          ? `<span class="engagement-pill ${ratioPillClass(row._ratio)}">${fmtRatio(row._ratio)}</span>`
+          : `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
+        return `
+        <tr>
+          <td class="${cellClass}"><span class="pub-title" title="${escHtml(row.publication)}">${escHtml(truncate(row.publication, 35))}</span></td>
+          <td class="${cellClass}">${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
+          <td class="text-right ${cellClass}">${scoreCell}</td>
+          <td class="text-right ${cellClass}">${fmtPct(row.tauxEngagement)}</td>
+          <td class="text-right ${cellClass}">${fmt(row.impressions)}</td>
+        </tr>`;
+      }).join('')}
+      </tbody></table></div>`;
+  }
+
+  const topLabel  = mode === 'normalized'
+    ? 'Top 5 — Sur-performance vs format'
+    : 'Top 5 — Meilleur engagement';
+  const flopLabel = mode === 'normalized'
+    ? 'Flop 5 — Sous-performance vs format'
+    : 'Flop 5 — Plus faible engagement';
+
+  container.innerHTML = `
+    <div class="tops-flops__col">
+      <h4 class="tops-flops__heading tops-flops__heading--top">
+        <i data-lucide="arrow-up-circle" aria-hidden="true"></i>
+        ${topLabel}
+      </h4>
+      ${buildTable(top5, 'cell--top')}
+    </div>
+    <div class="tops-flops__col">
+      <h4 class="tops-flops__heading tops-flops__heading--flop">
+        <i data-lucide="arrow-down-circle" aria-hidden="true"></i>
+        ${flopLabel}
+      </h4>
+      ${buildTable(flop5, 'cell--bottom')}
+    </div>
+  `;
+
+  /* Sync visual state of toggle buttons + bind click (idempotent). */
+  document.querySelectorAll('.ts-tf-toggle').forEach(btn => {
+    const isActive = btn.dataset.mode === mode;
+    btn.classList.toggle('is-active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    if (!btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        if (state.tsTopFlopMode === btn.dataset.mode) return;
+        state.tsTopFlopMode = btn.dataset.mode;
+        const all = state.filteredData;
+        const themePosts = all.filter(d => d.theme === state.themeStats);
+        renderTSTopFlopBlock(themePosts, all);
+      });
+    }
+  });
+
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+}
 
 function renderTSTopFlop(posts) {
   const container = $('ts-topflop');

@@ -759,6 +759,46 @@
               <!-- KPIs -->
               <section class="kpis" id="ts-kpis" aria-label="KPIs du thème"></section>
 
+              <!-- Top 5 / Flop 5 -->
+              <section>
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Classement des publications</p>
+                      <h3 class="chart-card__title">Top 5 &amp; Flop 5</h3>
+                    </div>
+                    <div class="chart-card__actions">
+                      <button class="btn btn--ghost btn--sm ts-tf-toggle is-active" data-mode="normalized" type="button" aria-pressed="true">Score relatif au format</button>
+                      <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Engagement brut</button>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="À propos du classement">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce classement ?</p>
+                        <p class="chart-info-popover__body">Tous les formats ne se valent pas : un carrousel ou une vidéo génère structurellement plus d'engagement qu'une image simple. Trier sur le taux brut désavantage donc les formats "courts".</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Score relatif au format (recommandé)</p>
+                          <p class="chart-info-popover__text">Chaque post est comparé à la médiane des posts de son propre média (carrousel vs carrousel, image vs image…). Un score de <strong>1,5×</strong> signifie "ce post a fait 50 % de mieux que la médiane de son format". Cela met chaque format sur un pied d'égalité et révèle les vraies pépites.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Engagement brut</p>
+                          <p class="chart-info-popover__text">Le classement classique par taux d'engagement absolu. Utile pour voir vos meilleures performances en valeur, mais biaisé en faveur des formats riches (carrousel, vidéo).</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Garde-fou</p>
+                          <p class="chart-info-popover__text">Les publications avec moins de 100 impressions sont exclues du classement (bruit statistique).</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chart-card__body chart-card__body--table">
+                    <div class="tops-flops" id="ts-topflop-block"></div>
+                  </div>
+                </div>
+              </section>
+
               <!-- Scatter -->
               <section>
                 <div class="chart-card chart-card--wide">
