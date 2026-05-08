@@ -1201,7 +1201,8 @@ code, kbd {
 /* ─── 14. Stacked / Heatmap Toggle ────────────────────────── */
 .stacked-toggle,
 .heatmap-toggle,
-.ts-tf-toggle {
+.ts-tf-toggle,
+.lab-tf-toggle {
   height: 28px;
   padding: 0 var(--space-3);
   font-size: 12px;
@@ -1210,7 +1211,8 @@ code, kbd {
 
 .stacked-toggle.is-active,
 .heatmap-toggle.is-active,
-.ts-tf-toggle.is-active {
+.ts-tf-toggle.is-active,
+.lab-tf-toggle.is-active {
   background: var(--color-bg-tertiary);
   color: var(--color-text);
 }
@@ -1516,7 +1518,8 @@ code, kbd {
 }
 
 @media (max-width: 1200px) {
-  #ts-topflop-block {
+  #ts-topflop-block,
+  #tops-flops-container {
     grid-template-columns: 1fr;
   }
 }
