@@ -3582,7 +3582,8 @@ function renderTopFlopBlock(cfg) {
   const container = $(cfg.containerId);
   if (!container) return;
 
-  const MIN_IMPRESSIONS = 100;
+  const MIN_IMPRESSIONS    = 100;
+  const MIN_FORMAT_SAMPLES = 5;
   const eligible = cfg.posts.filter(p => p.impressions >= MIN_IMPRESSIONS);
 
   if (eligible.length < 2) {
@@ -3597,18 +3598,21 @@ function renderTopFlopBlock(cfg) {
     return;
   }
 
-  /* Médianes d'engagement par média (baseline stable). */
-  const medianByMedia = {};
-  const byMediaAll = groupBy(cfg.allData.filter(p => p.impressions >= MIN_IMPRESSIONS), 'media');
-  Object.keys(byMediaAll).forEach(m => {
-    medianByMedia[m] = median(byMediaAll[m].map(p => p.tauxEngagement));
-  });
+  /* Pairs par média sur le dataset de référence (≥ MIN_IMPRESSIONS).
+     Médiane "leave-one-out" calculée à la volée pour chaque post,
+     pour éviter le biais d'un post qui contribue à sa propre baseline. */
+  const peersByMedia = groupBy(cfg.allData.filter(p => p.impressions >= MIN_IMPRESSIONS), 'media');
 
   const mode = cfg.mode;
 
   const scored = eligible.map(p => {
-    const baseline = medianByMedia[p.media];
-    const ratio = (baseline && baseline > 0) ? (p.tauxEngagement / baseline) : null;
+    const peers = peersByMedia[p.media] || [];
+    let ratio = null;
+    if (peers.length >= MIN_FORMAT_SAMPLES) {
+      const looPeers = peers.filter(q => q !== p);
+      const baseline = median(looPeers.map(q => q.tauxEngagement));
+      if (baseline > 0) ratio = p.tauxEngagement / baseline;
+    }
     return {
       ...p,
       _ratio: ratio,
