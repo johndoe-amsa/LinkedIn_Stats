@@ -1398,9 +1398,133 @@ code, kbd {
   background: rgba(238,0,0,0.06);
 }
 
+.ts-tf-header-cluster {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.tf-row {
+  cursor: default;
+  transition: background 120ms ease;
+}
+
+.tf-row:hover td {
+  background: var(--color-bg-tertiary);
+}
+
+.tf-tooltip {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  padding: var(--space-4);
+  font-size: 13px;
+  color: var(--color-text);
+  pointer-events: none;
+}
+
+.tf-tooltip[hidden] {
+  display: none;
+}
+
+.tf-tooltip__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tf-tooltip__date {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tf-tooltip__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--color-text);
+}
+
+.tf-tooltip__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: var(--space-1);
+}
+
+.tf-tooltip__type {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.tf-tooltip__ratio {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tf-tooltip__ratio-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--color-success);
+}
+
+.tf-tooltip__ratio-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.tf-tooltip__stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+.tf-tooltip__stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tf-tooltip__stat-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.tf-tooltip__stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
 @media (max-width: 1200px) {
   #ts-topflop-block {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .ts-tf-header-cluster {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }
 
