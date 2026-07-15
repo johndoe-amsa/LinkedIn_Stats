@@ -424,27 +424,32 @@
               </div>
               <div class="ts-tf-header-cluster">
                 <div class="chart-card__actions">
-                  <button class="btn btn--ghost btn--sm lab-tf-toggle is-active" data-mode="normalized" type="button" aria-pressed="true">Score relatif au format</button>
+                  <button class="btn btn--ghost btn--sm lab-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Performance globale</button>
+                  <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Score vs format</button>
                   <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Engagement brut</button>
                 </div>
                 <div class="chart-info-wrapper">
                   <button class="chart-info-btn" type="button" aria-label="À propos du classement">
                     <i data-lucide="info" aria-hidden="true"></i>
                   </button>
-                  <div class="chart-info-popover" role="tooltip">
+                  <div class="chart-info-popover chart-info-popover--wide" role="tooltip">
                     <p class="chart-info-popover__title">Comment lire ce classement ?</p>
-                    <p class="chart-info-popover__body">Tous les formats ne se valent pas : un carrousel ou une vidéo génère structurellement plus d'engagement qu'une image simple. Trier sur le taux brut désavantage donc les formats "courts".</p>
+                    <p class="chart-info-popover__body">Mesurer la "réussite" d'un post sur un seul chiffre est piégeux : un taux d'engagement brut favorise les formats riches (carrousel, vidéo) <em>et</em> les posts à faible portée (le rate gonfle quand le dénominateur est petit). Trois angles complémentaires :</p>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Score relatif au format (recommandé)</p>
-                      <p class="chart-info-popover__text">Chaque post est comparé à la médiane de <strong>ses pairs</strong> (les autres posts de son média — carrousel vs carrousel, image vs image…). Un score de <strong>1,5×</strong> signifie "ce post a fait 50 % de mieux que la médiane de son format". Cela met chaque format sur un pied d'égalité et révèle les vraies pépites.</p>
+                      <p class="chart-info-popover__section-label">Performance globale (recommandé)</p>
+                      <p class="chart-info-popover__text">Combine <strong>qualité × portée</strong> via la moyenne géométrique : <code>√(score_qualité × score_portée)</code>. Un post doit à la fois résonner avec son audience <em>et</em> toucher un volume significatif pour grimper en tête. C'est l'angle qu'utilisent les analyses pro pour répondre à "quel post a vraiment marché ?".</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Score vs format</p>
+                      <p class="chart-info-popover__text">Mesure la <strong>qualité pure</strong> : taux d'engagement comparé à la médiane des posts du même média. Un score de <strong>1,5×</strong> = "50 % de mieux que la médiane de son format". Répond à "ce post a-t-il bien résonné parmi ceux qui l'ont vu ?". Indépendant du volume.</p>
                     </div>
                     <div class="chart-info-popover__section">
                       <p class="chart-info-popover__section-label">Engagement brut</p>
-                      <p class="chart-info-popover__text">Le classement classique par taux d'engagement absolu. Utile pour voir vos meilleures performances en valeur, mais biaisé en faveur des formats riches (carrousel, vidéo).</p>
+                      <p class="chart-info-popover__text">Le taux d'engagement classique. Biaisé en faveur des formats riches et des petites audiences (un like compte plus en pourcentage sur 200 vues que sur 20 000).</p>
                     </div>
                     <div class="chart-info-popover__section">
                       <p class="chart-info-popover__section-label">Garde-fous statistiques</p>
-                      <p class="chart-info-popover__text">Pour éviter le bruit, sont exclus du classement normalisé : les posts avec <strong>&lt; 100 impressions</strong>, et ceux dont le format compte <strong>&lt; 5 publications</strong> (médiane non fiable). De plus, chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>) — sinon un post extrême tirerait sa propre référence et serait sous-évalué.</p>
+                      <p class="chart-info-popover__text">Sont exclus du classement : posts avec <strong>&lt; 100 impressions absolues</strong>, posts dont les impressions sont <strong>&lt; 50 % de la médiane de leur format</strong> (portée insuffisante), et formats qui comptent <strong>&lt; 5 publications</strong> (médiane non fiable). Chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>). Les posts éligibles mais avec une portée sous la médiane de leur format sont marqués d'un icône <i data-lucide="eye-off" aria-hidden="true" class="tf-low-reach-icon tf-low-reach-icon--inline"></i> "audience restreinte".</p>
                     </div>
                   </div>
                 </div>
@@ -796,27 +801,32 @@
                     </div>
                     <div class="ts-tf-header-cluster">
                       <div class="chart-card__actions">
-                        <button class="btn btn--ghost btn--sm ts-tf-toggle is-active" data-mode="normalized" type="button" aria-pressed="true">Score relatif au format</button>
+                        <button class="btn btn--ghost btn--sm ts-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Performance globale</button>
+                        <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Score vs format</button>
                         <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Engagement brut</button>
                       </div>
                       <div class="chart-info-wrapper">
                         <button class="chart-info-btn" type="button" aria-label="À propos du classement">
                           <i data-lucide="info" aria-hidden="true"></i>
                         </button>
-                        <div class="chart-info-popover" role="tooltip">
+                        <div class="chart-info-popover chart-info-popover--wide" role="tooltip">
                         <p class="chart-info-popover__title">Comment lire ce classement ?</p>
-                        <p class="chart-info-popover__body">Tous les formats ne se valent pas : un carrousel ou une vidéo génère structurellement plus d'engagement qu'une image simple. Trier sur le taux brut désavantage donc les formats "courts".</p>
+                        <p class="chart-info-popover__body">Mesurer la "réussite" d'un post sur un seul chiffre est piégeux : un taux d'engagement brut favorise les formats riches (carrousel, vidéo) <em>et</em> les posts à faible portée (le rate gonfle quand le dénominateur est petit). Trois angles complémentaires :</p>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Score relatif au format (recommandé)</p>
-                          <p class="chart-info-popover__text">Chaque post est comparé à la médiane de <strong>ses pairs</strong> (les autres posts de son média — carrousel vs carrousel, image vs image…). Un score de <strong>1,5×</strong> signifie "ce post a fait 50 % de mieux que la médiane de son format". Cela met chaque format sur un pied d'égalité et révèle les vraies pépites.</p>
+                          <p class="chart-info-popover__section-label">Performance globale (recommandé)</p>
+                          <p class="chart-info-popover__text">Combine <strong>qualité × portée</strong> via la moyenne géométrique : <code>√(score_qualité × score_portée)</code>. Un post doit à la fois résonner avec son audience <em>et</em> toucher un volume significatif pour grimper en tête. C'est l'angle qu'utilisent les analyses pro pour répondre à "quel post a vraiment marché ?".</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Score vs format</p>
+                          <p class="chart-info-popover__text">Mesure la <strong>qualité pure</strong> : taux d'engagement comparé à la médiane des posts du même média. Un score de <strong>1,5×</strong> = "50 % de mieux que la médiane de son format". Répond à "ce post a-t-il bien résonné parmi ceux qui l'ont vu ?". Indépendant du volume.</p>
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Engagement brut</p>
-                          <p class="chart-info-popover__text">Le classement classique par taux d'engagement absolu. Utile pour voir vos meilleures performances en valeur, mais biaisé en faveur des formats riches (carrousel, vidéo).</p>
+                          <p class="chart-info-popover__text">Le taux d'engagement classique. Biaisé en faveur des formats riches et des petites audiences (un like compte plus en pourcentage sur 200 vues que sur 20 000).</p>
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Garde-fous statistiques</p>
-                          <p class="chart-info-popover__text">Pour éviter le bruit, sont exclus du classement normalisé : les posts avec <strong>&lt; 100 impressions</strong>, et ceux dont le format compte <strong>&lt; 5 publications</strong> (médiane non fiable). De plus, chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>) — sinon un post extrême tirerait sa propre référence et serait sous-évalué.</p>
+                          <p class="chart-info-popover__text">Sont exclus du classement : posts avec <strong>&lt; 100 impressions absolues</strong>, posts dont les impressions sont <strong>&lt; 50 % de la médiane de leur format</strong> (portée insuffisante), et formats qui comptent <strong>&lt; 5 publications</strong> (médiane non fiable). Chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>). Les posts éligibles mais avec une portée sous la médiane de leur format sont marqués d'un icône <i data-lucide="eye-off" aria-hidden="true" class="tf-low-reach-icon tf-low-reach-icon--inline"></i> "audience restreinte".</p>
                         </div>
                       </div>
                     </div>

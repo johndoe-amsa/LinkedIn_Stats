@@ -50,10 +50,10 @@ const state = {
   themeStats: '',          // selected theme in analyse mode
 
   /* Thèmes -> Analyse: Top/Flop ranking mode */
-  tsTopFlopMode: 'normalized', // 'normalized' | 'raw'
+  tsTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
 
   /* Laboratoire (Liste): Top/Flop ranking mode */
-  labTopFlopMode: 'normalized', // 'normalized' | 'raw'
+  labTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
 
   /* Chart.js instances (keyed by canvas id) */
   charts: {},
@@ -3582,50 +3582,83 @@ function renderTopFlopBlock(cfg) {
   const container = $(cfg.containerId);
   if (!container) return;
 
-  const MIN_IMPRESSIONS    = 100;
-  const MIN_FORMAT_SAMPLES = 5;
-  const eligible = cfg.posts.filter(p => p.impressions >= MIN_IMPRESSIONS);
+  const MIN_IMPRESSIONS_ABS = 100;       // filet absolu
+  const REACH_FLOOR_FACTOR  = 0.5;       // seuil relatif: 50 % de la médiane format
+  const MIN_FORMAT_SAMPLES  = 5;         // taille mini d'un format pour normaliser
+  const LOW_REACH_FACTOR    = 1.0;       // flag "audience restreinte" si < médiane format
+
+  /* Peer group : tous les posts du dataset de référence avec ≥ 100 impressions.
+     Sert de base à toutes les médianes (engagement ET impressions). */
+  const allPeers = cfg.allData.filter(p => p.impressions >= MIN_IMPRESSIONS_ABS);
+  const peersByMedia = groupBy(allPeers, 'media');
+
+  /* Médiane d'impressions par format — base pour le seuil relatif et le flag. */
+  const medianImpressionsByMedia = {};
+  Object.keys(peersByMedia).forEach(m => {
+    medianImpressionsByMedia[m] = median(peersByMedia[m].map(p => p.impressions));
+  });
+
+  /* Set scoré : posts avec ≥ max(100, 50 % médiane format). */
+  const eligible = cfg.posts.filter(p => {
+    if (p.impressions < MIN_IMPRESSIONS_ABS) return false;
+    const fm = medianImpressionsByMedia[p.media];
+    if (!fm) return true;
+    return p.impressions >= Math.max(MIN_IMPRESSIONS_ABS, fm * REACH_FLOOR_FACTOR);
+  });
 
   if (eligible.length < 2) {
     container.innerHTML = `
       <div class="empty-state" style="grid-column:1/-1">
         <i data-lucide="${cfg.emptyIcon || 'bar-chart-2'}" aria-hidden="true"></i>
         <p class="empty-state__title">Données insuffisantes</p>
-        <p class="empty-state__desc">Il faut au moins 2 publications avec ≥ ${MIN_IMPRESSIONS} impressions pour établir un classement.</p>
+        <p class="empty-state__desc">Il faut au moins 2 publications avec une portée suffisante (≥ ${MIN_IMPRESSIONS_ABS} impressions et ≥ 50 % de la médiane de leur format) pour établir un classement.</p>
       </div>`;
     if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
     syncTopFlopToggle(cfg);
     return;
   }
 
-  /* Pairs par média sur le dataset de référence (≥ MIN_IMPRESSIONS).
-     Médiane "leave-one-out" calculée à la volée pour chaque post,
-     pour éviter le biais d'un post qui contribue à sa propre baseline. */
-  const peersByMedia = groupBy(cfg.allData.filter(p => p.impressions >= MIN_IMPRESSIONS), 'media');
-
   const mode = cfg.mode;
+
+  /* Médiane "leave-one-out" sur une clé donnée pour les pairs d'un format. */
+  function looMedian(post, peers, key) {
+    const looPeers = peers.filter(q => q !== post);
+    if (looPeers.length === 0) return null;
+    return median(looPeers.map(q => q[key]));
+  }
 
   const scored = eligible.map(p => {
     const peers = peersByMedia[p.media] || [];
-    let ratio = null;
+    let rateRatio  = null;
+    let reachRatio = null;
+    let composite  = null;
+
     if (peers.length >= MIN_FORMAT_SAMPLES) {
-      const looPeers = peers.filter(q => q !== p);
-      const baseline = median(looPeers.map(q => q.tauxEngagement));
-      if (baseline > 0) ratio = p.tauxEngagement / baseline;
+      const baseRate  = looMedian(p, peers, 'tauxEngagement');
+      const baseReach = looMedian(p, peers, 'impressions');
+      if (baseRate  && baseRate  > 0) rateRatio  = p.tauxEngagement / baseRate;
+      if (baseReach && baseReach > 0) reachRatio = p.impressions    / baseReach;
+      if (rateRatio !== null && reachRatio !== null && rateRatio > 0 && reachRatio > 0) {
+        composite = Math.sqrt(rateRatio * reachRatio);
+      }
     }
-    return {
-      ...p,
-      _ratio: ratio,
-      _score: mode === 'normalized'
-        ? (ratio !== null ? ratio : -Infinity)
-        : p.tauxEngagement,
-    };
+
+    /* Flag "audience restreinte" : impressions sous la médiane du format. */
+    const fm = medianImpressionsByMedia[p.media];
+    const lowReach = !!(fm && p.impressions < fm * LOW_REACH_FACTOR);
+
+    let _score;
+    if (mode === 'global')          _score = composite !== null ? composite  : -Infinity;
+    else if (mode === 'normalized') _score = rateRatio !== null ? rateRatio  : -Infinity;
+    else                            _score = p.tauxEngagement;
+
+    return { ...p, _ratio: rateRatio, _reachRatio: reachRatio, _composite: composite, _lowReach: lowReach, _score };
   });
 
-  const sorted = [...scored].sort((a, b) => b._score - a._score);
-  const ranked = mode === 'normalized'
-    ? sorted.filter(p => p._ratio !== null)
-    : sorted;
+  const needsScore = (mode === 'global' || mode === 'normalized');
+  const ranked = needsScore
+    ? scored.filter(p => p._score !== -Infinity).sort((a, b) => b._score - a._score)
+    : [...scored].sort((a, b) => b._score - a._score);
 
   const top5  = ranked.slice(0, Math.min(5, ranked.length));
   const flop5 = ranked.slice(-Math.min(5, ranked.length)).reverse();
@@ -3634,10 +3667,17 @@ function renderTopFlopBlock(cfg) {
   const secondLabel = cfg.secondCol.label;
 
   function buildTable(items, cellClass, idxPrefix) {
-    const scoreHeader = mode === 'normalized' ? 'Score vs format' : 'Engagement';
-    const headerHelp  = mode === 'normalized'
-      ? ' title="Taux d\'engagement du post divisé par la médiane des posts de son média"'
-      : '';
+    let scoreHeader, headerHelp;
+    if (mode === 'global') {
+      scoreHeader = 'Performance globale';
+      headerHelp  = ' title="Moyenne géométrique du score d\'engagement et du score de portée — récompense à la fois la qualité et la portée"';
+    } else if (mode === 'normalized') {
+      scoreHeader = 'Score vs format';
+      headerHelp  = ' title="Taux d\'engagement du post divisé par la médiane des posts de son média (méthode leave-one-out)"';
+    } else {
+      scoreHeader = 'Engagement';
+      headerHelp  = '';
+    }
 
     return `<div class="table-wrapper"><table class="data-table">
       <thead><tr>
@@ -3647,13 +3687,24 @@ function renderTopFlopBlock(cfg) {
         <th class="text-right">Impressions</th>
       </tr></thead>
       <tbody>${items.map((row, i) => {
-        const scoreCell = mode === 'normalized'
-          ? `<span class="engagement-pill ${scoreRatioPillClass(row._ratio)}">${fmtScoreRatio(row._ratio)}</span>`
-          : `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
+        let scoreCell;
+        if (mode === 'global') {
+          scoreCell = `<span class="engagement-pill ${scoreRatioPillClass(row._composite)}">${fmtScoreRatio(row._composite)}</span>`;
+        } else if (mode === 'normalized') {
+          scoreCell = `<span class="engagement-pill ${scoreRatioPillClass(row._ratio)}">${fmtScoreRatio(row._ratio)}</span>`;
+        } else {
+          scoreCell = `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
+        }
+        const lowReachIcon = row._lowReach
+          ? `<i data-lucide="eye-off" class="tf-low-reach-icon" aria-hidden="true" title="Audience restreinte — impressions sous la médiane de son format"></i>`
+          : '';
         const secondVal = row[secondKey];
         return `
         <tr class="tf-row" data-tf-idx="${idxPrefix}-${i}">
-          <td class="${cellClass}"><span class="pub-title">${escHtml(truncate(row.publication, 35))}</span></td>
+          <td class="${cellClass}">
+            <span class="pub-title">${escHtml(truncate(row.publication, 35))}</span>
+            ${lowReachIcon}
+          </td>
           <td class="${cellClass}">${secondVal !== '—' ? `<span class="badge badge--neutral">${escHtml(secondVal)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
           <td class="text-right ${cellClass}">${scoreCell}</td>
           <td class="text-right ${cellClass}">${fmt(row.impressions)}</td>
@@ -3662,12 +3713,17 @@ function renderTopFlopBlock(cfg) {
       </tbody></table></div>`;
   }
 
-  const topLabel  = mode === 'normalized'
-    ? 'Top 5 — Sur-performance vs format'
-    : 'Top 5 — Meilleur engagement';
-  const flopLabel = mode === 'normalized'
-    ? 'Flop 5 — Sous-performance vs format'
-    : 'Flop 5 — Plus faible engagement';
+  let topLabel, flopLabel;
+  if (mode === 'global') {
+    topLabel  = 'Top 5 — Meilleure performance globale';
+    flopLabel = 'Flop 5 — Plus faible performance globale';
+  } else if (mode === 'normalized') {
+    topLabel  = 'Top 5 — Sur-performance vs format';
+    flopLabel = 'Flop 5 — Sous-performance vs format';
+  } else {
+    topLabel  = 'Top 5 — Meilleur engagement';
+    flopLabel = 'Flop 5 — Plus faible engagement';
+  }
 
   container.innerHTML = `
     <div class="tops-flops__col">
@@ -3760,10 +3816,25 @@ function showRowTooltip(rowEl, post, mode) {
     : '';
   const fullTitle = post.publication && post.publication.trim() ? post.publication : '(sans titre)';
 
-  const ratioBlock = (mode === 'normalized' && post._ratio !== null && isFinite(post._ratio))
-    ? `<div class="tf-tooltip__ratio">
-         <span class="tf-tooltip__ratio-value">${post._ratio.toFixed(2).replace('.', ',')}×</span>
-         <span class="tf-tooltip__ratio-label">vs médiane ${escHtml(post.media)}</span>
+  let ratioBlock = '';
+  if (mode === 'global' && post._composite !== null && isFinite(post._composite)) {
+    const rateStr  = (post._ratio      !== null && isFinite(post._ratio))      ? `${post._ratio.toFixed(2).replace('.', ',')}×`      : '—';
+    const reachStr = (post._reachRatio !== null && isFinite(post._reachRatio)) ? `${post._reachRatio.toFixed(2).replace('.', ',')}×` : '—';
+    ratioBlock = `<div class="tf-tooltip__ratio">
+      <span class="tf-tooltip__ratio-value">${post._composite.toFixed(2).replace('.', ',')}×</span>
+      <span class="tf-tooltip__ratio-label">performance globale (qualité ${rateStr} · portée ${reachStr})</span>
+    </div>`;
+  } else if (mode === 'normalized' && post._ratio !== null && isFinite(post._ratio)) {
+    ratioBlock = `<div class="tf-tooltip__ratio">
+      <span class="tf-tooltip__ratio-value">${post._ratio.toFixed(2).replace('.', ',')}×</span>
+      <span class="tf-tooltip__ratio-label">vs médiane ${escHtml(post.media)}</span>
+    </div>`;
+  }
+
+  const lowReachBanner = post._lowReach
+    ? `<div class="tf-tooltip__warn">
+         <i data-lucide="eye-off" aria-hidden="true"></i>
+         <span>Audience restreinte — impressions sous la médiane de son format</span>
        </div>`
     : '';
 
@@ -3777,6 +3848,7 @@ function showRowTooltip(rowEl, post, mode) {
       </div>
     </div>
     ${ratioBlock}
+    ${lowReachBanner}
     <div class="tf-tooltip__stats">
       <div class="tf-tooltip__stat">
         <span class="tf-tooltip__stat-label">Impressions</span>
@@ -3804,6 +3876,8 @@ function showRowTooltip(rowEl, post, mode) {
       </div>
     </div>
   `;
+
+  if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
 
   /* Reveal hors-écran avant la mesure pour obtenir des dimensions valides. */
   tip.style.left = '-9999px';
