@@ -297,10 +297,20 @@ function parseRows(rows) {
       const interactions      = reactions + commentaires + republis;
       const totalInteractions = interactions + clics;
 
+      /* Taux d'engagement social — recalculé ici, volontairement.
+         La colonne "Taux d'engagement" du fichier LinkedIn agrège les clics
+         avec les interactions sociales : elle mesure donc un mélange de
+         curiosité (clic) et d'adhésion (réaction / commentaire / republication).
+         On isole la part sociale pour pouvoir la lire indépendamment du taux
+         de clics, qui reste disponible dans sa propre colonne. */
+      const tauxEngagementSocial = impressions > 0
+        ? (interactions / impressions) * 100
+        : 0;
+
       return {
         date, heure, publication, impressions, vues,
         reactions, commentaires, republis, clics,
-        tauxClics, tauxEngagement,
+        tauxClics, tauxEngagement, tauxEngagementSocial,
         theme, media, type,
         interactions, totalInteractions,
         dateRaw: get('Date'),
@@ -894,8 +904,12 @@ function renderKPIs(data) {
   const totalImpressions = sum(data, 'impressions');
   const avgClics = avg(data, 'tauxClics');
   const medianClics = median(data.map(d => d.tauxClics));
-  const avgEngagement = avg(data, 'tauxEngagement');
-  const medianEngagement = median(data.map(d => d.tauxEngagement));
+  /* Engagement social = (réactions + coms + republi.) / impressions.
+     Le taux du fichier (avgEngagementRaw) inclut les clics et reste affiché
+     en référence dans la carte, pour rendre l'écart lisible. */
+  const avgEngagement    = avg(data, 'tauxEngagementSocial');
+  const medianEngagement = median(data.map(d => d.tauxEngagementSocial));
+  const avgEngagementRaw = avg(data, 'tauxEngagement');
   const totalInteractions = data.reduce((acc, d) => acc + d.totalInteractions, 0);
 
   setKPI('kpi-impressions', fmtK(totalImpressions));
@@ -906,6 +920,7 @@ function renderKPIs(data) {
   $('kpi-posts-count').textContent = count;
   $('kpi-clics-median').textContent = fmtPct(medianClics);
   $('kpi-engagement-median').textContent = fmtPct(medianEngagement);
+  $('kpi-engagement-raw').textContent = fmtPct(avgEngagementRaw);
 
   /* Trend arrows: compare first half vs second half */
   if (data.length >= 4) {
@@ -921,8 +936,8 @@ function renderKPIs(data) {
       avg(firstHalf, 'tauxClics'),
       avg(secondHalf, 'tauxClics'));
     renderTrend('kpi-engagement-trend',
-      avg(firstHalf, 'tauxEngagement'),
-      avg(secondHalf, 'tauxEngagement'));
+      avg(firstHalf, 'tauxEngagementSocial'),
+      avg(secondHalf, 'tauxEngagementSocial'));
     renderTrend('kpi-interactions-trend',
       firstHalf.reduce((a, d) => a + d.totalInteractions, 0) / firstHalf.length,
       secondHalf.reduce((a, d) => a + d.totalInteractions, 0) / secondHalf.length);
@@ -1059,7 +1074,7 @@ function renderTimelineChart(data) {
           order: 2,
         },
         {
-          label: 'Engagement (%)',
+          label: 'Engagement fichier (%)',
           type: 'line',
           data: engagementValues,
           borderColor: d2,
@@ -1086,8 +1101,8 @@ function renderTimelineChart(data) {
           ...tooltipBase(),
           callbacks: {
             title:  (items) => items[0].label,
-            label:  (ctx)   => ctx.dataset.label === 'Engagement (%)'
-              ? `Engagement : ${fmtPct(ctx.raw)}`
+            label:  (ctx)   => ctx.dataset.label === 'Engagement fichier (%)'
+              ? `Engagement fichier : ${fmtPct(ctx.raw)}`
               : `Impressions : ${fmt(ctx.raw)}`,
           },
         },
@@ -1103,7 +1118,7 @@ function renderTimelineChart(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. ${fmtPct(avgEng)}`,
+                content: `Moy. fichier ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1340,7 +1355,7 @@ function renderEffortVsReward(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. ${fmtPct(avgEng)}`,
+                content: `Moy. fichier ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1550,6 +1565,7 @@ function renderLeaderboardTable() {
 
   /* Compute percentile thresholds */
   const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
+  const engSocValues = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
   const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues  = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -1561,6 +1577,7 @@ function renderLeaderboardTable() {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10 = p10(engValues),       engP90 = p90(engValues);
+  const engSocP10 = p10(engSocValues), engSocP90 = p90(engSocValues);
   const imprP10 = p10(imprValues),     imprP90 = p90(imprValues);
   const reactP10 = p10(reactValues),   reactP90 = p90(reactValues);
   const commP10 = p10(commValues),     commP90 = p90(commValues);
@@ -1623,6 +1640,7 @@ function renderLeaderboardTable() {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
+      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
@@ -1667,6 +1685,7 @@ function sortData(data, col, dir) {
       case 'republis':      return mult * (a.republis - b.republis);
       case 'clics':         return mult * (a.clics - b.clics);
       case 'tauxClics':     return mult * (a.tauxClics - b.tauxClics);
+      case 'engagementSocial': return mult * (a.tauxEngagementSocial - b.tauxEngagementSocial);
       case 'engagement':   return mult * (a.tauxEngagement - b.tauxEngagement);
       default:             return 0;
     }
@@ -3970,7 +3989,12 @@ function renderTSTopFlop(posts) {
               <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
                 Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
-              <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
+              <th class="sortable text-right" data-col="engagementSocial" tabindex="0" aria-sort="none"
+                  title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
+                Eng. social <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
+                  title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
                 Engagement <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th>Média</th>
@@ -4058,6 +4082,7 @@ function renderTSTable(posts) {
   data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
 
   const engValues      = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
+  const engSocValues   = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
   const imprValues     = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues    = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues     = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -4069,6 +4094,7 @@ function renderTSTable(posts) {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10      = p10(engValues),      engP90      = p90(engValues);
+  const engSocP10   = p10(engSocValues),   engSocP90   = p90(engSocValues);
   const imprP10     = p10(imprValues),     imprP90     = p90(imprValues);
   const reactP10    = p10(reactValues),    reactP90    = p90(reactValues);
   const commP10     = p10(commValues),     commP90     = p90(commValues);
@@ -4129,6 +4155,7 @@ function renderTSTable(posts) {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
+      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
@@ -4225,10 +4252,24 @@ function renderAbonnesPanel() {
   const postData = state.filteredData;
   const totalImpressions = postData.reduce((a, d) => a + d.impressions, 0);
 
-  const ratioImprAbo = last.abonnes > 0 ? totalImpressions / last.abonnes : 0;
-  setAbKPI('kpi-ab-ratio',
-    fmtK(Math.round(ratioImprAbo)),
-    `${fmtK(totalImpressions)} impressions pour ${fmt(last.abonnes)} abonnés`);
+  /* ── Ratio portée / audience ──
+     Jointure des deux feuilles : pour chaque relevé d'abonnés, la médiane des
+     impressions des publications du même mois, rapportée au total d'abonnés.
+     La médiane (et non la moyenne) évite qu'un post viral isolé ne fasse
+     passer un mois ordinaire pour un bon mois. */
+  const reachSeries = buildReachRatioSeries(data, postData);
+  const ratioPoints = reachSeries.filter(r => r.ratio !== null);
+
+  if (ratioPoints.length > 0) {
+    const lastPoint  = ratioPoints[ratioPoints.length - 1];
+    const medianRatio = median(ratioPoints.map(r => r.ratio));
+    setAbKPI('kpi-ab-ratio',
+      fmtPct(lastPoint.ratio),
+      `${fmtMois(lastPoint.date)} : ${fmt(lastPoint.medImp)} impr. médianes ÷ ${fmt(lastPoint.abonnes)} abonnés · médiane période ${fmtPct(medianRatio)}`);
+  } else {
+    setAbKPI('kpi-ab-ratio', '—',
+      'Aucun mois ne croise des publications et un relevé d\'abonnés');
+  }
 
   const convCost = gainAbs > 0 ? Math.round(totalImpressions / gainAbs) : null;
   setAbKPI('kpi-ab-conversion',
@@ -4240,8 +4281,126 @@ function renderAbonnesPanel() {
   /* ── Graphique combiné (évolution + variations) ── */
   renderAbonnesCombined(data, deltas);
 
+  /* ── Portée médiane × ratio portée/audience ── */
+  renderPorteeAudience(reachSeries);
+
   /* ── Bubble : volume impressions × abonnés par mois ── */
   renderAbonnesOverlay(data, postData);
+}
+
+
+/**
+ * Croise les relevés d'abonnés avec les publications du même mois.
+ * Retourne une entrée par relevé, dans l'ordre chronologique :
+ *   { date, abonnes, medImp, ratio, count }
+ * medImp / ratio valent null pour les mois sans publication — le graphique
+ * laisse alors un trou plutôt que de tracer un zéro trompeur.
+ */
+function buildReachRatioSeries(subData, postData) {
+  const monthKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  const impsByMonth = {};
+  postData.forEach(d => {
+    const k = monthKey(d.date);
+    (impsByMonth[k] = impsByMonth[k] || []).push(d.impressions);
+  });
+
+  return subData.map(d => {
+    const imps   = impsByMonth[monthKey(d.date)] || [];
+    const medImp = imps.length > 0 ? median(imps) : null;
+    const ratio  = (medImp !== null && d.abonnes > 0) ? (medImp / d.abonnes) * 100 : null;
+    return { date: d.date, abonnes: d.abonnes, medImp, ratio, count: imps.length };
+  });
+}
+
+
+function renderPorteeAudience(reachSeries) {
+  destroyChart('chart-portee-audience');
+  if (!$('chart-portee-audience')) return;
+
+  const fmtMois  = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  const [c1, c2] = DATA_COLORS();
+
+  const labels    = reachSeries.map(r => fmtMois(r.date));
+  const medImpVals = reachSeries.map(r => r.medImp);
+  const ratioVals  = reachSeries.map(r => r.ratio);
+
+  state.charts['chart-portee-audience'] = new Chart($('chart-portee-audience'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Impressions médianes / publication',
+          type: 'bar',
+          data: medImpVals,
+          backgroundColor: c1,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Portée / audience',
+          type: 'line',
+          data: ratioVals,
+          borderColor: c2,
+          backgroundColor: 'transparent',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: c2,
+          fill: false,
+          tension: 0.3,
+          spanGaps: true,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => items[0].label,
+            label: (ctx) => {
+              const r = reachSeries[ctx.dataIndex];
+              if (ctx.dataset.yAxisID === 'y1') {
+                return r.ratio === null ? null : `Portée / audience : ${fmtPct(r.ratio)}`;
+              }
+              if (r.medImp === null) return 'Aucune publication ce mois';
+              return `Impressions médianes : ${fmt(r.medImp)} (${r.count} publication${r.count > 1 ? 's' : ''})`;
+            },
+            afterBody: (items) => {
+              const r = reachSeries[items[0].dataIndex];
+              return `Abonnés : ${fmt(r.abonnes)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
+        y: {
+          ...scaleY({ ticks: { callback: v => fmtK(v) } }),
+          position: 'left',
+          title: { display: true, text: 'Impressions médianes', color: C.muted(), font: { size: 11 } },
+        },
+        y1: {
+          position: 'right',
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => `${Math.round(v)} %` },
+          beginAtZero: true,
+          title: { display: true, text: 'Portée / audience', color: C.muted(), font: { size: 11 } },
+        },
+      },
+    },
+  });
 }
 
 

@@ -277,13 +277,17 @@
 
             <div class="kpi-card" id="kpi-engagement">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Taux d'Engagement Moyen</p>
+                <p class="kpi-card__label">Taux d'Engagement Social</p>
                 <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
               <p class="kpi-card__sub">
                 <span id="kpi-engagement-trend"></span>
                 Médiane : <strong id="kpi-engagement-median">0 %</strong>
+              </p>
+              <p class="kpi-card__sub">
+                Réactions + coms + republi. ÷ impressions ·
+                fichier (clics inclus) : <strong id="kpi-engagement-raw">0 %</strong>
               </p>
             </div>
 
@@ -509,7 +513,12 @@
                     <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
                       Tx Clics <span class="sort-icon" aria-hidden="true"></span>
                     </th>
-                    <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none">
+                    <th class="sortable text-right" data-col="engagementSocial" tabindex="0" aria-sort="none"
+                        title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
+                      Eng. social <span class="sort-icon" aria-hidden="true"></span>
+                    </th>
+                    <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
+                        title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
                       Engagement <span class="sort-icon" aria-hidden="true"></span>
                     </th>
                     <th>Média</th>
@@ -1119,8 +1128,8 @@
 
               <div class="kpi-card" id="kpi-ab-ratio">
                 <div class="kpi-card__header">
-                  <p class="kpi-card__label">Impressions / abonné</p>
-                  <div class="kpi-card__icon"><i data-lucide="zap" aria-hidden="true"></i></div>
+                  <p class="kpi-card__label">Portée / audience</p>
+                  <div class="kpi-card__icon"><i data-lucide="radar" aria-hidden="true"></i></div>
                 </div>
                 <p class="kpi-card__value">—</p>
                 <p class="kpi-card__sub" id="kpi-ab-ratio-sub"></p>
@@ -1147,6 +1156,42 @@
                 </div>
                 <div class="chart-card__body">
                   <canvas id="chart-abonnes-combined" aria-label="Graphique combiné évolution et variation mensuelle des abonnés"></canvas>
+                </div>
+              </div>
+            </section>
+
+            <!-- Ratio portée / audience -->
+            <section class="charts-grid" aria-label="Ratio portée sur audience">
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">KPI directeur</p>
+                    <h3 class="chart-card__title">Portée médiane rapportée à l'audience</h3>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="À propos du ratio portée / audience">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Portée médiane ÷ total abonnés</p>
+                      <p class="chart-info-popover__body">Pour chaque mois : la <strong>médiane</strong> des impressions des publications du mois, divisée par le <strong>total d'abonnés</strong> relevé ce mois-là.</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Pourquoi la médiane</p>
+                        <p class="chart-info-popover__text">Un seul post viral suffit à doubler une moyenne mensuelle. La médiane décrit ce que fait une publication <em>ordinaire</em> du mois — c'est elle qui mesure la santé réelle de la diffusion.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text"><strong>40 %</strong> = une publication typique touche l'équivalent de 40 % de l'audience. Le ratio isole la performance de diffusion de la simple croissance du compte : gagner des abonnés sans que le ratio suive signale une audience qui grossit mais décroche.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Mois sans publication</p>
+                        <p class="chart-info-popover__text">Aucune médiane calculable : le point est laissé vide plutôt que ramené à zéro, ce qui fausserait la tendance.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-portee-audience" aria-label="Portée médiane par mois et ratio portée sur audience"></canvas>
                 </div>
               </div>
             </section>
