@@ -902,6 +902,7 @@ function renderBilan(data) {
 function renderKPIs(data) {
   const count = data.length;
   const totalImpressions = sum(data, 'impressions');
+  const medianImpressions = median(data.map(d => d.impressions));
   const avgClics = avg(data, 'tauxClics');
   const medianClics = median(data.map(d => d.tauxClics));
   /* Engagement social = (réactions + coms + republi.) / impressions.
@@ -918,6 +919,7 @@ function renderKPIs(data) {
   setKPI('kpi-interactions', fmt(totalInteractions));
 
   $('kpi-posts-count').textContent = count;
+  $('kpi-impressions-median').textContent = fmt(medianImpressions);
   $('kpi-clics-median').textContent = fmtPct(medianClics);
   $('kpi-engagement-median').textContent = fmtPct(medianEngagement);
   $('kpi-engagement-raw').textContent = fmtPct(avgEngagementRaw);
@@ -1203,6 +1205,106 @@ function renderPodium(data) {
 function renderMatrice(data) {
   renderHeatmap(data);
   renderEffortVsReward(data);
+  renderTypeCompare(data);
+}
+
+/* ── Natif vs re-post ──
+   Regroupe les publications par valeur de la colonne "Type".
+   Portée et engagement en médiane : les deux groupes ont rarement des
+   effectifs comparables, et une moyenne se laisserait emporter par un seul
+   post exceptionnel du plus petit groupe. */
+function renderTypeCompare(data) {
+  const container = $('type-compare-container');
+  if (!container) return;
+
+  const MIN_TYPE_SAMPLES = 5;   // en deçà, médiane non fiable — cohérent avec les Top/Flop
+
+  const typed = data.filter(d => d.type && d.type !== '—');
+  const types = [...new Set(typed.map(d => d.type))];
+
+  if (types.length < 2) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <i data-lucide="git-compare" aria-hidden="true"></i>
+        <p class="empty-state__title">Comparaison indisponible</p>
+        <p class="empty-state__desc">${types.length === 0
+          ? 'La colonne "Type" est absente ou vide dans votre fichier.'
+          : `Toutes les publications de la période portent le même type (${escHtml(types[0])}).`}</p>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  const rows = types.map(type => {
+    const group = typed.filter(d => d.type === type);
+    const groupImpressions = sum(group, 'impressions');
+    return {
+      type,
+      count:      group.length,
+      share:      (group.length / typed.length) * 100,
+      medImp:     median(group.map(d => d.impressions)),
+      medEngSoc:  median(group.map(d => d.tauxEngagementSocial)),
+      reactPerK:  groupImpressions > 0 ? (sum(group, 'reactions') / groupImpressions) * 1000 : 0,
+      comsPerPost: avg(group, 'commentaires'),
+      thin:       group.length < MIN_TYPE_SAMPLES,
+    };
+  }).sort((a, b) => b.count - a.count);
+
+  /* Meilleure valeur par colonne — mise en avant, en ignorant les groupes
+     trop petits pour être comparés. */
+  const solid = rows.filter(r => !r.thin);
+  const best = (key) => solid.length >= 2 ? Math.max(...solid.map(r => r[key])) : null;
+  const bests = {
+    medImp:      best('medImp'),
+    medEngSoc:   best('medEngSoc'),
+    reactPerK:   best('reactPerK'),
+    comsPerPost: best('comsPerPost'),
+  };
+  const mark = (row, key) =>
+    (!row.thin && bests[key] !== null && row[key] === bests[key]) ? ' cell--top' : '';
+
+  const fmtDec = n => n.toFixed(1).replace('.', ',');
+
+  let html = `<table class="data-table" aria-label="Comparaison des publications natives et des re-posts">
+    <thead>
+      <tr>
+        <th scope="col">Type</th>
+        <th class="text-right" scope="col">Publications</th>
+        <th class="text-right" scope="col">Part du volume</th>
+        <th class="text-right" scope="col">Impressions méd.</th>
+        <th class="text-right" scope="col">Eng. social méd.</th>
+        <th class="text-right" scope="col">Réactions / 1 000</th>
+        <th class="text-right" scope="col">Coms / publi.</th>
+      </tr>
+    </thead>
+    <tbody>`;
+
+  rows.forEach(r => {
+    html += `<tr>
+      <td>
+        <span class="badge badge--neutral">${escHtml(r.type)}</span>
+        ${r.thin ? `<i data-lucide="alert-triangle" class="tf-low-reach-icon" aria-hidden="true" title="Moins de ${MIN_TYPE_SAMPLES} publications — médiane non fiable"></i>` : ''}
+      </td>
+      <td class="text-right">${fmt(r.count)}</td>
+      <td class="text-right">${fmtPct(r.share)}</td>
+      <td class="text-right${mark(r, 'medImp')}">${fmt(r.medImp)}</td>
+      <td class="text-right${mark(r, 'medEngSoc')}">${fmtPct(r.medEngSoc)}</td>
+      <td class="text-right${mark(r, 'reactPerK')}">${fmtDec(r.reactPerK)}</td>
+      <td class="text-right${mark(r, 'comsPerPost')}">${fmtDec(r.comsPerPost)}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+
+  if (rows.some(r => r.thin)) {
+    html += `<p class="type-compare__note">
+      <i data-lucide="alert-triangle" aria-hidden="true"></i>
+      Un groupe de moins de ${MIN_TYPE_SAMPLES} publications est signalé : sa médiane n'est pas fiable.
+    </p>`;
+  }
+
+  container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
 }
 
 /* ── Heatmap: Theme x Media ── */
@@ -1387,8 +1489,65 @@ function renderEffortVsReward(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderEntonnoir(data) {
+  renderEngagementDepth(data);
   renderFunnelChart(data);
   renderStackedEngagement(data);
+}
+
+/* ── Profondeur de l'engagement ──
+   Quatre mesures qui décrivent la *nature* de l'engagement, là où le taux
+   global n'en donne que l'intensité :
+   - réactions pour 1 000 impressions : qualité de la portée, indépendante du
+     volume publié ;
+   - commentaires et republications par publication : les deux signaux les
+     plus coûteux pour l'audience, donc les plus révélateurs ;
+   - part des publications sans aucun commentaire : ce qu'une moyenne masque
+     toujours, à savoir la proportion de posts qui ne déclenchent rien. */
+function renderEngagementDepth(data) {
+  const setDepthKPI = (cardId, value, sub) => {
+    const card = $(cardId);
+    if (!card) return;
+    card.querySelector('.kpi-card__value').textContent = value;
+    const subEl = $(cardId + '-sub');
+    if (subEl) subEl.textContent = sub || '';
+  };
+
+  if (data.length === 0) {
+    ['kpi-react-mille', 'kpi-coms-post', 'kpi-republi-post', 'kpi-zero-coms']
+      .forEach(id => setDepthKPI(id, '—', ''));
+    return;
+  }
+
+  const fmtDec = n => n.toFixed(1).replace('.', ',');
+
+  /* Réactions / 1 000 impressions — agrégé sur la période (rapport de totaux),
+     complété par la médiane par publication qui décrit le post typique. */
+  const totalImpressions = sum(data, 'impressions');
+  const totalReactions   = sum(data, 'reactions');
+  const reactPerK = totalImpressions > 0 ? (totalReactions / totalImpressions) * 1000 : 0;
+  const perPostReactPerK = data
+    .filter(d => d.impressions > 0)
+    .map(d => (d.reactions / d.impressions) * 1000);
+  setDepthKPI('kpi-react-mille', fmtDec(reactPerK),
+    perPostReactPerK.length > 0
+      ? `Médiane par publication : ${fmtDec(median(perPostReactPerK))}`
+      : '');
+
+  /* Commentaires par publication */
+  const avgComs = avg(data, 'commentaires');
+  setDepthKPI('kpi-coms-post', fmtDec(avgComs),
+    `Médiane : ${fmtDec(median(data.map(d => d.commentaires)))} · ${fmt(sum(data, 'commentaires'))} au total`);
+
+  /* Republications par publication */
+  const avgRepublis = avg(data, 'republis');
+  setDepthKPI('kpi-republi-post', fmtDec(avgRepublis),
+    `Médiane : ${fmtDec(median(data.map(d => d.republis)))} · ${fmt(sum(data, 'republis'))} au total`);
+
+  /* Part des publications sans aucun commentaire */
+  const zeroComs = data.filter(d => d.commentaires === 0).length;
+  const zeroPct  = (zeroComs / data.length) * 100;
+  setDepthKPI('kpi-zero-coms', fmtPct(zeroPct),
+    `${fmt(zeroComs)} publication${zeroComs > 1 ? 's' : ''} sur ${fmt(data.length)}`);
 }
 
 /* ── Funnel ── */

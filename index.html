@@ -261,6 +261,9 @@
                 <span id="kpi-impressions-trend"></span>
                 Publications : <strong id="kpi-posts-count">0</strong>
               </p>
+              <p class="kpi-card__sub">
+                Médiane : <strong id="kpi-impressions-median">0</strong> / publication
+              </p>
             </div>
 
             <div class="kpi-card" id="kpi-clics">
@@ -370,6 +373,40 @@
               </div>
             </div>
 
+            <!-- Natif vs re-post -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Origine de la publication</p>
+                  <h3 class="chart-card__title">Natif vs re-post</h3>
+                </div>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="À propos de la comparaison natif / re-post">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Lire cette comparaison</p>
+                    <p class="chart-info-popover__body">Chaque ligne regroupe les publications d'une même valeur de la colonne <code>Type</code> de votre fichier.</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Médianes, pas moyennes</p>
+                      <p class="chart-info-popover__text">Portée et engagement sont donnés en médiane : avec des effectifs déséquilibrés entre natif et re-post, une moyenne se laisse emporter par un seul post exceptionnel.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Réactions / 1 000 impressions</p>
+                      <p class="chart-info-popover__text">Rapport agrégé sur l'ensemble des publications du groupe. Il mesure la qualité de la portée indépendamment du volume publié.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Échantillon</p>
+                      <p class="chart-info-popover__text">Un groupe de <strong>moins de 5 publications</strong> est signalé : sa médiane n'est pas fiable et l'écart avec l'autre groupe ne doit pas être interprété.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-card__body chart-card__body--table">
+                <div class="table-wrapper" id="type-compare-container"></div>
+              </div>
+            </div>
+
           </section>
         </div>
 
@@ -378,6 +415,46 @@
              TAB 3 — L'ENTONNOIR DE L'AUDIENCE
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-entonnoir" role="tabpanel">
+
+          <!-- Profondeur de l'engagement -->
+          <section class="kpis" aria-label="Profondeur de l'engagement">
+            <div class="kpi-card" id="kpi-react-mille">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Réactions / 1 000 impr.</p>
+                <div class="kpi-card__icon"><i data-lucide="thumbs-up" aria-hidden="true"></i></div>
+              </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub" id="kpi-react-mille-sub"></p>
+            </div>
+
+            <div class="kpi-card" id="kpi-coms-post">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Commentaires / publication</p>
+                <div class="kpi-card__icon"><i data-lucide="message-circle" aria-hidden="true"></i></div>
+              </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub" id="kpi-coms-post-sub"></p>
+            </div>
+
+            <div class="kpi-card" id="kpi-republi-post">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Republications / publication</p>
+                <div class="kpi-card__icon"><i data-lucide="repeat-2" aria-hidden="true"></i></div>
+              </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub" id="kpi-republi-post-sub"></p>
+            </div>
+
+            <div class="kpi-card" id="kpi-zero-coms">
+              <div class="kpi-card__header">
+                <p class="kpi-card__label">Publications sans commentaire</p>
+                <div class="kpi-card__icon"><i data-lucide="message-circle-off" aria-hidden="true"></i></div>
+              </div>
+              <p class="kpi-card__value">—</p>
+              <p class="kpi-card__sub" id="kpi-zero-coms-sub"></p>
+            </div>
+          </section>
+
           <section class="charts-grid" aria-label="Entonnoir de l'audience">
 
             <!-- Funnel -->

@@ -1917,6 +1917,25 @@ code, kbd {
   background: var(--color-bg-secondary);
 }
 
+/* Note d'échantillon sous un tableau de comparaison */
+.type-compare__note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+.type-compare__note svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  stroke-width: 2;
+  color: var(--color-warning);
+}
+
 /* Column widths */
 .col-pub {
   max-width: 200px;
