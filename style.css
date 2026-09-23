@@ -998,6 +998,13 @@ code, kbd {
   stroke-width: 2;
 }
 
+/* Ce que compare la flèche — en retrait de la valeur colorée */
+.kpi-card__trend-ref {
+  margin-left: var(--space-1);
+  font-weight: 400;
+  color: var(--color-text-subtle);
+}
+
 .kpi-card__trend--up   { color: var(--color-success); }
 .kpi-card__trend--down { color: var(--color-error); }
 

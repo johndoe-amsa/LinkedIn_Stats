@@ -291,7 +291,7 @@ function parseRows(rows) {
       const republis      = parseNum(get('Republi') || get('Republications'));
       const clics         = parseNum(get('Clics'));
       const tauxClics     = parsePct(get('Taux de clics') || get('Tauxdeclics'));
-      const tauxEngagement= parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
+      const tauxEngagementLinkedIn = parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
       const theme         = (get('Theme') || get('Thème') || get('Thematique') || '—').trim() || '—';
       const media         = (get('Media') || get('Média') || '—').trim() || '—';
       const type          = (get('Type') || '—').trim() || '—';
@@ -300,20 +300,20 @@ function parseRows(rows) {
       const interactions      = reactions + commentaires + republis;
       const totalInteractions = interactions + clics;
 
-      /* Taux d'engagement social — recalculé ici, volontairement.
-         La colonne "Taux d'engagement" du fichier LinkedIn agrège les clics
-         avec les interactions sociales : elle mesure donc un mélange de
-         curiosité (clic) et d'adhésion (réaction / commentaire / republication).
-         On isole la part sociale pour pouvoir la lire indépendamment du taux
-         de clics, qui reste disponible dans sa propre colonne. */
-      const tauxEngagementSocial = impressions > 0
+      /* Taux d'engagement = (réactions + commentaires + republications) / impressions.
+         Recalculé ici, et c'est lui qu'utilise tout le tableau de bord : la
+         colonne "Taux d'engagement" du fichier LinkedIn agrège aussi les clics,
+         elle mélange donc curiosité (clic) et adhésion (réaction, commentaire,
+         republication). Le taux de clics a sa propre colonne ; le taux LinkedIn
+         est conservé dans tauxEngagementLinkedIn, affiché seulement en référence. */
+      const tauxEngagement = impressions > 0
         ? (interactions / impressions) * 100
         : 0;
 
       return {
         date, heure, publication, impressions, vues,
         reactions, commentaires, republis, clics,
-        tauxClics, tauxEngagement, tauxEngagementSocial,
+        tauxClics, tauxEngagement, tauxEngagementLinkedIn,
         theme, media, type,
         interactions, totalInteractions,
         dateRaw: get('Date'),
@@ -502,8 +502,11 @@ function initDashboard() {
     });
   }
 
-  /* Thèmes tab — mode toggle (Analyse / Comparaison) */
-  document.querySelectorAll('.ct-mode-toggle').forEach(btn => {
+  /* Thèmes tab — mode toggle (Analyse / Comparaison).
+     Limité à la barre de Thèmes : les boutons d'Années portent aussi la classe
+     ct-mode-toggle pour le style, et passer Années en Comparaison basculait
+     Thèmes en Comparaison par la même occasion. */
+  document.querySelectorAll('#ct-mode-bar .ct-mode-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       state.themeMode = btn.dataset.mode;
       renderThemePanel(state.filteredData);
@@ -1050,12 +1053,11 @@ function renderKPIs(data) {
   const medianImpressions = median(data.map(d => d.impressions));
   const avgClics = avg(data, 'tauxClics');
   const medianClics = median(data.map(d => d.tauxClics));
-  /* Engagement social = (réactions + coms + republi.) / impressions.
-     Le taux du fichier (avgEngagementRaw) inclut les clics et reste affiché
-     en référence dans la carte, pour rendre l'écart lisible. */
-  const avgEngagement    = avg(data, 'tauxEngagementSocial');
-  const medianEngagement = median(data.map(d => d.tauxEngagementSocial));
-  const avgEngagementRaw = avg(data, 'tauxEngagement');
+  /* Le taux LinkedIn (clics inclus) reste affiché en référence dans la carte,
+     pour que l'écart avec le taux d'engagement soit lisible. */
+  const avgEngagement    = avg(data, 'tauxEngagement');
+  const medianEngagement = median(data.map(d => d.tauxEngagement));
+  const avgEngagementRaw = avg(data, 'tauxEngagementLinkedIn');
   const totalInteractions = data.reduce((acc, d) => acc + d.totalInteractions, 0);
 
   setKPI('kpi-impressions', fmtK(totalImpressions));
@@ -1077,14 +1079,14 @@ function renderKPIs(data) {
     const secondHalf = sorted.slice(mid);
 
     renderTrend('kpi-impressions-trend',
-      sum(firstHalf, 'impressions') / firstHalf.length,
-      sum(secondHalf, 'impressions') / secondHalf.length);
+      median(firstHalf.map(d => d.impressions)),
+      median(secondHalf.map(d => d.impressions)));
     renderTrend('kpi-clics-trend',
       avg(firstHalf, 'tauxClics'),
       avg(secondHalf, 'tauxClics'));
     renderTrend('kpi-engagement-trend',
-      avg(firstHalf, 'tauxEngagementSocial'),
-      avg(secondHalf, 'tauxEngagementSocial'));
+      avg(firstHalf, 'tauxEngagement'),
+      avg(secondHalf, 'tauxEngagement'));
     renderTrend('kpi-interactions-trend',
       firstHalf.reduce((a, d) => a + d.totalInteractions, 0) / firstHalf.length,
       secondHalf.reduce((a, d) => a + d.totalInteractions, 0) / secondHalf.length);
@@ -1102,7 +1104,10 @@ function renderTrend(elementId, oldVal, newVal) {
   const icon = isUp ? 'trending-up' : 'trending-down';
   const cls  = isUp ? 'kpi-card__trend--up' : 'kpi-card__trend--down';
   const sign = isUp ? '+' : '';
-  el.innerHTML = `<span class="kpi-card__trend ${cls}"><i data-lucide="${icon}"></i>${sign}${pctChange.toFixed(1).replace('.', ',')}%</span>`;
+  /* Les posts de la période sont triés par date et coupés en deux moitiés :
+     la flèche compare la moitié récente à la moitié ancienne. Sans cette
+     précision, "+22 %" se lit spontanément comme "vs le mois dernier". */
+  el.innerHTML = `<span class="kpi-card__trend ${cls}" title="Compare la moitié la plus récente des publications de la période à la moitié la plus ancienne"><i data-lucide="${icon}"></i>${sign}${fmtDec(pctChange)}\u202f%<span class="kpi-card__trend-ref">vs 1re moitié de la période</span></span>`;
 }
 
 function setKPI(cardId, value) {
@@ -1117,9 +1122,12 @@ function animateCounter(el, targetText) {
   const numMatch = targetText.match(/[\d\s,.]+/);
   if (!numMatch) { el.textContent = targetText; return; }
 
-  const numStr = numMatch[0].trim();
-  const prefix = targetText.slice(0, numMatch.index);
-  const suffix = targetText.slice(numMatch.index + numMatch[0].length);
+  const numRaw = numMatch[0];
+  const numStr = numRaw.trim();
+  /* L'espace avant l'unité ("56,3 k", "2,60 %") fait partie du suffixe,
+     sinon il disparaît pendant l'animation puis réapparaît à la fin. */
+  const prefix = targetText.slice(0, numMatch.index) + numRaw.match(/^\s*/)[0];
+  const suffix = numRaw.match(/\s*$/)[0] + targetText.slice(numMatch.index + numRaw.length);
 
   /* Detect decimal separator (comma in fr-FR) */
   const hasDecimal = numStr.includes(',');
@@ -1221,7 +1229,7 @@ function renderTimelineChart(data) {
           order: 2,
         },
         {
-          label: 'Engagement fichier (%)',
+          label: 'Engagement (%)',
           type: 'line',
           data: engagementValues,
           borderColor: d2,
@@ -1248,8 +1256,8 @@ function renderTimelineChart(data) {
           ...tooltipBase(),
           callbacks: {
             title:  (items) => items[0].label,
-            label:  (ctx)   => ctx.dataset.label === 'Engagement fichier (%)'
-              ? `Engagement fichier : ${fmtPct(ctx.raw)}`
+            label:  (ctx)   => ctx.dataset.label === 'Engagement (%)'
+              ? `Engagement : ${fmtPct(ctx.raw)}`
               : `Impressions : ${fmt(ctx.raw)}`,
           },
         },
@@ -1265,7 +1273,7 @@ function renderTimelineChart(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. fichier ${fmtPct(avgEng)}`,
+                content: `Moy. ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1388,7 +1396,7 @@ function renderTypeCompare(data) {
       count:      group.length,
       share:      (group.length / typed.length) * 100,
       medImp:     median(group.map(d => d.impressions)),
-      medEngSoc:  median(group.map(d => d.tauxEngagementSocial)),
+      medEngSoc:  median(group.map(d => d.tauxEngagement)),
       reactPerK:  groupImpressions > 0 ? (sum(group, 'reactions') / groupImpressions) * 1000 : 0,
       comsPerPost: avg(group, 'commentaires'),
       thin:       group.length < MIN_TYPE_SAMPLES,
@@ -1408,7 +1416,6 @@ function renderTypeCompare(data) {
   const mark = (row, key) =>
     (!row.thin && bests[key] !== null && row[key] === bests[key]) ? ' cell--top' : '';
 
-  const fmtDec = n => n.toFixed(1).replace('.', ',');
 
   let html = `<table class="data-table" aria-label="Comparaison des publications natives et des re-posts">
     <thead>
@@ -1417,7 +1424,7 @@ function renderTypeCompare(data) {
         <th class="text-right" scope="col">Publications</th>
         <th class="text-right" scope="col">Part du volume</th>
         <th class="text-right" scope="col">Impressions méd.</th>
-        <th class="text-right" scope="col">Eng. social méd.</th>
+        <th class="text-right" scope="col">Engagement méd.</th>
         <th class="text-right" scope="col">Réactions / 1 000</th>
         <th class="text-right" scope="col">Coms / publi.</th>
       </tr>
@@ -1481,7 +1488,7 @@ function renderHeatmap(data) {
       if (matches.length > 0) {
         const val = metric === 'engagement'
           ? avg(matches, 'tauxEngagement')
-          : avg(matches, 'impressions');
+          : median(matches.map(d => d.impressions));
         matrix[theme][media] = { value: val, count: matches.length };
         if (val < globalMin) globalMin = val;
         if (val > globalMax) globalMax = val;
@@ -1602,7 +1609,7 @@ function renderEffortVsReward(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. fichier ${fmtPct(avgEng)}`,
+                content: `Moy. ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1663,7 +1670,6 @@ function renderEngagementDepth(data) {
     return;
   }
 
-  const fmtDec = n => n.toFixed(1).replace('.', ',');
 
   /* Réactions / 1 000 impressions — agrégé sur la période (rapport de totaux),
      complété par la médiane par publication qui décrit le post typique. */
@@ -1734,8 +1740,8 @@ function renderFunnelChart(data) {
             title: (items) => items[0].label,
             label: (ctx) => {
               const pct = totalImpressions > 0
-                ? ((ctx.raw / totalImpressions) * 100).toFixed(1) : 0;
-              return `${fmt(ctx.raw)} (${pct}% des impressions)`;
+                ? fmtDec((ctx.raw / totalImpressions) * 100) : '0';
+              return `${fmt(ctx.raw)} (${pct} % des impressions)`;
             },
           },
         },
@@ -1812,7 +1818,7 @@ function renderStackedEngagement(data) {
           ...tooltipBase(),
           callbacks: {
             title: (items) => items[0].label,
-            label: (ctx)   => `${ctx.dataset.label} : ${ctx.raw.toFixed(1)}%`,
+            label: (ctx)   => `${ctx.dataset.label} : ${fmtDec(ctx.raw)} %`,
           },
         },
       },
@@ -1869,7 +1875,7 @@ function renderLeaderboardTable() {
 
   /* Compute percentile thresholds */
   const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engSocValues = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
+  const engLiValues = data.map(d => d.tauxEngagementLinkedIn).sort((a, b) => a - b);
   const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues  = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -1881,7 +1887,7 @@ function renderLeaderboardTable() {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10 = p10(engValues),       engP90 = p90(engValues);
-  const engSocP10 = p10(engSocValues), engSocP90 = p90(engSocValues);
+  const engLiP10 = p10(engLiValues),   engLiP90 = p90(engLiValues);
   const imprP10 = p10(imprValues),     imprP90 = p90(imprValues);
   const reactP10 = p10(reactValues),   reactP90 = p90(reactValues);
   const commP10 = p10(commValues),     commP90 = p90(commValues);
@@ -1944,12 +1950,12 @@ function renderLeaderboardTable() {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
-      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
+      <td class="text-right ${cellClass(row.tauxEngagementLinkedIn, engLiP10, engLiP90)}">${fmtPct(row.tauxEngagementLinkedIn)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
@@ -1960,9 +1966,26 @@ function renderLeaderboardTable() {
    TABLE SORT
    ═══════════════════════════════════════════════════════════════ */
 
+/* Pastilles d'engagement : repères relatifs à la normale du compte, et non
+   seuils absolus qui ne valent que pour un compte donné. Haute = quart des
+   publications le plus engageant de tout l'historique, basse = quart le moins
+   engageant. Calculé sur rawData (et non sur la période filtrée) pour qu'un
+   même post garde la même pastille quel que soit le filtre. */
+let engagementBandsCache = { source: null, p25: 0, p75: 0 };
+
+function engagementBands() {
+  if (engagementBandsCache.source !== state.rawData) {
+    const rates = state.rawData.map(d => d.tauxEngagement).sort((a, b) => a - b);
+    const at = q => rates.length ? rates[Math.min(rates.length - 1, Math.floor(rates.length * q))] : 0;
+    engagementBandsCache = { source: state.rawData, p25: at(0.25), p75: at(0.75) };
+  }
+  return engagementBandsCache;
+}
+
 function engagementClass(pct) {
-  if (pct >= 5) return 'engagement-pill--high';
-  if (pct >= 2) return 'engagement-pill--mid';
+  const { p25, p75 } = engagementBands();
+  if (pct >= p75) return 'engagement-pill--high';
+  if (pct > p25)  return 'engagement-pill--mid';
   return 'engagement-pill--low';
 }
 
@@ -1989,7 +2012,7 @@ function sortData(data, col, dir) {
       case 'republis':      return mult * (a.republis - b.republis);
       case 'clics':         return mult * (a.clics - b.clics);
       case 'tauxClics':     return mult * (a.tauxClics - b.tauxClics);
-      case 'engagementSocial': return mult * (a.tauxEngagementSocial - b.tauxEngagementSocial);
+      case 'engagementLinkedIn': return mult * (a.tauxEngagementLinkedIn - b.tauxEngagementLinkedIn);
       case 'engagement':   return mult * (a.tauxEngagement - b.tauxEngagement);
       default:             return 0;
     }
@@ -2228,14 +2251,15 @@ function renderYearlyImpressionsChart(data) {
   data.forEach(d => {
     if (!d.date) return;
     const y = d.date.getFullYear();
-    if (!byYear[y]) byYear[y] = { total: 0, count: 0 };
+    if (!byYear[y]) byYear[y] = { total: 0, imps: [] };
     byYear[y].total += (d.impressions || 0);
-    byYear[y].count++;
+    byYear[y].imps.push(d.impressions || 0);
   });
 
   const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
   const totals   = years.map(y => byYear[y].total);
-  const averages = years.map(y => Math.round(byYear[y].total / byYear[y].count));
+  /* Post typique = médiane : un post viral ne tire pas l'année vers le haut */
+  const typicals = years.map(y => Math.round(median(byYear[y].imps)));
 
   const [d1, d2] = DATA_COLORS();
 
@@ -2256,9 +2280,9 @@ function renderYearlyImpressionsChart(data) {
           order: 2,
         },
         {
-          label: 'Moy. par post',
+          label: 'Post typique (médiane)',
           type: 'line',
-          data: averages,
+          data: typicals,
           borderColor: d2,
           borderWidth: 2,
           backgroundColor: 'transparent',
@@ -2282,8 +2306,8 @@ function renderYearlyImpressionsChart(data) {
           ...tooltipBase(),
           callbacks: {
             title: (items) => items[0].label,
-            label: (item) => item.dataset.label === 'Moy. par post'
-              ? ` Moy. par post : ${fmt(item.raw)}`
+            label: (item) => item.dataset.label === 'Post typique (médiane)'
+              ? ` Post typique : ${fmt(item.raw)} impressions`
               : ` Total : ${fmtK(item.raw)}`,
           },
         },
@@ -2403,7 +2427,9 @@ function renderHeatmapJourHeure(data) {
     for (let h = 0; h < 24; h++) {
       const matches = withHeure.filter(d => d.date.getDay() === dayIdx && d.heure === h);
       if (matches.length > 0) {
-        const val = avg(matches, metricKey);
+        const val = metricKey === 'impressions'
+          ? median(matches.map(d => d.impressions))
+          : avg(matches, metricKey);
         matrix[dayIdx][h] = { value: val, count: matches.length };
         if (val < globalMin) globalMin = val;
         if (val > globalMax) globalMax = val;
@@ -2630,13 +2656,13 @@ function renderCompareDistImpressionsChart(yearDataMap, years, yearColorMap) {
     pointHoverRadius: 6,
   }));
 
-  // Average marker: short horizontal dashed segment per year
+  // Repère du post typique (médiane) : court segment horizontal par année
   const avgDatasets = years.map((y, i) => {
-    const mean = yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0;
+    const typical = median(yearDataMap[y].map(d => d.impressions));
     return {
       label: `_avg_${y}`,
       type: 'line',
-      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      data: [{ x: i - 0.32, y: typical }, { x: i + 0.32, y: typical }],
       borderColor: yearColorMap[y],
       borderWidth: 2.5,
       borderDash: [4, 3],
@@ -2698,8 +2724,8 @@ function renderCompareRadarChart(yearDataMap, years, yearColorMap) {
   const radarMetrics = [
     { label: 'Engagement',        getValue: (y) => avg(yearDataMap[y], 'tauxEngagement'),                                                    fmt: fmtPct },
     { label: 'Taux de clics',     getValue: (y) => avg(yearDataMap[y], 'tauxClics'),                                                         fmt: fmtPct },
-    { label: 'Impressions/post',  getValue: (y) => yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0,   fmt: fmtK   },
-    { label: 'Interactions/post', getValue: (y) => avg(yearDataMap[y], 'interactions'),                                                      fmt: (v) => v.toFixed(1) },
+    { label: 'Impressions (post typique)', getValue: (y) => median(yearDataMap[y].map(d => d.impressions)), fmt: fmtK },
+    { label: 'Interactions/post', getValue: (y) => avg(yearDataMap[y], 'interactions'),                                                      fmt: (v) => fmtDec(v) },
   ];
 
   // Raw values indexed as [metricIndex][yearIndex]
@@ -2808,7 +2834,7 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
         x: scaleX(),
         y: scaleY({
           beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+          ticks: { callback: (v) => `${fmtDec(v)} %` },
         }),
       },
     },
@@ -2888,10 +2914,10 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
   const metrics = [
     { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
     { label: 'Impressions totales', valA: sum(dA, 'impressions'),                               valB: sum(dB, 'impressions'),                               fmtFn: fmtK   },
-    { label: 'Impressions / post',  valA: dA.length ? sum(dA, 'impressions') / dA.length : 0,  valB: dB.length ? sum(dB, 'impressions') / dB.length : 0,  fmtFn: fmtK   },
+    { label: 'Impressions (post typique)', valA: median(dA.map(d => d.impressions)), valB: median(dB.map(d => d.impressions)), fmtFn: fmtK },
     { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                            valB: avg(dB, 'tauxEngagement'),                            fmtFn: fmtPct },
     { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                 valB: avg(dB, 'tauxClics'),                                 fmtFn: fmtPct },
-    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
+    { label: 'Actions totales',     valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
   ];
 
   const rows = metrics.map(m => {
@@ -2908,10 +2934,10 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
       badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
     } else if (m.valA >= m.valB) {
       const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">${yearA}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">${yearA}&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     } else {
       const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">${yearB}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">${yearB}&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     }
 
     return `<tr>
@@ -3131,13 +3157,13 @@ function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
     pointHoverRadius: 6,
   }));
 
-  // Average marker: short horizontal segment per theme
+  // Repère du post typique (médiane) : court segment horizontal par thème
   const avgDatasets = themes.map((t, i) => {
-    const mean = themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0;
+    const typical = median(themeDataMap[t].map(d => d.impressions));
     return {
       label: `_avg_${t}`,
       type: 'line',
-      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      data: [{ x: i - 0.32, y: typical }, { x: i + 0.32, y: typical }],
       borderColor: themeColorMap[t],
       borderWidth: 2.5,
       borderDash: [4, 3],
@@ -3199,8 +3225,8 @@ function renderCTPerfChart(themeDataMap, themes, themeColorMap) {
   const radarMetrics = [
     { label: 'Engagement',       getValue: (t) => avg(themeDataMap[t], 'tauxEngagement'),                                                   fmt: fmtPct },
     { label: 'Taux de clics',    getValue: (t) => avg(themeDataMap[t], 'tauxClics'),                                                        fmt: fmtPct },
-    { label: 'Impressions/post', getValue: (t) => themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0, fmt: fmtK   },
-    { label: 'Interactions/post',getValue: (t) => avg(themeDataMap[t], 'interactions'),                                                     fmt: (v) => v.toFixed(1) },
+    { label: 'Impressions (post typique)', getValue: (t) => median(themeDataMap[t].map(d => d.impressions)), fmt: fmtK },
+    { label: 'Interactions/post',getValue: (t) => avg(themeDataMap[t], 'interactions'),                                                     fmt: (v) => fmtDec(v) },
   ];
 
   // Raw values indexed as [metricIndex][themeIndex]
@@ -3309,7 +3335,7 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
         x: scaleX(),
         y: scaleY({
           beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+          ticks: { callback: (v) => `${fmtDec(v)} %` },
         }),
       },
     },
@@ -3325,10 +3351,10 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
   const metrics = [
     { label: 'Publications',        valA: dA.length,                                          valB: dB.length,                                          fmtFn: fmt    },
     { label: 'Impressions totales', valA: sum(dA, 'impressions'),                              valB: sum(dB, 'impressions'),                              fmtFn: fmtK   },
-    { label: 'Impressions / post',  valA: dA.length ? sum(dA,'impressions')/dA.length : 0,    valB: dB.length ? sum(dB,'impressions')/dB.length : 0,    fmtFn: fmtK   },
+    { label: 'Impressions (post typique)', valA: median(dA.map(d => d.impressions)), valB: median(dB.map(d => d.impressions)), fmtFn: fmtK },
     { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                           valB: avg(dB, 'tauxEngagement'),                           fmtFn: fmtPct },
     { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                valB: avg(dB, 'tauxClics'),                                fmtFn: fmtPct },
-    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                        valB: sum(dB, 'totalInteractions'),                        fmtFn: fmt    },
+    { label: 'Actions totales',     valA: sum(dA, 'totalInteractions'),                        valB: sum(dB, 'totalInteractions'),                        fmtFn: fmt    },
   ];
 
   const rows = metrics.map(m => {
@@ -3345,10 +3371,10 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
       badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
     } else if (m.valA >= m.valB) {
       const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">A&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">A&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     } else {
       const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">B&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">B&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     }
 
     return `<tr>
@@ -3474,20 +3500,20 @@ function renderTSKPIs(posts, allData) {
   const container = $('ts-kpis');
   if (!container) return;
 
-  const globalAvgImp = avg(allData, 'impressions');
+  const globalTypImp = median(allData.map(d => d.impressions));
   const globalAvgEng = avg(allData, 'tauxEngagement');
   const globalAvgClic= avg(allData, 'tauxClics');
 
-  const avgImp    = avg(posts, 'impressions');
+  const typImp    = median(posts.map(d => d.impressions));
   const avgEng    = avg(posts, 'tauxEngagement');
   const avgClic   = avg(posts, 'tauxClics');
 
   function deltaBadge(val, ref, unit = '') {
     if (!ref || ref === 0) return '';
     const diff = ((val - ref) / ref) * 100;
-    const abs  = Math.abs(diff).toFixed(1);
-    if (diff > 5)  return `<span class="ts-kpi-delta ts-kpi-delta--up">▲ +${abs}% vs global</span>`;
-    if (diff < -5) return `<span class="ts-kpi-delta ts-kpi-delta--down">▼ −${abs}% vs global</span>`;
+    const abs  = fmtDec(Math.abs(diff));
+    if (diff > 5)  return `<span class="ts-kpi-delta ts-kpi-delta--up">▲ +${abs} % vs global</span>`;
+    if (diff < -5) return `<span class="ts-kpi-delta ts-kpi-delta--down">▼ −${abs} % vs global</span>`;
     return `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ égal au global</span>`;
   }
 
@@ -3502,11 +3528,11 @@ function renderTSKPIs(posts, allData) {
     </div>
     <div class="kpi-card">
       <div class="kpi-card__header">
-        <p class="kpi-card__label">Impressions / post</p>
+        <p class="kpi-card__label">Impressions (post typique)</p>
         <div class="kpi-card__icon"><i data-lucide="bar-chart-2" aria-hidden="true"></i></div>
       </div>
-      <p class="kpi-card__value">${fmtK(avgImp)}</p>
-      ${deltaBadge(avgImp, globalAvgImp)}
+      <p class="kpi-card__value">${fmtK(typImp)}</p>
+      ${deltaBadge(typImp, globalTypImp)}
     </div>
     <div class="kpi-card">
       <div class="kpi-card__header">
@@ -3641,7 +3667,7 @@ function renderTSScatterChart(posts) {
           max: maxImp,
         },
         y: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          ...scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
           title: { display: true, text: 'Engagement (%)', color: C.muted(), font: { size: 12 } },
           max: maxEng,
         },
@@ -3789,7 +3815,7 @@ function renderTSHourChart(posts) {
       },
       scales: {
         x: scaleX(),
-        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+        y: scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
       },
     },
   });
@@ -3845,7 +3871,7 @@ function renderTSTrendChart(posts) {
       },
       scales: {
         x: scaleX(),
-        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+        y: scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
       },
     },
   });
@@ -3869,9 +3895,9 @@ function renderTSMediaChart(posts) {
   if (fallback) fallback.hidden = true;
 
   const colors = DATA_COLORS();
-  const avgImps = mediaTypes.map(m => {
+  const typImps = mediaTypes.map(m => {
     const group = validPosts.filter(p => p.media === m);
-    return avg(group, 'impressions') / 1000;
+    return median(group.map(p => p.impressions));
   });
   const avgEngs = mediaTypes.map(m => {
     const group = validPosts.filter(p => p.media === m);
@@ -3885,8 +3911,8 @@ function renderTSMediaChart(posts) {
       labels: mediaTypes,
       datasets: [
         {
-          label: 'Impressions moy. (k)',
-          data: avgImps,
+          label: 'Impressions (post typique)',
+          data: typImps,
           backgroundColor: hexToRgba(colors[0], 0.85),
           borderRadius: 4,
           yAxisID: 'yImp',
@@ -3909,7 +3935,7 @@ function renderTSMediaChart(posts) {
           ...tooltipBase(),
           callbacks: {
             label: (item) => item.datasetIndex === 0
-              ? ` Impressions : ${item.parsed.y.toFixed(1)}k`
+              ? ` Impressions (post typique) : ${fmt(item.parsed.y)}`
               : ` Engagement : ${fmtPct(item.parsed.y)}`,
           },
         },
@@ -3917,11 +3943,11 @@ function renderTSMediaChart(posts) {
       scales: {
         x: scaleX(),
         yImp: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)}k` } }),
+          ...scaleY({ ticks: { callback: (v) => fmtK(v) } }),
           position: 'left',
         },
         yEng: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          ...scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
           position: 'right',
           grid: { display: false },
         },
@@ -4358,13 +4384,13 @@ function renderTSTopFlop(posts) {
               <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
                 Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
-              <th class="sortable text-right" data-col="engagementSocial" tabindex="0" aria-sort="none"
-                  title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
-                Eng. social <span class="sort-icon" aria-hidden="true">↕</span>
-              </th>
               <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
-                  title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
+                  title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
                 Engagement <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="engagementLinkedIn" tabindex="0" aria-sort="none"
+                  title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
+                Eng. LinkedIn <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th>Média</th>
             </tr>
@@ -4451,7 +4477,7 @@ function renderTSTable(posts) {
   data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
 
   const engValues      = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engSocValues   = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
+  const engLiValues    = data.map(d => d.tauxEngagementLinkedIn).sort((a, b) => a - b);
   const imprValues     = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues    = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues     = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -4463,7 +4489,7 @@ function renderTSTable(posts) {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10      = p10(engValues),      engP90      = p90(engValues);
-  const engSocP10   = p10(engSocValues),   engSocP90   = p90(engSocValues);
+  const engLiP10    = p10(engLiValues),    engLiP90    = p90(engLiValues);
   const imprP10     = p10(imprValues),     imprP90     = p90(imprValues);
   const reactP10    = p10(reactValues),    reactP90    = p90(reactValues);
   const commP10     = p10(commValues),     commP90     = p90(commValues);
@@ -4524,12 +4550,12 @@ function renderTSTable(posts) {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
-      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
+      <td class="text-right ${cellClass(row.tauxEngagementLinkedIn, engLiP10, engLiP90)}">${fmtPct(row.tauxEngagementLinkedIn)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
@@ -4999,10 +5025,12 @@ function renderAbonnesOverlay(subData, postData) {
 /* ─── Utilities ──────────────────────────────────────────────── */
 
 function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
+/* Nombre décimal au format français : 2,3 et non 2.3 */
+function fmtDec(n, digits = 1) { return (+n).toFixed(digits).replace('.', ','); }
 function fmtK(n)    {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
+  if (Math.abs(n) >= 1_000_000) return `${fmtDec(n / 1_000_000)}\u202fM`;
+  if (Math.abs(n) >= 1_000)     return `${fmtDec(n / 1_000)}\u202fk`;
+  return Number.isInteger(n) ? String(n) : fmtDec(n);
 }
 function fmtPct(n)  { return `${(+n).toFixed(2).replace('.', ',')} %`; }
 
