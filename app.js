@@ -32,6 +32,9 @@ const state = {
   /* Engagement stacked mode */
   stackedMode: 'theme',
 
+  /* Abonnés : barres du graphique combiné en gain absolu ou en croissance % */
+  aboDeltaMode: 'abs',     // 'abs' | 'pct'
+
   /* Heatmap metric */
   heatmapMetric: 'engagement',
   heatmapJHMetric: 'impressions',
@@ -457,6 +460,18 @@ function initDashboard() {
       btn.classList.add('is-active');
       state.stackedMode = btn.dataset.mode;
       renderStackedEngagement(state.filteredData);
+    });
+  });
+
+  /* Abonnés — barres en gain absolu / croissance % */
+  document.querySelectorAll('.abo-delta-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.abo-delta-toggle').forEach(b => {
+        b.classList.toggle('is-active', b === btn);
+        b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+      });
+      state.aboDeltaMode = btn.dataset.mode;
+      renderAbonnesPanel();
     });
   });
 
@@ -895,7 +910,137 @@ function accountAvgEngagement() {
 function renderBilan(data) {
   renderKPIs(data);
   renderTimelineChart(data);
+  renderCadencePortee(data);
   renderPodium(data);
+}
+
+/* ── Cadence × portée médiane ──
+   Répond à "publier plus, est-ce toucher moins ?". Les impressions totales
+   montent mécaniquement avec le nombre de posts ; la médiane par publication,
+   elle, ne dépend que de ce que fait un post ordinaire. Les mois sans
+   publication sont conservés à zéro : un trou de cadence est une information. */
+function renderCadencePortee(data) {
+  destroyChart('chart-cadence-portee');
+  const canvas = $('chart-cadence-portee');
+  if (!canvas || data.length === 0) return;
+
+  const byMonth = {};
+  data.forEach(d => {
+    const k = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
+    (byMonth[k] = byMonth[k] || []).push(d.impressions);
+  });
+
+  /* Plage continue de mois, du premier au dernier post de la période */
+  const sorted = [...data].sort((a, b) => a.date - b.date);
+  const cur = new Date(sorted[0].date.getFullYear(), sorted[0].date.getMonth(), 1);
+  const end = new Date(sorted[sorted.length - 1].date.getFullYear(), sorted[sorted.length - 1].date.getMonth(), 1);
+  const months = [];
+  while (cur <= end) {
+    const k = `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`;
+    const imps = byMonth[k] || [];
+    months.push({
+      date:   new Date(cur),
+      count:  imps.length,
+      medImp: imps.length > 0 ? median(imps) : null,
+    });
+    cur.setMonth(cur.getMonth() + 1);
+  }
+
+  const periodMedian = median(data.map(d => d.impressions));
+  const [d1, d2] = DATA_COLORS();
+
+  state.charts['chart-cadence-portee'] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: months.map(m => m.date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })),
+      datasets: [
+        {
+          label: 'Publications',
+          type: 'bar',
+          data: months.map(m => m.count),
+          backgroundColor: d1,
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Impressions médianes / publication',
+          type: 'line',
+          data: months.map(m => m.medImp),
+          borderColor: d2,
+          borderWidth: 2,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: d2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          tension: 0,
+          spanGaps: true,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 3,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => items[0].label,
+            label: ctx => {
+              const m = months[ctx.dataIndex];
+              if (ctx.dataset.yAxisID === 'y') {
+                return `Publications : ${m.count}`;
+              }
+              return m.medImp === null ? null : `Impressions médianes : ${fmt(m.medImp)}`;
+            },
+          },
+        },
+        annotation: {
+          annotations: {
+            medianLine: {
+              type: 'line',
+              yMin: periodMedian,
+              yMax: periodMedian,
+              yScaleID: 'y1',
+              borderColor: C.muted(),
+              borderWidth: 1,
+              borderDash: [6, 4],
+              label: {
+                display: true,
+                content: `Médiane période ${fmt(periodMedian)}`,
+                position: 'start',
+                font: { size: 11, family: "'Geist', system-ui, sans-serif" },
+                color: C.muted(),
+                backgroundColor: 'transparent',
+              },
+            },
+          },
+        },
+      },
+      scales: {
+        x: scaleX({ ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 18 } }),
+        y: {
+          ...scaleY({ beginAtZero: true, ticks: { precision: 0 } }),
+          position: 'left',
+          title: { display: true, text: 'Publications', color: C.muted(), font: { size: 11 } },
+        },
+        y1: {
+          position: 'right',
+          beginAtZero: true,
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmtK(v) },
+          title: { display: true, text: 'Impressions médianes', color: C.muted(), font: { size: 11 } },
+        },
+      },
+    },
+  });
 }
 
 /* ── KPIs with trend arrows ── */
@@ -2348,6 +2493,7 @@ function renderComparaison(data) {
   renderCompareDistImpressionsChart(yearDataMap, selected, yearColorMap);
   renderCompareRadarChart(yearDataMap, selected, yearColorMap);
   renderCompareTrendChart(yearDataMap, selected, yearColorMap);
+  renderCompareReachChart(yearDataMap, selected, yearColorMap);
 }
 
 function renderYearPills(allYears, yearColorMap) {
@@ -2664,6 +2810,70 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
           beginAtZero: true,
           ticks: { callback: (v) => `${v.toFixed(1)} %` },
         }),
+      },
+    },
+  });
+}
+
+/* ── Saisonnalité de la portée ──
+   Impressions médianes par mois de l'année, une courbe par année.
+   Un mois de salon se lit contre le même mois des autres années. Le nombre
+   de publications de chaque point est gardé pour l'infobulle : un mois à
+   1 ou 2 posts ne décrit que ces posts. */
+function renderCompareReachChart(yearDataMap, years, yearColorMap) {
+  destroyChart('chart-compare-reach');
+  const canvas = $('chart-compare-reach');
+  if (!canvas) return;
+
+  const counts = {};
+  const datasets = years.map(y => {
+    const color = yearColorMap[y];
+    counts[y] = Array(12).fill(0);
+    const byMonth = Array.from({ length: 12 }, (_, m) => {
+      const imps = yearDataMap[y].filter(r => r.date && r.date.getMonth() === m).map(r => r.impressions);
+      counts[y][m] = imps.length;
+      return imps.length > 0 ? median(imps) : null;
+    });
+    return {
+      label: String(y),
+      data: byMonth,
+      borderColor: color,
+      backgroundColor: 'transparent',
+      pointBackgroundColor: color,
+      pointStyle: 'circle',
+      pointRadius: lastPointRadius(),
+      pointHoverRadius: 4,
+      borderWidth: 2,
+      tension: 0,
+      spanGaps: true,
+    };
+  });
+
+  state.charts['chart-compare-reach'] = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: MONTH_LABELS, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: (items) => MONTH_LABELS[items[0].dataIndex],
+            label: (item) => {
+              const n = counts[item.dataset.label][item.dataIndex];
+              return item.parsed.y !== null
+                ? ` ${item.dataset.label} : ${fmt(item.parsed.y)} (${n} publication${n > 1 ? 's' : ''})`
+                : ` ${item.dataset.label} : —`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: scaleX(),
+        y: scaleY({ beginAtZero: true, ticks: { callback: (v) => fmtK(v) } }),
       },
     },
   });
@@ -4403,9 +4613,19 @@ function renderAbonnesPanel() {
   setAbKPI('kpi-ab-pct',
     (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
     `Par rapport au premier relevé (${fmtMois(first.date)})`);
-  setAbKPI('kpi-ab-avg',
-    (avgGain >= 0 ? '+' : '') + fmt(Math.round(avgGain)),
-    `Médiane : ${fmt(Math.round(median(deltas)))} abonnés / mois`);
+  /* Croissance mensuelle en % — le même gain absolu pèse moins à mesure que
+     le compte grossit : seul le taux dit si la dynamique tient. Médiane pour
+     qu'un mois de campagne ne suffise pas à embellir toute la période. */
+  const growth    = buildMonthlyGrowthSeries(data);
+  const growthPct = growth.filter(g => g !== null).map(g => g.pct);
+  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + '\u202f%';
+  if (growthPct.length > 0) {
+    setAbKPI('kpi-ab-avg',
+      fmtSignedPct(median(growthPct)),
+      `Médiane par mois · dernier : ${fmtSignedPct(growthPct[growthPct.length - 1])} · moy. ${avgGain >= 0 ? '+' : ''}${fmt(Math.round(avgGain))} abonnés / mois`);
+  } else {
+    setAbKPI('kpi-ab-avg', '—', 'Il faut au moins deux relevés');
+  }
 
   /* ── KPIs croisés publications / abonnés ── */
   const postData = state.filteredData;
@@ -4438,13 +4658,34 @@ function renderAbonnesPanel() {
       : `Aucune croissance sur la période`);
 
   /* ── Graphique combiné (évolution + variations) ── */
-  renderAbonnesCombined(data, deltas);
+  renderAbonnesCombined(data, deltas, growth);
 
   /* ── Portée médiane × ratio portée/audience ── */
   renderPorteeAudience(reachSeries);
 
   /* ── Bubble : volume impressions × abonnés par mois ── */
   renderAbonnesOverlay(data, postData);
+}
+
+
+/**
+ * Croissance d'un relevé d'abonnés au suivant, en %.
+ * Retourne un tableau aligné sur subData (null pour le premier relevé) :
+ *   { pct, months }
+ * Quand deux relevés sont espacés de plus d'un mois (relevé manquant), le taux
+ * est ramené à son équivalent mensuel composé, pour rester comparable aux
+ * autres mois au lieu d'apparaître comme un pic.
+ */
+function buildMonthlyGrowthSeries(subData) {
+  return subData.map((d, i) => {
+    if (i === 0) return null;
+    const prev = subData[i - 1];
+    if (prev.abonnes <= 0) return null;
+    const months = Math.max(1,
+      (d.date.getFullYear() - prev.date.getFullYear()) * 12 + (d.date.getMonth() - prev.date.getMonth()));
+    const pct = (Math.pow(d.abonnes / prev.abonnes, 1 / months) - 1) * 100;
+    return { pct, months };
+  });
 }
 
 
@@ -4563,18 +4804,21 @@ function renderPorteeAudience(reachSeries) {
 }
 
 
-function renderAbonnesCombined(subData, deltas) {
+function renderAbonnesCombined(subData, deltas, growth) {
   destroyChart('chart-abonnes-combined');
   if (!$('chart-abonnes-combined')) return;
 
   const fmtMois    = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
   const [c1, c2]   = DATA_COLORS();
   const errorColor = cssVar('--color-error');
+  const pctMode    = state.aboDeltaMode === 'pct';
+  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
 
   const labels      = subData.map(d => fmtMois(d.date));
   const abonneVals  = subData.map(d => d.abonnes);
   /* Les deltas ont un élément de moins — on aligne en décalant d'un mois */
-  const deltaVals   = [null, ...deltas];
+  const absVals     = [null, ...deltas];
+  const deltaVals   = pctMode ? growth.map(g => g === null ? null : g.pct) : absVals;
   const deltaColors = deltaVals.map(v => v === null ? 'transparent' : v >= 0 ? c1 : errorColor);
 
   state.charts['chart-abonnes-combined'] = new Chart($('chart-abonnes-combined'), {
@@ -4583,7 +4827,7 @@ function renderAbonnesCombined(subData, deltas) {
       labels,
       datasets: [
         {
-          label: 'Variation mensuelle',
+          label: pctMode ? 'Croissance mensuelle' : 'Variation mensuelle',
           type: 'bar',
           data: deltaVals,
           backgroundColor: deltaColors,
@@ -4622,7 +4866,13 @@ function renderAbonnesCombined(subData, deltas) {
             label: ctx => {
               if (ctx.dataset.label === 'Abonnés') return `Abonnés : ${fmt(ctx.raw)}`;
               if (ctx.raw === null) return null;
-              return `Variation : ${ctx.raw >= 0 ? '+' : ''}${fmt(ctx.raw)} abonnés`;
+              const abs = absVals[ctx.dataIndex];
+              const absStr = `${abs >= 0 ? '+' : ''}${fmt(abs)} abonnés`;
+              if (!pctMode) return `Variation : ${absStr}`;
+              const g = growth[ctx.dataIndex];
+              return g.months > 1
+                ? `Croissance : ${fmtSignedPct(g.pct)} / mois (${absStr} sur ${g.months} mois)`
+                : `Croissance : ${fmtSignedPct(g.pct)} (${absStr})`;
             },
           },
         },
@@ -4630,9 +4880,11 @@ function renderAbonnesCombined(subData, deltas) {
       scales: {
         x: scaleX({ ticks: { maxRotation: 30, maxTicksLimit: 18 } }),
         y: {
-          ...scaleY({ ticks: { callback: v => (v > 0 ? '+' : '') + fmt(v) } }),
+          ...scaleY({ ticks: { callback: v => pctMode
+            ? (v > 0 ? '+' : '') + v.toFixed(1).replace('.', ',') + ' %'
+            : (v > 0 ? '+' : '') + fmt(v) } }),
           position: 'left',
-          title: { display: true, text: 'Variation / mois', color: C.muted(), font: { size: 11 } },
+          title: { display: true, text: pctMode ? 'Croissance / mois' : 'Variation / mois', color: C.muted(), font: { size: 11 } },
         },
         y1: {
           position: 'right',

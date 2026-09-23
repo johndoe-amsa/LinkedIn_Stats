@@ -322,6 +322,36 @@
                 <canvas id="chart-timeline" aria-label="Évolution des impressions et du taux d'engagement"></canvas>
               </div>
             </div>
+
+            <!-- Cadence × portée médiane -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Cadence de publication</p>
+                  <h3 class="chart-card__title">Publier plus, est-ce toucher moins ?</h3>
+                </div>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="À propos du graphique cadence et portée">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Cadence × portée médiane</p>
+                    <p class="chart-info-popover__body">Les <strong>barres</strong> donnent le nombre de publications du mois, la <strong>courbe</strong> les impressions médianes par publication. Contrairement aux impressions totales, la médiane n'augmente pas mécaniquement quand on publie davantage.</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Courbe stable quand les barres montent : la cadence ne coûte rien. Courbe qui baisse : les publications se font concurrence auprès de la même audience. Courbe qui monte : la régularité est récompensée.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Mois sans publication</p>
+                      <p class="chart-info-popover__text">Affichés avec une barre à zéro : un trou de cadence est une information en soi.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-cadence-portee" aria-label="Nombre de publications par mois et impressions médianes par publication"></canvas>
+              </div>
+            </div>
           </section>
 
           <!-- Podium Express -->
@@ -824,6 +854,36 @@
                   </div>
                 </div>
 
+                <!-- Saisonnalité de la portée -->
+                <div class="chart-card chart-card--wide">
+                  <div class="chart-card__header">
+                    <div>
+                      <p class="chart-card__label">Saisonnalité</p>
+                      <h3 class="chart-card__title">Portée médiane par mois</h3>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="À propos de la saisonnalité de la portée">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comparer un mois au même mois</p>
+                        <p class="chart-info-popover__body">Chaque courbe est une année : impressions médianes des publications de chaque mois. Un mois de salon se compare au même mois des autres années, pas au mois précédent, qui n'a pas le même contexte.</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Salon biennal</p>
+                          <p class="chart-info-popover__text">Si un salon n'a lieu qu'une année sur deux, comparez avec l'année N−2 : désélectionnez les années intermédiaires dans les pastilles ci-dessus.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Petits effectifs</p>
+                          <p class="chart-info-popover__text">Le nombre de publications de chaque point figure dans l'infobulle. Un mois à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chart-card__body">
+                    <canvas id="chart-compare-reach" aria-label="Impressions médianes par mois de l'année, une courbe par année"></canvas>
+                  </div>
+                </div>
+
               </section>
 
             </div><!-- /#compare-content -->
@@ -1196,7 +1256,7 @@
 
               <div class="kpi-card" id="kpi-ab-avg">
                 <div class="kpi-card__header">
-                  <p class="kpi-card__label">Gain moyen mensuel</p>
+                  <p class="kpi-card__label">Croissance mensuelle</p>
                   <div class="kpi-card__icon"><i data-lucide="calendar-plus" aria-hidden="true"></i></div>
                 </div>
                 <p class="kpi-card__value">—</p>
@@ -1229,6 +1289,10 @@
                   <div>
                     <p class="chart-card__label">Progression & variations</p>
                     <h3 class="chart-card__title">Évolution et gains mensuels des abonnés</h3>
+                  </div>
+                  <div class="chart-card__actions">
+                    <button class="btn btn--ghost btn--sm abo-delta-toggle is-active" data-mode="abs" type="button" aria-pressed="true">Gain</button>
+                    <button class="btn btn--ghost btn--sm abo-delta-toggle" data-mode="pct" type="button" aria-pressed="false">Croissance %</button>
                   </div>
                 </div>
                 <div class="chart-card__body">
