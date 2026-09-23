@@ -748,6 +748,280 @@ code, kbd {
   stroke-width: 2;
 }
 
+/* ─── À retenir : phrases générées en tête d'onglet ─────────── */
+.takeaways {
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.takeaways__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.takeaways__title svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.takeaways__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+.takeaways__list li {
+  position: relative;
+  padding-left: var(--space-4);
+}
+
+.takeaways__list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.65em;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-text-subtle);
+}
+
+.takeaways__list strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Infobulles ⓘ ouvertes au clic / au toucher ──────────── */
+.chart-info-wrapper.is-open .chart-info-popover {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* ─── Glossaire (modale) ──────────────────────────────────────
+   Desktop : modale centrée. Mobile : bottom sheet. */
+.modal {
+  width: min(640px, calc(100vw - 2 * var(--space-4)));
+  max-height: min(80vh, 720px);
+  padding: 0;
+  margin: auto;
+  color: var(--color-text);
+  background: var(--backdrop-bg);
+  backdrop-filter: var(--backdrop);
+  -webkit-backdrop-filter: var(--backdrop);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+}
+
+.modal[open] {
+  display: flex;
+  flex-direction: column;
+  animation: modal-in var(--duration-slow) var(--ease-out);
+}
+
+.modal::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: var(--backdrop);
+  -webkit-backdrop-filter: var(--backdrop);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+
+.modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-6) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal__title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.modal__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+.modal__close:hover {
+  color: var(--color-text);
+  border-color: var(--color-border-strong);
+}
+
+.modal__close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.modal__body {
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-6);
+}
+
+.modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.modal__foot .btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.glossary__group + .glossary__group {
+  margin-top: var(--space-6);
+}
+
+.glossary__group-title {
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.glossary__item {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.glossary__item dt {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.glossary__item dd {
+  margin-top: var(--space-1);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+@media (max-width: 768px) {
+  .modal {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 85vh;
+    margin: auto 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .modal[open] {
+    animation: sheet-in var(--duration-slow) var(--ease-out);
+  }
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+/* ─── Visite guidée ────────────────────────────────────────── */
+.tour {
+  position: fixed;
+  z-index: var(--z-modal);
+  width: 320px;
+  max-width: calc(100vw - 2 * var(--space-4));
+  padding: var(--space-4);
+  background: var(--backdrop-bg);
+  backdrop-filter: var(--backdrop);
+  -webkit-backdrop-filter: var(--backdrop);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-2);
+  animation: modal-in var(--duration-slow) var(--ease-out);
+}
+
+.tour--sheet {
+  top: auto;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: auto;
+}
+
+.tour__step {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tour__title {
+  margin-top: var(--space-1);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.tour__text {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.tour__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* Élément présenté par l'étape en cours : contour, sans voile sombre */
+.tour-target {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+}
+
+.nav__actions #glossary-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal[open],
+  .tour {
+    animation: none;
+  }
+}
+
 /* ─── Filtres actifs (rappel sur chaque onglet) ────────────── */
 .active-filters {
   display: flex;
@@ -1378,6 +1652,13 @@ code, kbd {
   opacity: 1;
   transform: translateY(0);
   pointer-events: auto;
+}
+
+/* Écartée par Échap : l'emporte sur le survol et le focus (règle placée après) */
+.chart-info-wrapper.is-dismissed .chart-info-popover {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
 }
 
 .chart-info-popover__title {
@@ -2706,8 +2987,14 @@ td .engagement-pill--high { color: var(--color-success); }
     gap: var(--space-6);
   }
 
+  /* En-tête compact plutôt que masqué : la question de l'onglet et le choix
+     Vue essentielle / complète restent accessibles sur mobile */
   .dashboard-main__header {
-    display: none;
+    gap: var(--space-2);
+  }
+
+  .dashboard-main__header .section-title {
+    font-size: 20px;
   }
 
   .kpis {

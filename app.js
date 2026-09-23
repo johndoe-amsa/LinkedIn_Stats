@@ -463,6 +463,9 @@ function initDashboard() {
   /* Vue essentielle / complète */
   initViewToggle();
 
+  /* Visite guidée au premier chargement, une fois la page dessinée */
+  setTimeout(maybeStartTour, 400);
+
   /* Stacked toggle */
   document.querySelectorAll('.stacked-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -573,6 +576,9 @@ let filterTheme, filterMedia, filterDateFrom, filterDateTo, resetFiltersBtn;
 let tableSearch, tableBody, tableEmpty, tableCount, clearSearchBtn, resetBtn;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initInfoPopovers();
+  initGlossary();
+  initTour();
   filterTheme     = $('filter-theme');
   filterMedia     = $('filter-media');
   filterDateFrom  = $('filter-date-from');
@@ -1039,6 +1045,7 @@ function accountAvgEngagement() {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderBilan(data) {
+  renderTakeaways('bilan', takeawaysBilan(data));
   renderKPIs(data);
   renderOverviewAudience(data);
   renderTimelineChart(data);
@@ -1075,6 +1082,7 @@ function renderOverviewAudience(postData) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderCalendrier(data) {
+  renderTakeaways('calendrier', takeawaysCalendrier(data));
   renderCadencePortee(data);
   renderHeatmapJourHeure(data);
 }
@@ -1819,6 +1827,7 @@ function renderEffortVsReward(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderEntonnoir(data) {
+  renderTakeaways('reactions', takeawaysReactions(data));
   renderEngagementDepth(data);
   renderFunnelChart(data);
   renderStackedEngagement(data);
@@ -2022,6 +2031,7 @@ function renderStackedEngagement(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderLaboratoire(data) {
+  renderTakeaways('publications', takeawaysPublications(data));
   renderTopsFlops(data);
   renderLeaderboardTable();
 }
@@ -2227,6 +2237,7 @@ function buildYearColorMap(data) {
  * selon state.statsMode.
  */
 function renderStatsPanel(data) {
+  renderTakeaways('historique', takeawaysHistorique(data));
   renderStatsModeToggle(data);
 
   const tendancesSection = document.getElementById('sy-tendances');
@@ -3622,7 +3633,7 @@ function renderThemePanel(data) {
   Object.entries(sections).forEach(([mode, el]) => { if (el) el.hidden = mode !== state.themeMode; });
   $('tab-section-title').textContent = CONTENUS_TITLES[state.themeMode];
 
-  if (state.themeMode === 'overview')     renderMatrice(data);
+  if (state.themeMode === 'overview')     { renderTakeaways('contenus', takeawaysContenus(data)); renderMatrice(data); }
   else if (state.themeMode === 'analyse') renderThemeStats(data);
   else                                    renderCompareThemes(data);
 
@@ -4871,7 +4882,7 @@ function renderAbonnesPanel() {
   $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
 
   setAbKPI('kpi-ab-pct',
-    (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
+    fmtSignedPct(gainPct),
     `Depuis le premier relevé (${fmtMois(first.date)})`);
   /* Croissance mensuelle en % — le même gain absolu pèse moins à mesure que
      le compte grossit : seul le taux dit si la dynamique tient. Médiane pour
@@ -4924,6 +4935,8 @@ function renderAbonnesPanel() {
 
   /* ── Bubble : volume impressions × abonnés par mois ── */
   renderAbonnesOverlay(data, postData);
+
+  renderTakeaways('audience', takeawaysAudience(data, postData));
 }
 
 
@@ -5254,13 +5267,350 @@ function renderAbonnesOverlay(subData, postData) {
 
 
 
+
+/* ═══════════════════════════════════════════════════════════════
+   AIDE INTÉGRÉE — « À retenir », glossaire, visite guidée, infobulles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── À retenir ──
+   2 ou 3 phrases factuelles par onglet, calculées sur la période filtrée.
+   Une comparaison n'est formulée qu'entre groupes d'au moins MIN_GROUP_POSTS
+   posts : en deçà, l'écart reflète quelques posts, pas une tendance (même
+   seuil que les classements et « posts originaux vs relayés »). */
+const MIN_GROUP_POSTS = 5;
+const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+function renderTakeaways(key, items) {
+  const box = $(`takeaways-${key}`);
+  if (!box) return;
+  const list = items.filter(Boolean);
+  box.hidden = list.length === 0;
+  box.querySelector('.takeaways__list').innerHTML = list.map(t => `<li>${t}</li>`).join('');
+}
+
+const strong     = v => `<strong>${v}</strong>`;
+const typicalImp = posts => median(posts.map(p => p.impressions));
+const postTitle  = post => `« ${escHtml(truncate(post.publication || 'Sans titre', 70))} »`;
+
+/* Groupes d'au moins MIN_GROUP_POSTS posts selon une clé : [{ key, posts }] */
+function reliableGroups(data, keyFn) {
+  const map = {};
+  data.forEach(d => {
+    const k = keyFn(d);
+    if (k === null || k === undefined || k === '—') return;
+    (map[k] = map[k] || []).push(d);
+  });
+  return Object.entries(map)
+    .filter(([, posts]) => posts.length >= MIN_GROUP_POSTS)
+    .map(([key, posts]) => ({ key, posts }));
+}
+
+/* « vus 14 % de plus / de moins que… », « à peu près autant que… » */
+function compareWords(value, ref) {
+  const diff = ref ? (value - ref) / ref * 100 : 0;
+  if (Math.abs(diff) <= 5) return null;
+  return `${strong(fmtDec(Math.abs(diff), 0) + ' %')} de ${diff > 0 ? 'plus' : 'moins'}`;
+}
+
+function takeawaysBilan(data) {
+  if (data.length === 0) return [];
+  const out = [`Un post typique est affiché ${strong(fmt(typicalImp(data)))} fois, pour un taux d'engagement de ` +
+               `${strong(fmtPct(median(data.map(d => d.tauxEngagement))))}.`];
+  if (data.length >= 2 * MIN_GROUP_POSTS) {
+    const sorted = [...data].sort((a, b) => a.date - b.date);
+    const mid = Math.floor(sorted.length / 2);
+    const words = compareWords(typicalImp(sorted.slice(mid)), typicalImp(sorted.slice(0, mid)));
+    out.push(words
+      ? `Tes posts les plus récents de la période sont vus ${words} que les plus anciens.`
+      : 'Tes posts les plus récents de la période sont vus à peu près autant que les plus anciens.');
+  }
+  const top = [...data].sort((a, b) => b.impressions - a.impressions)[0];
+  out.push(`Ton post le plus vu : ${postTitle(top)}, avec ${strong(fmt(top.impressions))} impressions (${formatDisplayDate(top.date)}).`);
+  return out;
+}
+
+function takeawaysAudience(sub, postData) {
+  if (sub.length < 2) return [];
+  const first = sub[0], last = sub[sub.length - 1];
+  const gain  = last.abonnes - first.abonnes;
+  const pct   = first.abonnes > 0 ? gain / first.abonnes * 100 : 0;
+  const since = first.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const out = [`Tu as ${gain >= 0 ? 'gagné' : 'perdu'} ${strong(fmt(Math.abs(gain)))} abonnés depuis ${since} (${strong(fmtSignedPct(pct))}).`];
+
+  const growth = buildMonthlyGrowthSeries(sub).filter(g => g !== null).map(g => g.pct);
+  if (growth.length) out.push(`Un mois typique fait évoluer ton audience de ${strong(fmtSignedPct(median(growth)))}.`);
+
+  const points = buildReachRatioSeries(sub, postData).filter(r => r.ratio !== null);
+  if (points.length >= 3) {
+    const lastPt = points[points.length - 1];
+    const typ    = median(points.map(r => r.ratio));
+    const diff   = typ ? (lastPt.ratio - typ) / typ * 100 : 0;
+    const where  = Math.abs(diff) <= 5 ? 'proche de' : diff > 0 ? 'au-dessus de' : 'en dessous de';
+    const month  = lastPt.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    out.push(`En ${month}, ton indice de visibilité est de ${strong(fmtPct(lastPt.ratio))}, ${where} ton mois typique (${fmtPct(typ)}).`);
+  }
+  return out;
+}
+
+function takeawaysPublications(data) {
+  const out = [];
+  if (data.length >= 10) {
+    const imps  = data.map(d => d.impressions).sort((a, b) => b - a);
+    const n     = Math.max(1, Math.round(imps.length / 10));
+    const total = imps.reduce((a, b) => a + b, 0);
+    const share = total ? imps.slice(0, n).reduce((a, b) => a + b, 0) / total * 100 : 0;
+    out.push(n === 1
+      ? `Ton post le plus vu (10 % de tes posts) totalise ${strong(fmtDec(share, 0) + ' %')} de tes impressions.`
+      : `Tes ${n} posts les plus vus (10 % de tes posts) totalisent ${strong(fmtDec(share, 0) + ' %')} de tes impressions.`);
+  }
+  /* Le plus engageant parmi les posts assez vus : un taux calculé sur quelques
+     dizaines d'affichages se gonfle trop facilement. */
+  const wellSeen = data.filter(d => d.impressions >= typicalImp(data));
+  if (wellSeen.length >= 2) {
+    const best = [...wellSeen].sort((a, b) => b.tauxEngagement - a.tauxEngagement)[0];
+    out.push(`Parmi tes posts vus au moins autant qu'un post typique, le plus engageant est ${postTitle(best)} (${strong(fmtPct(best.tauxEngagement))}).`);
+  }
+  return out;
+}
+
+function takeawaysContenus(data) {
+  const out = [];
+  const formats = reliableGroups(data, d => d.media)
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  if (formats.length >= 2) {
+    const best = formats[0], worst = formats[formats.length - 1];
+    out.push(`Les posts au format ${strong(escHtml(best.key))} sont les plus vus : un post typique y est affiché ` +
+             `${strong(fmt(best.typ))} fois, contre ${fmt(worst.typ)} au format ${escHtml(worst.key)}.`);
+  }
+  const themes = reliableGroups(data, d => d.theme)
+    .map(g => ({ ...g, eng: avg(g.posts, 'tauxEngagement') })).sort((a, b) => b.eng - a.eng);
+  if (themes.length >= 2) {
+    out.push(`Le thème ${strong('« ' + escHtml(themes[0].key) + ' »')} engage le plus : ${strong(fmtPct(themes[0].eng))} ` +
+             `en moyenne sur ${postsLabel(themes[0].posts.length)}.`);
+    const most = [...themes].sort((a, b) => b.posts.length - a.posts.length)[0];
+    if (most.key !== themes[0].key) {
+      const all  = avg(data, 'tauxEngagement');
+      const diff = all ? (most.eng - all) / all : 0;
+      const how  = Math.abs(diff) <= 0.05 ? 'autant que' : diff > 0 ? 'plus que' : 'moins que';
+      out.push(`Ton thème le plus publié, « ${escHtml(most.key)} » (${postsLabel(most.posts.length)}), engage ${how} ` +
+               `l'ensemble de tes posts (${fmtPct(most.eng)} contre ${fmtPct(all)}).`);
+    }
+  }
+  if (!out.length) out.push(`Pas encore assez de posts par format ou par thème (au moins ${MIN_GROUP_POSTS} chacun) pour les comparer de façon fiable.`);
+  return out;
+}
+
+function takeawaysReactions(data) {
+  if (data.length === 0) return [];
+  const out = [];
+  const imp = sum(data, 'impressions');
+  if (imp > 0) out.push(`Pour 1 000 affichages, tes posts reçoivent ${strong(fmtDec(sum(data, 'reactions') / imp * 1000))} réactions.`);
+  const inter = sum(data, 'interactions');
+  if (inter > 0) {
+    const deep = (sum(data, 'commentaires') + sum(data, 'republis')) / inter * 100;
+    out.push(`Commentaires et republications représentent ${strong(fmtDec(deep, 0) + ' %')} de tes interactions ; ` +
+             `le reste, ce sont des réactions (« j'aime »…).`);
+  }
+  const zero = data.filter(d => d.commentaires === 0).length;
+  out.push(`${strong(fmtDec(zero / data.length * 100, 0) + ' %')} de tes posts n'ont reçu aucun commentaire.`);
+  return out;
+}
+
+function takeawaysCalendrier(data) {
+  if (data.length === 0) return [];
+  const out = [];
+  const sorted = [...data].sort((a, b) => a.date - b.date);
+  const f = sorted[0].date, l = sorted[sorted.length - 1].date;
+  const months = (l.getFullYear() - f.getFullYear()) * 12 + l.getMonth() - f.getMonth() + 1;
+  const active = new Set(data.map(d => `${d.date.getFullYear()}-${d.date.getMonth()}`)).size;
+  const perMonth = data.length / months;
+  out.push(`Tu publies en moyenne ${strong(fmtDec(perMonth))} post${perMonth >= 2 ? 's' : ''} par mois` +
+           (months > active ? ` ; ${months - active} mois sur ${months} n'ont eu aucune publication.` : ', sans aucun mois vide.'));
+
+  const days = reliableGroups(data, d => d.date.getDay())
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  if (days.length >= 2) {
+    out.push(`Le ${strong(JOURS_LONGS[days[0].key])} est ton meilleur jour : un post typique y est affiché ${strong(fmt(days[0].typ))} fois ` +
+             `(${postsLabel(days[0].posts.length)}), contre ${fmt(typicalImp(data))} pour l'ensemble de tes posts.`);
+  }
+  const hours = reliableGroups(data.filter(d => d.heure !== null && d.heure !== undefined), d => d.heure)
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  out.push(hours.length >= 2
+    ? `C'est à ${strong(hours[0].key + ' h')} que tes posts sont le plus vus (post typique : ${fmt(hours[0].typ)}, ${postsLabel(hours[0].posts.length)}).`
+    : `Pas encore assez de posts avec l'heure renseignée pour désigner une meilleure heure (il en faut au moins ${MIN_GROUP_POSTS} par créneau).`);
+  return out;
+}
+
+function takeawaysHistorique(data) {
+  const years = [...new Set(data.map(d => d.date.getFullYear()))].sort((a, b) => a - b);
+  if (years.length < 2) {
+    return data.length ? ["Une seule année dans la période : l'historique se lit mieux avec plusieurs années de publications."] : [];
+  }
+  const L = years[years.length - 1], P = years[years.length - 2];
+  const inL = data.filter(d => d.date.getFullYear() === L);
+  const inP = data.filter(d => d.date.getFullYear() === P);
+  const out = [];
+
+  /* Année en cours : on compare à la même date de l'année précédente */
+  const now = new Date();
+  if (L === now.getFullYear()) {
+    const cut = new Date(P, now.getMonth(), now.getDate(), 23, 59, 59);
+    out.push(`En ${L}, tu as publié ${strong(postsLabel(inL.length))} à ce jour, contre ${postsLabel(inP.filter(d => d.date <= cut).length)} à la même date en ${P}.`);
+  } else {
+    out.push(`En ${L}, tu as publié ${strong(postsLabel(inL.length))}, contre ${postsLabel(inP.length)} en ${P}.`);
+  }
+  const tL = typicalImp(inL), tP = typicalImp(inP);
+  if (tP > 0) {
+    out.push(`Un post typique de ${L} est affiché ${strong(fmt(tL))} fois, contre ${fmt(tP)} en ${P} (${strong(fmtSignedPct((tL - tP) / tP * 100))}).`);
+  }
+  out.push(`Engagement moyen : ${strong(fmtPct(avg(inL, 'tauxEngagement')))} en ${L}, contre ${fmtPct(avg(inP, 'tauxEngagement'))} en ${P}.`);
+  if (Math.min(inL.length, inP.length) < MIN_GROUP_POSTS) {
+    out.push(`Attention : l'une de ces années compte moins de ${MIN_GROUP_POSTS} posts, ces écarts sont peu fiables.`);
+  }
+  return out;
+}
+
+/* ── Infobulles ⓘ : au clic et au toucher ──
+   Le survol n'existe pas sur mobile : un clic (ou un toucher) ouvre
+   l'infobulle, un clic ailleurs ou Échap la referme. Au clavier, le focus
+   l'ouvre déjà (CSS :focus-visible). Délégation sur le document : couvre
+   aussi les infobulles créées après coup (tableau du thème). */
+function closeInfoPopovers(except) {
+  document.querySelectorAll('.chart-info-wrapper.is-open').forEach(w => {
+    if (w === except) return;
+    w.classList.remove('is-open');
+    w.querySelector('.chart-info-btn').setAttribute('aria-expanded', 'false');
+  });
+}
+
+function initInfoPopovers() {
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.chart-info-popover')) return;           // lecture de l'infobulle ouverte
+    const btn = e.target.closest('.chart-info-btn');
+    const wrapper = btn ? btn.parentElement : null;
+    closeInfoPopovers(wrapper);
+    if (wrapper) btn.setAttribute('aria-expanded', String(wrapper.classList.toggle('is-open')));
+  });
+  /* Échap ferme aussi une infobulle ouverte au clavier (focus) ou au survol,
+     sans déplacer le focus (WCAG 1.4.13) : elle reste écartée jusqu'à ce que
+     le focus ou la souris quitte le bouton. */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeInfoPopovers(null);
+    const active = document.activeElement && document.activeElement.closest('.chart-info-wrapper');
+    [active, ...document.querySelectorAll('.chart-info-wrapper:hover')].forEach(w => w && w.classList.add('is-dismissed'));
+  });
+  const undismiss = (e) => {
+    const w = e.target.closest && e.target.closest('.chart-info-wrapper');
+    if (w && !w.contains(e.relatedTarget)) w.classList.remove('is-dismissed');
+  };
+  document.addEventListener('focusout', undismiss);
+  document.addEventListener('mouseout', undismiss);
+}
+
+/* ── Glossaire ── (<dialog> natif : Échap, fond inerte et retour du focus) */
+function initGlossary() {
+  const dlg = $('glossary');
+  $('glossary-btn').addEventListener('click', () => { closeInfoPopovers(null); dlg.showModal(); });
+  $('glossary-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });   // clic sur le fond
+  $('tour-replay').addEventListener('click', () => { dlg.close(); startTour(); });
+}
+
+/* ── Visite guidée ── 4 étapes au premier chargement, relançable depuis le glossaire */
+const TOUR_KEY = 'linkedin-analytics-tour-done';
+const TOUR_STEPS = [
+  { target: () => document.querySelector('.tab-bar'),
+    title: 'Chaque onglet répond à une question',
+    text: "Commence par la Vue d'ensemble, puis ouvre l'onglet qui répond à ta question : « Quels posts ont marché ? », « Quand et à quel rythme publier ? »…" },
+  { target: () => document.querySelector('.view-toggle'),
+    title: 'Vue essentielle ou vue complète',
+    text: "La vue essentielle montre l'indispensable de chaque onglet. La vue complète ajoute les analyses détaillées : nuages de points, radars, distributions." },
+  { target: () => [...document.querySelectorAll('.tab-panel.is-active .chart-info-btn')].find(b => b.offsetParent),
+    title: "Chaque graphique s'explique",
+    text: 'Le bouton ⓘ indique ce que montre le graphique, comment le lire et à quoi faire attention.' },
+  { target: () => $('glossary-btn'),
+    title: "Un mot t'échappe ?",
+    text: "Le glossaire définit tous les termes : post typique, indice de visibilité, taux d'engagement… Tu peux aussi y relancer cette visite." },
+];
+let tourStep = -1;
+
+function maybeStartTour() {
+  let done = false;
+  try { done = localStorage.getItem(TOUR_KEY) === '1'; } catch (e) { /* stockage indisponible */ }
+  if (!done) startTour();
+}
+
+function startTour() {
+  closeInfoPopovers(null);
+  showTourStep(0);
+}
+
+function showTourStep(i) {
+  document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+  if (i >= TOUR_STEPS.length) { endTour(); return; }
+  tourStep = i;
+  const step = TOUR_STEPS[i];
+  const target = step.target();
+  $('tour-step').textContent  = `${i + 1} / ${TOUR_STEPS.length}`;
+  $('tour-title').textContent = step.title;
+  $('tour-text').textContent  = step.text;
+  $('tour-next').textContent  = i === TOUR_STEPS.length - 1 ? 'Terminer' : 'Suivant';
+  $('tour').hidden = false;
+  if (target) {
+    target.classList.add('tour-target');
+    target.scrollIntoView({ block: 'center' });
+  }
+  positionTour();
+  $('tour-next').focus();
+}
+
+/* Carte placée sous l'élément visé (au-dessus s'il manque de place) ;
+   sur mobile, fixée en bas de l'écran comme une bottom sheet. */
+function positionTour() {
+  const tour = $('tour');
+  if (!tour || tour.hidden) return;
+  const sheet = window.innerWidth <= 768;
+  tour.classList.toggle('tour--sheet', sheet);
+  if (sheet) { tour.style.top = tour.style.left = ''; return; }
+  const target = document.querySelector('.tour-target');
+  const t = tour.getBoundingClientRect();
+  const margin = 16, gap = 12;
+  if (!target) {
+    tour.style.top  = `${(innerHeight - t.height) / 2}px`;
+    tour.style.left = `${(innerWidth - t.width) / 2}px`;
+    return;
+  }
+  const r = target.getBoundingClientRect();
+  let top = r.bottom + gap;
+  if (top + t.height > innerHeight - margin) top = Math.max(margin, r.top - gap - t.height);
+  const left = Math.min(Math.max(margin, r.left), innerWidth - t.width - margin);
+  tour.style.top  = `${top}px`;
+  tour.style.left = `${left}px`;
+}
+
+function endTour() {
+  document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+  $('tour').hidden = true;
+  tourStep = -1;
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { /* stockage indisponible */ }
+}
+
+function initTour() {
+  $('tour-next').addEventListener('click', () => showTourStep(tourStep + 1));
+  $('tour-skip').addEventListener('click', endTour);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('tour').hidden) endTour(); });
+  window.addEventListener('resize', positionTour);
+  window.addEventListener('scroll', positionTour, { passive: true });
+}
+
 /* ─── Utilities ──────────────────────────────────────────────── */
 
 function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
 /* Nombre décimal au format français : 2,3 et non 2.3 */
 function fmtDec(n, digits = 1) { return (+n).toFixed(digits).replace('.', ','); }
 /* Pourcentage signé : +4,9 % / −1,2 % */
-function fmtSignedPct(n) { return (n >= 0 ? '+' : '') + fmtDec(n) + '\u202f%'; }
+function fmtSignedPct(n) { return (n >= 0 ? '+' : '−') + fmtDec(Math.abs(n)) + '\u202f%'; }
 /* « 1 post », « 12 posts » */
 function postsLabel(n) { return `${fmt(n)} post${n > 1 ? 's' : ''}`; }
 function fmtK(n)    {

@@ -135,6 +135,10 @@
         <span class="nav__count" id="nav-count"></span>
       </div>
       <div class="nav__actions">
+        <button type="button" class="btn btn--ghost btn--sm" id="glossary-btn" aria-haspopup="dialog">
+          <i data-lucide="book-open" aria-hidden="true"></i>
+          Glossaire
+        </button>
         <button type="button" class="theme-toggle" id="theme-toggle-nav" aria-label="Changer le thème clair/sombre">
           <i data-lucide="moon" aria-hidden="true"></i>
         </button>
@@ -265,6 +269,12 @@
              VUE D'ENSEMBLE — Comment va mon compte ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel is-active" id="panel-bilan" role="tabpanel">
+
+          <!-- À retenir : phrases générées à partir des données -->
+          <section class="takeaways" id="takeaways-bilan" hidden aria-label="À retenir">
+            <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+            <ul class="takeaways__list"></ul>
+          </section>
 
           <!-- KPI Cards -->
           <section class="kpis" aria-label="Indicateurs clés">
@@ -445,6 +455,12 @@
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-entonnoir" role="tabpanel">
 
+          <!-- À retenir : phrases générées à partir des données -->
+          <section class="takeaways" id="takeaways-reactions" hidden aria-label="À retenir">
+            <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+            <ul class="takeaways__list"></ul>
+          </section>
+
           <!-- Profondeur de l'engagement -->
           <section class="kpis" aria-label="Profondeur de l'engagement">
             <div class="kpi-card" id="kpi-react-mille">
@@ -510,7 +526,7 @@
                     </div>
                     <div class="chart-info-popover__section">
                       <p class="chart-info-popover__section-label">Comment le lire</p>
-                      <p class="chart-info-popover__text">Survole une barre pour voir sa part des impressions : « 3 % des impressions » = 3 actions pour 100 affichages.</p>
+                      <p class="chart-info-popover__text">Survole ou touche une barre pour voir sa part des impressions : « 3 % des impressions » = 3 actions pour 100 affichages.</p>
                     </div>
                     <div class="chart-info-popover__section">
                       <p class="chart-info-popover__section-label">Attention à</p>
@@ -573,13 +589,19 @@
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-laboratoire" role="tabpanel">
 
+          <!-- À retenir : phrases générées à partir des données -->
+          <section class="takeaways" id="takeaways-publications" hidden aria-label="À retenir">
+            <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+            <ul class="takeaways__list"></ul>
+          </section>
+
           <!-- Tops vs Flops -->
           <section class="chart-card chart-card--wide">
             <div class="chart-card__header">
               <div>
                 <p class="chart-card__label">Classement</p>
                 <h3 class="chart-card__title">Quels posts ont le mieux et le moins bien marché ?</h3>
-                <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole une ligne pour voir le détail.</p>
+                <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole ou touche une ligne pour voir le détail.</p>
               </div>
               <div class="ts-tf-header-cluster">
                 <div class="chart-card__actions">
@@ -602,7 +624,7 @@
                       <p class="chart-info-popover__text"><strong>Meilleurs au global</strong> (recommandé) : un post doit à la fois bien engager <em>et</em> être bien vu, par rapport aux posts du même format (image, vidéo…).</p>
                       <p class="chart-info-popover__text"><strong>Meilleurs pour leur format</strong> : l'engagement du post comparé à celui d'un post typique du même format. « 1,5× » = 50 % de mieux.</p>
                       <p class="chart-info-popover__text"><strong>Taux d'engagement seul</strong> : le taux brut, sans comparaison.</p>
-                      <p class="chart-info-popover__text">Survole une ligne pour voir le détail du post.</p>
+                      <p class="chart-info-popover__text">Survole ou touche une ligne pour voir le détail du post.</p>
                     </div>
                     <div class="chart-info-popover__section">
                       <p class="chart-info-popover__section-label">Attention à</p>
@@ -737,6 +759,12 @@
              CALENDRIER — Quand et à quel rythme publier ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-calendrier" role="tabpanel">
+
+          <!-- À retenir : phrases générées à partir des données -->
+          <section class="takeaways" id="takeaways-calendrier" hidden aria-label="À retenir">
+            <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+            <ul class="takeaways__list"></ul>
+          </section>
           <section class="charts-grid" aria-label="Calendrier de publication">
 
             <!-- Cadence × portée médiane -->
@@ -840,6 +868,12 @@
               <span id="sy-compare-btn-label">Comparaison</span>
             </button>
           </div>
+
+          <!-- À retenir : phrases générées à partir des données -->
+          <section class="takeaways" id="takeaways-historique" hidden aria-label="À retenir">
+            <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+            <ul class="takeaways__list"></ul>
+          </section>
 
           <!-- ─── MODE TENDANCES ─── -->
           <div id="sy-tendances">
@@ -1160,7 +1194,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Comment le lire</p>
-                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole un point pour voir la valeur réelle.</p>
+                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole ou touche un point pour voir la valeur réelle.</p>
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
@@ -1281,6 +1315,12 @@
 
           <!-- ─── MODE TOUS LES SUJETS ─── -->
           <div id="ct-overview">
+
+            <!-- À retenir : phrases générées à partir des données -->
+            <section class="takeaways" id="takeaways-contenus" hidden aria-label="À retenir">
+              <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+              <ul class="takeaways__list"></ul>
+            </section>
   <section class="charts-grid" aria-label="Matrice stratégique">
 
               <!-- Heatmap -->
@@ -1441,7 +1481,7 @@
                     <div>
                       <p class="chart-card__label">Classement du thème</p>
                       <h3 class="chart-card__title">Quels posts de ce thème ont le mieux et le moins bien marché ?</h3>
-                      <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole une ligne pour voir le détail.</p>
+                      <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole ou touche une ligne pour voir le détail.</p>
                     </div>
                     <div class="ts-tf-header-cluster">
                       <div class="chart-card__actions">
@@ -1464,7 +1504,7 @@
                             <p class="chart-info-popover__text"><strong>Meilleurs au global</strong> (recommandé) : un post doit à la fois bien engager <em>et</em> être bien vu, par rapport aux posts du même format (image, vidéo…).</p>
                             <p class="chart-info-popover__text"><strong>Meilleurs pour leur format</strong> : l'engagement du post comparé à celui d'un post typique du même format. « 1,5× » = 50 % de mieux.</p>
                             <p class="chart-info-popover__text"><strong>Taux d'engagement seul</strong> : le taux brut, sans comparaison.</p>
-                            <p class="chart-info-popover__text">Survole une ligne pour voir le détail du post.</p>
+                            <p class="chart-info-popover__text">Survole ou touche une ligne pour voir le détail du post.</p>
                           </div>
                           <div class="chart-info-popover__section">
                             <p class="chart-info-popover__section-label">Attention à</p>
@@ -1582,7 +1622,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Comment le lire</p>
-                          <p class="chart-info-popover__text">La barre en couleur pleine est l'heure la plus engageante. Survole une barre pour voir combien de posts elle contient.</p>
+                          <p class="chart-info-popover__text">La barre en couleur pleine est l'heure la plus engageante. Survole ou touche une barre pour voir combien de posts elle contient.</p>
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
@@ -1856,7 +1896,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Comment le lire</p>
-                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole un point pour voir la valeur réelle.</p>
+                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole ou touche un point pour voir la valeur réelle.</p>
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
@@ -1933,6 +1973,12 @@
               <i data-lucide="alert-triangle" aria-hidden="true"></i>
               <span id="abonnes-filter-note-text"></span>
             </p>
+
+            <!-- À retenir : phrases générées à partir des données -->
+            <section class="takeaways" id="takeaways-audience" hidden aria-label="À retenir">
+              <p class="takeaways__title"><i data-lucide="lightbulb" aria-hidden="true"></i>À retenir</p>
+              <ul class="takeaways__list"></ul>
+            </section>
 
             <!-- Hero : total abonnés + croissance -->
             <div class="ab-hero">
@@ -2114,6 +2160,126 @@
 
       </div><!-- /.dashboard-main -->
     </main>
+  </div>
+
+  <!-- Glossaire -->
+  <dialog class="modal glossary" id="glossary" aria-labelledby="glossary-title">
+    <div class="modal__head">
+      <div>
+        <p class="section-label">Aide</p>
+        <h2 class="modal__title" id="glossary-title">Glossaire</h2>
+      </div>
+      <button type="button" class="modal__close" id="glossary-close" aria-label="Fermer le glossaire">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="modal__body">
+          <section class="glossary__group">
+            <h3 class="glossary__group-title">Visibilité</h3>
+            <dl class="glossary__list">
+              <div class="glossary__item">
+                <dt>Impressions</dt>
+                <dd>Nombre de fois où un post a été affiché à l'écran. Une même personne peut en compter plusieurs.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Post typique</dt>
+                <dd>La médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir. C'est la bonne référence pour dire ce que fait un post ordinaire.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Indice de visibilité</dt>
+                <dd>Impressions du post typique du mois ÷ nombre d'abonnés. 100 % : un post typique est affiché autant de fois que tu as d'abonnés. Il peut dépasser 100 %, car des personnes qui ne te suivent pas voient aussi tes posts.</dd>
+              </div>
+            </dl>
+          </section>
+          <section class="glossary__group">
+            <h3 class="glossary__group-title">Engagement</h3>
+            <dl class="glossary__list">
+              <div class="glossary__item">
+                <dt>Taux d'engagement</dt>
+                <dd>Définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Engagement hors clics</dt>
+                <dd>Réactions, commentaires et republications ÷ impressions. Il isole l'adhésion (réagir, commenter, partager) de la simple curiosité (cliquer).</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Taux de clics</dt>
+                <dd>Part des affichages suivis d'un clic sur le post.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Interactions</dt>
+                <dd>Réactions + commentaires + republications.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Actions totales</dt>
+                <dd>Interactions + clics.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Réactions pour 1 000 impressions</dt>
+                <dd>Combien de réactions un post obtient pour 1 000 affichages : la qualité de la visibilité, indépendamment du nombre de posts publiés.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Republications</dt>
+                <dd>Partages de tes posts par d'autres membres.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Contenus relayés</dt>
+                <dd>Posts dont la colonne « Type » de ton fichier indique un re-post (partage d'un contenu existant) plutôt qu'une publication originale.</dd>
+              </div>
+            </dl>
+          </section>
+          <section class="glossary__group">
+            <h3 class="glossary__group-title">Audience</h3>
+            <dl class="glossary__list">
+              <div class="glossary__item">
+                <dt>Croissance mensuelle</dt>
+                <dd>Abonnés gagnés dans le mois ÷ abonnés du mois précédent. Le « mois typique » est la médiane des mois de la période.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Affichages pour gagner un abonné</dt>
+                <dd>Impressions de la période ÷ abonnés gagnés sur la même période.</dd>
+              </div>
+            </dl>
+          </section>
+          <section class="glossary__group">
+            <h3 class="glossary__group-title">Lecture du tableau de bord</h3>
+            <dl class="glossary__list">
+              <div class="glossary__item">
+                <dt>Vs ta normale</dt>
+                <dd>Quand un filtre est actif : écart entre la sélection et le même indicateur sur tout ton historique. « ≈ ta normale » : moins de 5 % d'écart.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Échantillon faible</dt>
+                <dd>Un résultat qui repose sur 1 ou 2 posts reflète ces posts, pas une tendance. Les cases concernées sont entourées de pointillés, et les infobulles donnent le nombre de posts.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Score global, vs son format</dt>
+                <dd>Classement des posts : l'engagement et les impressions d'un post comparés à ceux d'un post typique du même format (image, vidéo…). « 1,5× » = 50 % de mieux.</dd>
+              </div>
+              <div class="glossary__item">
+                <dt>Vue essentielle, vue complète</dt>
+                <dd>La vue essentielle montre les blocs indispensables de chaque onglet ; la vue complète ajoute les analyses détaillées (nuages de points, radars, distributions…).</dd>
+              </div>
+            </dl>
+          </section>
+    </div>
+    <div class="modal__foot">
+      <button type="button" class="btn btn--secondary btn--sm" id="tour-replay">
+        <i data-lucide="compass" aria-hidden="true"></i>
+        Revoir la visite guidée
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Visite guidée : 4 étapes au premier chargement -->
+  <div class="tour" id="tour" role="dialog" aria-modal="false" aria-labelledby="tour-title" aria-describedby="tour-text" hidden>
+    <p class="tour__step" id="tour-step"></p>
+    <h3 class="tour__title" id="tour-title"></h3>
+    <p class="tour__text" id="tour-text"></p>
+    <div class="tour__actions">
+      <button type="button" class="btn btn--ghost btn--sm" id="tour-skip">Passer</button>
+      <button type="button" class="btn btn--primary btn--sm" id="tour-next">Suivant</button>
+    </div>
   </div>
 
   <script src="app.js"></script>
