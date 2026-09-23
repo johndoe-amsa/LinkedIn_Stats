@@ -291,7 +291,7 @@ function parseRows(rows) {
       const republis      = parseNum(get('Republi') || get('Republications'));
       const clics         = parseNum(get('Clics'));
       const tauxClics     = parsePct(get('Taux de clics') || get('Tauxdeclics'));
-      const tauxEngagementLinkedIn = parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
+      const tauxEngagement = parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
       const theme         = (get('Theme') || get('Thème') || get('Thematique') || '—').trim() || '—';
       const media         = (get('Media') || get('Média') || '—').trim() || '—';
       const type          = (get('Type') || '—').trim() || '—';
@@ -300,20 +300,22 @@ function parseRows(rows) {
       const interactions      = reactions + commentaires + republis;
       const totalInteractions = interactions + clics;
 
-      /* Taux d'engagement = (réactions + commentaires + republications) / impressions.
-         Recalculé ici, et c'est lui qu'utilise tout le tableau de bord : la
-         colonne "Taux d'engagement" du fichier LinkedIn agrège aussi les clics,
-         elle mélange donc curiosité (clic) et adhésion (réaction, commentaire,
-         republication). Le taux de clics a sa propre colonne ; le taux LinkedIn
-         est conservé dans tauxEngagementLinkedIn, affiché seulement en référence. */
-      const tauxEngagement = impressions > 0
+      /* Taux d'engagement : celui de LinkedIn, lu tel quel dans le fichier
+         (clics, réactions, commentaires, republications et abonnés gagnés,
+         ÷ impressions). C'est lui qu'utilise tout le tableau de bord, pour que
+         les chiffres correspondent à l'interface LinkedIn et aux références du
+         secteur.
+         Engagement hors clics = (réactions + commentaires + republications)
+         ÷ impressions : complément affiché en référence, qui isole l'adhésion
+         (réagir, commenter, partager) de la simple curiosité (cliquer). */
+      const tauxEngagementHorsClics = impressions > 0
         ? (interactions / impressions) * 100
         : 0;
 
       return {
         date, heure, publication, impressions, vues,
         reactions, commentaires, republis, clics,
-        tauxClics, tauxEngagement, tauxEngagementLinkedIn,
+        tauxClics, tauxEngagement, tauxEngagementHorsClics,
         theme, media, type,
         interactions, totalInteractions,
         dateRaw: get('Date'),
@@ -1053,11 +1055,10 @@ function renderKPIs(data) {
   const medianImpressions = median(data.map(d => d.impressions));
   const avgClics = avg(data, 'tauxClics');
   const medianClics = median(data.map(d => d.tauxClics));
-  /* Le taux LinkedIn (clics inclus) reste affiché en référence dans la carte,
-     pour que l'écart avec le taux d'engagement soit lisible. */
+  /* L'engagement hors clics est affiché en complément dans la carte */
   const avgEngagement    = avg(data, 'tauxEngagement');
   const medianEngagement = median(data.map(d => d.tauxEngagement));
-  const avgEngagementRaw = avg(data, 'tauxEngagementLinkedIn');
+  const avgEngagementHorsClics = avg(data, 'tauxEngagementHorsClics');
   const totalInteractions = data.reduce((acc, d) => acc + d.totalInteractions, 0);
 
   setKPI('kpi-impressions', fmtK(totalImpressions));
@@ -1069,7 +1070,7 @@ function renderKPIs(data) {
   $('kpi-impressions-median').textContent = fmt(medianImpressions);
   $('kpi-clics-median').textContent = fmtPct(medianClics);
   $('kpi-engagement-median').textContent = fmtPct(medianEngagement);
-  $('kpi-engagement-raw').textContent = fmtPct(avgEngagementRaw);
+  $('kpi-engagement-horsclics').textContent = fmtPct(avgEngagementHorsClics);
 
   /* Trend arrows: compare first half vs second half */
   if (data.length >= 4) {
@@ -1396,7 +1397,7 @@ function renderTypeCompare(data) {
       count:      group.length,
       share:      (group.length / typed.length) * 100,
       medImp:     median(group.map(d => d.impressions)),
-      medEngSoc:  median(group.map(d => d.tauxEngagement)),
+      medEng:  median(group.map(d => d.tauxEngagement)),
       reactPerK:  groupImpressions > 0 ? (sum(group, 'reactions') / groupImpressions) * 1000 : 0,
       comsPerPost: avg(group, 'commentaires'),
       thin:       group.length < MIN_TYPE_SAMPLES,
@@ -1409,7 +1410,7 @@ function renderTypeCompare(data) {
   const best = (key) => solid.length >= 2 ? Math.max(...solid.map(r => r[key])) : null;
   const bests = {
     medImp:      best('medImp'),
-    medEngSoc:   best('medEngSoc'),
+    medEng:   best('medEng'),
     reactPerK:   best('reactPerK'),
     comsPerPost: best('comsPerPost'),
   };
@@ -1440,7 +1441,7 @@ function renderTypeCompare(data) {
       <td class="text-right">${fmt(r.count)}</td>
       <td class="text-right">${fmtPct(r.share)}</td>
       <td class="text-right${mark(r, 'medImp')}">${fmt(r.medImp)}</td>
-      <td class="text-right${mark(r, 'medEngSoc')}">${fmtPct(r.medEngSoc)}</td>
+      <td class="text-right${mark(r, 'medEng')}">${fmtPct(r.medEng)}</td>
       <td class="text-right${mark(r, 'reactPerK')}">${fmtDec(r.reactPerK)}</td>
       <td class="text-right${mark(r, 'comsPerPost')}">${fmtDec(r.comsPerPost)}</td>
     </tr>`;
@@ -1875,7 +1876,7 @@ function renderLeaderboardTable() {
 
   /* Compute percentile thresholds */
   const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engLiValues = data.map(d => d.tauxEngagementLinkedIn).sort((a, b) => a - b);
+  const engHcValues = data.map(d => d.tauxEngagementHorsClics).sort((a, b) => a - b);
   const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues  = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -1887,7 +1888,7 @@ function renderLeaderboardTable() {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10 = p10(engValues),       engP90 = p90(engValues);
-  const engLiP10 = p10(engLiValues),   engLiP90 = p90(engLiValues);
+  const engHcP10 = p10(engHcValues),   engHcP90 = p90(engHcValues);
   const imprP10 = p10(imprValues),     imprP90 = p90(imprValues);
   const reactP10 = p10(reactValues),   reactP90 = p90(reactValues);
   const commP10 = p10(commValues),     commP90 = p90(commValues);
@@ -1955,7 +1956,7 @@ function renderLeaderboardTable() {
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
-      <td class="text-right ${cellClass(row.tauxEngagementLinkedIn, engLiP10, engLiP90)}">${fmtPct(row.tauxEngagementLinkedIn)}</td>
+      <td class="text-right ${cellClass(row.tauxEngagementHorsClics, engHcP10, engHcP90)}">${fmtPct(row.tauxEngagementHorsClics)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
@@ -2012,7 +2013,7 @@ function sortData(data, col, dir) {
       case 'republis':      return mult * (a.republis - b.republis);
       case 'clics':         return mult * (a.clics - b.clics);
       case 'tauxClics':     return mult * (a.tauxClics - b.tauxClics);
-      case 'engagementLinkedIn': return mult * (a.tauxEngagementLinkedIn - b.tauxEngagementLinkedIn);
+      case 'engagementHorsClics': return mult * (a.tauxEngagementHorsClics - b.tauxEngagementHorsClics);
       case 'engagement':   return mult * (a.tauxEngagement - b.tauxEngagement);
       default:             return 0;
     }
@@ -4385,12 +4386,12 @@ function renderTSTopFlop(posts) {
                 Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
-                  title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
+                  title="Taux d'engagement LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés ÷ impressions">
                 Engagement <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
-              <th class="sortable text-right" data-col="engagementLinkedIn" tabindex="0" aria-sort="none"
-                  title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
-                Eng. LinkedIn <span class="sort-icon" aria-hidden="true">↕</span>
+              <th class="sortable text-right" data-col="engagementHorsClics" tabindex="0" aria-sort="none"
+                  title="(Réactions + commentaires + republications) ÷ impressions — sans les clics">
+                Hors clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th>Média</th>
             </tr>
@@ -4477,7 +4478,7 @@ function renderTSTable(posts) {
   data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
 
   const engValues      = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engLiValues    = data.map(d => d.tauxEngagementLinkedIn).sort((a, b) => a - b);
+  const engHcValues    = data.map(d => d.tauxEngagementHorsClics).sort((a, b) => a - b);
   const imprValues     = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues    = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues     = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -4489,7 +4490,7 @@ function renderTSTable(posts) {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10      = p10(engValues),      engP90      = p90(engValues);
-  const engLiP10    = p10(engLiValues),    engLiP90    = p90(engLiValues);
+  const engHcP10    = p10(engHcValues),    engHcP90    = p90(engHcValues);
   const imprP10     = p10(imprValues),     imprP90     = p90(imprValues);
   const reactP10    = p10(reactValues),    reactP90    = p90(reactValues);
   const commP10     = p10(commValues),     commP90     = p90(commValues);
@@ -4555,7 +4556,7 @@ function renderTSTable(posts) {
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
-      <td class="text-right ${cellClass(row.tauxEngagementLinkedIn, engLiP10, engLiP90)}">${fmtPct(row.tauxEngagementLinkedIn)}</td>
+      <td class="text-right ${cellClass(row.tauxEngagementHorsClics, engHcP10, engHcP90)}">${fmtPct(row.tauxEngagementHorsClics)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
