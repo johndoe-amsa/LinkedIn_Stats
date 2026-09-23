@@ -1018,6 +1018,10 @@ code, kbd {
 }
 
 .chart-card {
+  /* Élément de grille : sans min-width: 0, un tableau large impose sa largeur
+     à toute la colonne et fait défiler la page horizontalement sur mobile ;
+     le tableau défile alors dans son propre cadre (.table-wrapper). */
+  min-width: 0;
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -1055,6 +1059,16 @@ code, kbd {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--color-text);
+}
+
+/* Sous-titre : comment lire le bloc, en une phrase */
+.chart-card__desc,
+.section-desc {
+  margin-top: var(--space-1);
+  max-width: 72ch;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
 }
 
 .chart-card__badge {
@@ -1221,6 +1235,21 @@ code, kbd {
   font-size: 12px;
   color: var(--color-text-muted);
   line-height: 1.5;
+}
+
+.chart-info-popover__text + .chart-info-popover__text {
+  margin-top: var(--space-1);
+}
+
+/* « Pour aller plus loin » : détails techniques, séparés du reste */
+.chart-info-popover__section--more {
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.chart-info-popover__section--more .chart-info-popover__section-label {
+  color: var(--color-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2500,6 +2529,34 @@ td .engagement-pill--high { color: var(--color-success); }
 
   .chart-card__actions {
     align-self: flex-start;
+  }
+
+  /* En-tête empilé : le bouton ⓘ reste à droite pour que son infobulle,
+     ancrée par la droite, s'ouvre vers l'intérieur de l'écran */
+  .chart-card__header > .chart-info-wrapper {
+    align-self: flex-end;
+  }
+
+  /* Boutons + ⓘ : les boutons passent à la ligne sur toute la largeur,
+     le ⓘ reste à droite en dessous */
+  .chart-card__header > .ts-tf-header-cluster {
+    align-self: stretch;
+  }
+
+  .ts-tf-header-cluster > .chart-card__actions {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  /* Les en-têtes de section passent à la ligne : même principe */
+  .podium-section__header > .chart-info-wrapper {
+    margin-left: auto;
+  }
+
+  /* Largeur bornée par la zone de contenu de la carte (marges de page et de carte) */
+  .chart-info-popover,
+  .chart-info-popover--wide {
+    max-width: calc(100vw - 4 * var(--space-4));
   }
 
   .nav__meta {

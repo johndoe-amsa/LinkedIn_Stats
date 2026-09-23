@@ -253,7 +253,7 @@
           <section class="kpis" aria-label="Indicateurs clés">
             <div class="kpi-card" id="kpi-impressions">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Total Impressions</p>
+                <p class="kpi-card__label">Impressions totales</p>
                 <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
@@ -262,31 +262,31 @@
                 Publications : <strong id="kpi-posts-count">0</strong>
               </p>
               <p class="kpi-card__sub">
-                Médiane : <strong id="kpi-impressions-median">0</strong> / publication
+                Post typique : <strong id="kpi-impressions-median">0</strong> impressions
               </p>
             </div>
 
             <div class="kpi-card" id="kpi-clics">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Taux de Clics Moyen</p>
+                <p class="kpi-card__label">Taux de clics moyen</p>
                 <div class="kpi-card__icon"><i data-lucide="mouse-pointer-click" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
               <p class="kpi-card__sub">
                 <span id="kpi-clics-trend"></span>
-                Médiane : <strong id="kpi-clics-median">0 %</strong>
+                Post typique : <strong id="kpi-clics-median">0 %</strong>
               </p>
             </div>
 
             <div class="kpi-card" id="kpi-engagement">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Taux d'Engagement</p>
+                <p class="kpi-card__label">Taux d'engagement moyen</p>
                 <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
               <p class="kpi-card__sub">
                 <span id="kpi-engagement-trend"></span>
-                Médiane : <strong id="kpi-engagement-median">0 %</strong>
+                Post typique : <strong id="kpi-engagement-median">0 %</strong>
               </p>
               <p class="kpi-card__sub">
                 Définition LinkedIn, clics inclus ·
@@ -302,7 +302,7 @@
               <p class="kpi-card__value">—</p>
               <p class="kpi-card__sub">
                 <span id="kpi-interactions-trend"></span>
-                Réactions + Coms + Republi. + Clics
+                Réactions, commentaires, republications et clics
               </p>
             </div>
           </section>
@@ -313,10 +313,37 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Évolution temporelle</p>
-                  <h3 class="chart-card__title">Impressions & Engagement</h3>
+                  <p class="chart-card__label">Évolution mois par mois</p>
+                  <h3 class="chart-card__title">Mes posts sont-ils plus vus et plus engageants au fil des mois ?</h3>
+                  <p class="chart-card__desc">Barres : impressions totales du mois. Courbe : taux d'engagement moyen du mois. Pointillés : ton engagement moyen sur tout l'historique.</p>
                 </div>
-                <div class="chart-card__badge" id="chart-timeline-range"></div>
+                <div class="ts-tf-header-cluster">
+                  <div class="chart-card__badge" id="chart-timeline-range"></div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts sont-ils plus vus et plus engageants au fil des mois ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque mois, le nombre total d'affichages de tes posts (barres) et leur taux d'engagement moyen (courbe).</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Une barre haute = beaucoup d'affichages, souvent parce que tu as publié davantage ce mois-là. Une courbe au-dessus des pointillés = un mois plus engageant que d'habitude.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Le total dépend du nombre de posts : pour comparer les mois entre eux, regarde plutôt « Publier plus, est-ce toucher moins ? » juste en dessous. Un mois avec un seul post peut faire bondir la courbe.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Taux d'engagement = définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div class="chart-card__body">
                 <canvas id="chart-timeline" aria-label="Évolution des impressions et du taux d'engagement"></canvas>
@@ -327,23 +354,31 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Cadence de publication</p>
+                  <p class="chart-card__label">Rythme de publication</p>
                   <h3 class="chart-card__title">Publier plus, est-ce toucher moins ?</h3>
+                  <p class="chart-card__desc">Barres : nombre de posts du mois. Courbe : impressions d'un post typique ce mois-là. Pointillés : le post typique sur toute la période.</p>
                 </div>
                 <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="À propos du graphique cadence et portée">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Publier plus, est-ce toucher moins ?">
                     <i data-lucide="info" aria-hidden="true"></i>
                   </button>
                   <div class="chart-info-popover" role="tooltip">
-                    <p class="chart-info-popover__title">Cadence × portée médiane</p>
-                    <p class="chart-info-popover__body">Les <strong>barres</strong> donnent le nombre de publications du mois, la <strong>courbe</strong> les impressions médianes par publication. Contrairement aux impressions totales, la médiane n'augmente pas mécaniquement quand on publie davantage.</p>
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Comment le lire</p>
-                      <p class="chart-info-popover__text">Courbe stable quand les barres montent : la cadence ne coûte rien. Courbe qui baisse : les publications se font concurrence auprès de la même audience. Courbe qui monte : la régularité est récompensée.</p>
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Combien tu publies chaque mois, et combien de fois un post ordinaire de ce mois a été affiché.</p>
                     </div>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Mois sans publication</p>
-                      <p class="chart-info-popover__text">Affichés avec une barre à zéro : un trou de cadence est une information en soi.</p>
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Courbe stable quand les barres montent : publier davantage ne coûte rien. Courbe qui baisse : tes posts se font concurrence auprès des mêmes personnes. Courbe qui monte : la régularité est récompensée.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable. Les mois sans publication restent affichés, avec une barre à zéro.</p>
+                    </div>
+                    <div class="chart-info-popover__section chart-info-popover__section--more">
+                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                      <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
                     </div>
                   </div>
                 </div>
@@ -358,8 +393,29 @@
           <section class="podium-section">
             <div class="podium-section__header">
               <div>
-                <p class="section-label">Podium Express</p>
-                <h3 class="section-title">Top 3 publications</h3>
+                <p class="section-label">Podium</p>
+                <h3 class="section-title">Les 3 posts les plus vus</h3>
+                <p class="section-desc">Classés par nombre d'impressions sur la période choisie.</p>
+              </div>
+              <div class="chart-info-wrapper">
+                <button class="chart-info-btn" type="button" aria-label="Comment lire : Les 3 posts les plus vus">
+                  <i data-lucide="info" aria-hidden="true"></i>
+                </button>
+                <div class="chart-info-popover" role="tooltip">
+                  <p class="chart-info-popover__title">Comment lire ce classement</p>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                    <p class="chart-info-popover__text">Les trois posts les plus affichés de la période filtrée, avec leur engagement et leurs clics.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Comment le lire</p>
+                    <p class="chart-info-popover__text">C'est un classement de visibilité, pas de qualité : un post peut être très vu et peu engageant. Pour savoir quels posts ont vraiment marché, consulte le classement de l'onglet Liste.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Attention à</p>
+                    <p class="chart-info-popover__text">Les posts récents ont eu moins de temps pour accumuler des impressions.</p>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="podium" id="podium-cards"></div>
@@ -377,12 +433,39 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Carte de chaleur</p>
-                  <h3 class="chart-card__title">Thème × Média</h3>
+                  <p class="chart-card__label">Sujets × formats</p>
+                  <h3 class="chart-card__title">Quel format pour quel sujet ?</h3>
+                  <p class="chart-card__desc">Plus la case est foncée, meilleur est le résultat. Le petit chiffre indique le nombre de posts : en dessous de 3, n'en tire pas de conclusion.</p>
                 </div>
-                <div class="chart-card__actions">
-                  <button class="btn btn--ghost btn--sm heatmap-toggle is-active" data-metric="engagement">Engagement</button>
-                  <button class="btn btn--ghost btn--sm heatmap-toggle" data-metric="impressions">Impressions</button>
+                <div class="ts-tf-header-cluster">
+                  <div class="chart-card__actions">
+                    <button class="btn btn--ghost btn--sm heatmap-toggle is-active" data-metric="engagement">Engagement</button>
+                    <button class="btn btn--ghost btn--sm heatmap-toggle" data-metric="impressions">Impressions</button>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel format pour quel sujet ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque thème (lignes) et chaque format (colonnes) : l'engagement moyen ou les impressions d'un post typique, selon le bouton choisi.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Compare les cases d'une même ligne : elles indiquent quel format marche le mieux pour ce sujet. Une case « — » est une combinaison jamais publiée.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Les couleurs sont relatives : la case la plus foncée est la meilleure du tableau, pas forcément un bon résultat dans l'absolu. Une case à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Engagement = moyenne des taux des posts de la case. Impressions = post typique (médiane).</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="chart-card__body chart-card__body--table">
@@ -394,8 +477,33 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Effort vs Récompense</p>
-                  <h3 class="chart-card__title">Volume publié vs Engagement généré</h3>
+                  <p class="chart-card__label">Effort et résultat</p>
+                  <h3 class="chart-card__title">Les sujets où je publie le plus rapportent-ils autant ?</h3>
+                  <p class="chart-card__desc">Pour chaque thème : le nombre de posts publiés et leur engagement moyen. Pointillés : ton engagement moyen.</p>
+                </div>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Les sujets où je publie le plus rapportent-ils autant ?">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Pour chaque thème, le nombre de posts publiés (l'effort) et leur taux d'engagement moyen (le résultat).</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Beaucoup de posts mais un engagement sous les pointillés : ce sujet te coûte du temps pour peu de résultat. Peu de posts mais un engagement au-dessus : ce sujet mérite peut-être d'être développé.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Un thème avec 2 ou 3 posts peut afficher un engagement élevé par hasard.</p>
+                    </div>
+                    <div class="chart-info-popover__section chart-info-popover__section--more">
+                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                      <p class="chart-info-popover__text">Pointillés = engagement moyen de tous tes posts, sur tout l'historique. Taux d'engagement = définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="chart-card__body">
@@ -407,27 +515,31 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Origine de la publication</p>
-                  <h3 class="chart-card__title">Natif vs re-post</h3>
+                  <p class="chart-card__label">Origine des posts</p>
+                  <h3 class="chart-card__title">Mes posts originaux marchent-ils mieux que les contenus que je relaie ?</h3>
+                  <p class="chart-card__desc">Une ligne par valeur de la colonne « Type » de ton fichier. La meilleure valeur de chaque colonne est mise en évidence.</p>
                 </div>
                 <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="À propos de la comparaison natif / re-post">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts originaux marchent-ils mieux que les contenus que je relaie ?">
                     <i data-lucide="info" aria-hidden="true"></i>
                   </button>
                   <div class="chart-info-popover" role="tooltip">
-                    <p class="chart-info-popover__title">Lire cette comparaison</p>
-                    <p class="chart-info-popover__body">Chaque ligne regroupe les publications d'une même valeur de la colonne <code>Type</code> de votre fichier.</p>
+                    <p class="chart-info-popover__title">Comment lire ce tableau</p>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Médianes, pas moyennes</p>
-                      <p class="chart-info-popover__text">Portée et engagement sont donnés en médiane : avec des effectifs déséquilibrés entre natif et re-post, une moyenne se laisse emporter par un seul post exceptionnel.</p>
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Pour chaque type de post : combien tu en as publié et leurs résultats (impressions d'un post typique, engagement, réactions pour 1 000 impressions, commentaires par post).</p>
                     </div>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Réactions / 1 000 impressions</p>
-                      <p class="chart-info-popover__text">Rapport agrégé sur l'ensemble des publications du groupe. Il mesure la qualité de la portée indépendamment du volume publié.</p>
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Compare les lignes colonne par colonne. « Réactions pour 1 000 impr. » : combien de réactions un post obtient pour 1 000 affichages, c'est-à-dire la qualité de la visibilité, indépendamment du nombre de posts.</p>
                     </div>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Échantillon</p>
-                      <p class="chart-info-popover__text">Un groupe de <strong>moins de 5 publications</strong> est signalé : sa médiane n'est pas fiable et l'écart avec l'autre groupe ne doit pas être interprété.</p>
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Un groupe de moins de 5 posts est signalé par un triangle : ses chiffres ne sont pas fiables et l'écart avec l'autre groupe ne doit pas être interprété.</p>
+                    </div>
+                    <div class="chart-info-popover__section chart-info-popover__section--more">
+                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                      <p class="chart-info-popover__text">Impressions et engagement en post typique (médiane) : les deux groupes ont rarement le même nombre de posts, et une moyenne se laisserait emporter par un post exceptionnel.</p>
                     </div>
                   </div>
                 </div>
@@ -450,7 +562,7 @@
           <section class="kpis" aria-label="Profondeur de l'engagement">
             <div class="kpi-card" id="kpi-react-mille">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Réactions / 1 000 impr.</p>
+                <p class="kpi-card__label">Réactions pour 1 000 impressions</p>
                 <div class="kpi-card__icon"><i data-lucide="thumbs-up" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
@@ -459,7 +571,7 @@
 
             <div class="kpi-card" id="kpi-coms-post">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Commentaires / publication</p>
+                <p class="kpi-card__label">Commentaires par post</p>
                 <div class="kpi-card__icon"><i data-lucide="message-circle" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
@@ -468,7 +580,7 @@
 
             <div class="kpi-card" id="kpi-republi-post">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Republications / publication</p>
+                <p class="kpi-card__label">Republications par post</p>
                 <div class="kpi-card__icon"><i data-lucide="repeat-2" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
@@ -477,7 +589,7 @@
 
             <div class="kpi-card" id="kpi-zero-coms">
               <div class="kpi-card__header">
-                <p class="kpi-card__label">Publications sans commentaire</p>
+                <p class="kpi-card__label">Posts sans commentaire</p>
                 <div class="kpi-card__icon"><i data-lucide="message-circle-off" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
@@ -491,8 +603,29 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Entonnoir de conversion</p>
-                  <h3 class="chart-card__title">Impressions → Clics → Interactions</h3>
+                  <p class="chart-card__label">Du regard à l'action</p>
+                  <h3 class="chart-card__title">Sur 100 affichages, combien de clics et de réactions ?</h3>
+                  <p class="chart-card__desc">Chaque barre compare une étape au nombre total d'affichages de tes posts.</p>
+                </div>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Sur 100 affichages, combien de clics et de réactions ?">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Le total de tes impressions sur la période, puis le nombre de clics et d'interactions (réactions, commentaires, republications) qu'elles ont suscités.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Survole une barre pour voir sa part des impressions : « 3 % des impressions » = 3 actions pour 100 affichages.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Ce n'est pas un vrai entonnoir : on peut réagir sans avoir cliqué. Clics et interactions sont deux réponses différentes au même affichage.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="chart-card__body">
@@ -504,12 +637,35 @@
             <div class="chart-card chart-card--wide">
               <div class="chart-card__header">
                 <div>
-                  <p class="chart-card__label">Jauge d'interactions</p>
-                  <h3 class="chart-card__title">Réactions vs Commentaires vs Republications</h3>
+                  <p class="chart-card__label">Nature des réactions</p>
+                  <h3 class="chart-card__title">Comment réagit-on à mes posts ?</h3>
+                  <p class="chart-card__desc">Répartition des interactions entre réactions, commentaires et republications, par thème ou pour tes 15 posts les plus actifs.</p>
                 </div>
-                <div class="chart-card__actions">
-                  <button class="btn btn--ghost btn--sm stacked-toggle is-active" data-mode="theme">Par thème</button>
-                  <button class="btn btn--ghost btn--sm stacked-toggle" data-mode="publication">Top 15 publications</button>
+                <div class="ts-tf-header-cluster">
+                  <div class="chart-card__actions">
+                    <button class="btn btn--ghost btn--sm stacked-toggle is-active" data-mode="theme">Par thème</button>
+                    <button class="btn btn--ghost btn--sm stacked-toggle" data-mode="publication">15 posts les plus actifs</button>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Comment réagit-on à mes posts ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Sur 100 interactions, combien sont des réactions (« j'aime »…), des commentaires et des republications.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Plus la part de commentaires et de republications est grande, plus l'audience s'implique : commenter ou partager demande plus d'effort qu'un simple « j'aime ».</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Chaque barre fait toujours 100 % : elle montre une répartition, pas un volume. Un thème à 3 interactions et un autre à 3 000 ont des barres de même longueur.</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div class="chart-card__body chart-card__body--tall">
@@ -530,37 +686,40 @@
           <section class="chart-card chart-card--wide">
             <div class="chart-card__header">
               <div>
-                <p class="chart-card__label">Comparaison</p>
-                <h3 class="chart-card__title">Tops vs Flops — Engagement</h3>
+                <p class="chart-card__label">Classement</p>
+                <h3 class="chart-card__title">Quels posts ont le mieux et le moins bien marché ?</h3>
+                <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole une ligne pour voir le détail.</p>
               </div>
               <div class="ts-tf-header-cluster">
                 <div class="chart-card__actions">
-                  <button class="btn btn--ghost btn--sm lab-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Performance globale</button>
-                  <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Score vs format</button>
-                  <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Engagement brut</button>
+                  <button class="btn btn--ghost btn--sm lab-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Meilleurs au global</button>
+                  <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Meilleurs pour leur format</button>
+                  <button class="btn btn--ghost btn--sm lab-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Taux d'engagement seul</button>
                 </div>
                 <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="À propos du classement">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels posts ont le mieux et le moins bien marché ?">
                     <i data-lucide="info" aria-hidden="true"></i>
                   </button>
                   <div class="chart-info-popover chart-info-popover--wide" role="tooltip">
-                    <p class="chart-info-popover__title">Comment lire ce classement ?</p>
-                    <p class="chart-info-popover__body">Mesurer la "réussite" d'un post sur un seul chiffre est piégeux : un taux d'engagement brut favorise les formats riches (carrousel, vidéo) <em>et</em> les posts à faible portée (le rate gonfle quand le dénominateur est petit). Trois angles complémentaires :</p>
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Performance globale (recommandé)</p>
-                      <p class="chart-info-popover__text">Combine <strong>qualité × portée</strong> via la moyenne géométrique : <code>√(score_qualité × score_portée)</code>. Un post doit à la fois résonner avec son audience <em>et</em> toucher un volume significatif pour grimper en tête. C'est l'angle qu'utilisent les analyses pro pour répondre à "quel post a vraiment marché ?".</p>
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Les 5 posts qui ont le mieux marché et les 5 qui ont le moins bien marché sur la période, selon le mode choisi avec les boutons.</p>
                     </div>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Score vs format</p>
-                      <p class="chart-info-popover__text">Mesure la <strong>qualité pure</strong> : taux d'engagement comparé à la médiane des posts du même média. Un score de <strong>1,5×</strong> = "50 % de mieux que la médiane de son format". Répond à "ce post a-t-il bien résonné parmi ceux qui l'ont vu ?". Indépendant du volume.</p>
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text"><strong>Meilleurs au global</strong> (recommandé) : un post doit à la fois bien engager <em>et</em> être bien vu, par rapport aux posts du même format (image, vidéo…).</p>
+                      <p class="chart-info-popover__text"><strong>Meilleurs pour leur format</strong> : l'engagement du post comparé à celui d'un post typique du même format. « 1,5× » = 50 % de mieux.</p>
+                      <p class="chart-info-popover__text"><strong>Taux d'engagement seul</strong> : le taux brut, sans comparaison.</p>
+                      <p class="chart-info-popover__text">Survole une ligne pour voir le détail du post.</p>
                     </div>
                     <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Engagement brut</p>
-                      <p class="chart-info-popover__text">Le taux d'engagement classique. Biaisé en faveur des formats riches et des petites audiences (un like compte plus en pourcentage sur 200 vues que sur 20 000).</p>
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Le taux seul avantage les formats riches (carrousel, vidéo) et les posts peu vus : quelques réactions sur 200 affichages donnent vite un taux élevé. L'icône <em>œil barré</em> signale un post moins vu qu'un post typique de son format.</p>
                     </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Garde-fous statistiques</p>
-                      <p class="chart-info-popover__text">Sont exclus du classement : posts avec <strong>&lt; 100 impressions absolues</strong>, posts dont les impressions sont <strong>&lt; 50 % de la médiane de leur format</strong> (portée insuffisante), et formats qui comptent <strong>&lt; 5 publications</strong> (médiane non fiable). Chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>). Les posts éligibles mais avec une portée sous la médiane de leur format sont marqués d'un icône <i data-lucide="eye-off" aria-hidden="true" class="tf-low-reach-icon tf-low-reach-icon--inline"></i> "audience restreinte".</p>
+                    <div class="chart-info-popover__section chart-info-popover__section--more">
+                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                      <p class="chart-info-popover__text">Sont exclus du classement : les posts de moins de 100 impressions, ceux qui ont moins de la moitié des impressions d'un post typique de leur format, et les formats de moins de 5 posts. Chaque post est comparé aux autres posts de son format, sans lui-même (méthode <em>leave-one-out</em>). Le score global est la moyenne géométrique des deux rapports, engagement et impressions.</p>
                     </div>
                   </div>
                 </div>
@@ -573,8 +732,9 @@
           <section class="table-section" aria-label="Tableau des publications">
             <div class="table-section__header">
               <div class="table-section__title-group">
-                <p class="section-label">Classement</p>
-                <h2 class="section-title">Toutes les publications</h2>
+                <p class="section-label">Détail</p>
+                <h2 class="section-title">Toutes mes publications</h2>
+                <p class="section-desc">Clique sur un en-tête de colonne pour trier.</p>
               </div>
               <div class="table-section__controls">
                 <div class="search-field">
@@ -588,6 +748,27 @@
                   />
                 </div>
                 <span class="table-count" id="table-count"></span>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Toutes mes publications">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Chaque post de la période avec tous ses chiffres : impressions, réactions, commentaires, republications, clics, taux de clics et taux d'engagement.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Pastille d'engagement <strong>verte</strong> : parmi le quart de tes posts les plus engageants de tout ton historique. <strong>Orange</strong> : dans ta normale. <strong>Grise</strong> : parmi le quart le moins engageant.</p>
+                      <p class="chart-info-popover__text">Colonne « Hors clics » : l'engagement sans compter les clics, pour isoler les réactions, commentaires et republications.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">À partir de 10 posts, les cases colorées signalent les 10 % meilleurs et les 10 % plus faibles de chaque colonne, parmi les posts affichés : elles changent quand tu filtres ou que tu recherches.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -612,13 +793,13 @@
                       Commentaires <span class="sort-icon" aria-hidden="true"></span>
                     </th>
                     <th class="sortable text-right" data-col="republis" tabindex="0" aria-sort="none">
-                      Republi. <span class="sort-icon" aria-hidden="true"></span>
+                      Republications <span class="sort-icon" aria-hidden="true"></span>
                     </th>
                     <th class="sortable text-right" data-col="clics" tabindex="0" aria-sort="none">
                       Clics <span class="sort-icon" aria-hidden="true"></span>
                     </th>
                     <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
-                      Tx Clics <span class="sort-icon" aria-hidden="true"></span>
+                      Taux de clics <span class="sort-icon" aria-hidden="true"></span>
                     </th>
                     <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
                         title="Taux d'engagement LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés ÷ impressions">
@@ -686,13 +867,36 @@
               <div class="chart-card">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Publications cumulées</p>
-                    <h3 class="chart-card__title">Progression YTD par année</h3>
+                    <p class="chart-card__label">Rythme annuel</p>
+                    <h3 class="chart-card__title">Est-ce que je publie plus que les années précédentes ?</h3>
+                    <p class="chart-card__desc">Nombre de posts cumulés depuis janvier, une courbe par année.</p>
                   </div>
-                  <div class="chart-card__actions">
-                    <button class="btn btn--secondary" id="sy-goto-compare" type="button" title="Comparer les années entre elles">
-                      Comparer <i data-lucide="arrow-right" aria-hidden="true"></i>
-                    </button>
+                  <div class="ts-tf-header-cluster">
+                    <div class="chart-card__actions">
+                      <button class="btn btn--secondary" id="sy-goto-compare" type="button" title="Comparer les années entre elles">
+                        Comparer <i data-lucide="arrow-right" aria-hidden="true"></i>
+                      </button>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Est-ce que je publie plus que les années précédentes ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque année, le nombre de posts publiés depuis le 1er janvier, mois après mois.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Une courbe au-dessus des autres au même mois : tu avais publié davantage à cette date. Une pente raide = mois très actif ; un palier = mois sans publication.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">L'année en cours s'arrête au dernier mois publié : compare-la aux mêmes mois des autres années.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
@@ -705,7 +909,28 @@
                 <div class="chart-card__header">
                   <div>
                     <p class="chart-card__label">Volume annuel</p>
-                    <h3 class="chart-card__title">Publications par année</h3>
+                    <h3 class="chart-card__title">Combien de posts par an ?</h3>
+                    <p class="chart-card__desc">Nombre total de posts publiés chaque année.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Combien de posts par an ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Le nombre de posts publiés chaque année, sur la période filtrée.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Compare la hauteur des barres pour voir si ton rythme augmente ou baisse.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">L'année en cours est incomplète : sa barre reste basse tant que l'année n'est pas finie. Si un filtre de dates coupe une année, seuls les mois retenus sont comptés.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
@@ -717,8 +942,33 @@
               <div class="chart-card">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Portée annuelle</p>
-                    <h3 class="chart-card__title">Impressions par année</h3>
+                    <p class="chart-card__label">Visibilité annuelle</p>
+                    <h3 class="chart-card__title">Mes posts sont-ils plus vus d'une année sur l'autre ?</h3>
+                    <p class="chart-card__desc">Barres : impressions totales de l'année. Courbe : impressions d'un post typique.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts sont-ils plus vus d'une année sur l'autre ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Le nombre total d'affichages de tes posts chaque année, et combien de fois un post ordinaire a été affiché.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Les barres montent mais pas la courbe : tu es plus visible parce que tu publies davantage. La courbe monte : chaque post touche réellement plus de monde.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">L'année en cours est incomplète pour le total ; la courbe, elle, reste comparable.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
@@ -730,8 +980,33 @@
               <div class="chart-card">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Performance annuelle</p>
-                    <h3 class="chart-card__title">Engagement & Clics par année</h3>
+                    <p class="chart-card__label">Qualité annuelle</p>
+                    <h3 class="chart-card__title">Mes posts engagent-ils mieux qu'avant ?</h3>
+                    <p class="chart-card__desc">Taux d'engagement moyen et taux de clics moyen de chaque année.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts engagent-ils mieux qu'avant ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque année, le taux d'engagement moyen et le taux de clics moyen de tes posts.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Taux d'engagement : part des affichages suivis d'une action (clic, réaction, commentaire, republication, abonnement). Taux de clics : part des affichages suivis d'un clic.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Les clics comptent dans les deux taux : le taux d'engagement est donc toujours au moins égal au taux de clics.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Taux d'engagement = définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
@@ -743,12 +1018,39 @@
               <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Timing des publications</p>
-                    <h3 class="chart-card__title">Meilleures heures de performance</h3>
+                    <p class="chart-card__label">Moments de publication</p>
+                    <h3 class="chart-card__title">Quel jour et à quelle heure publier ?</h3>
+                    <p class="chart-card__desc">Chaque case croise un jour et une heure de publication. Plus elle est foncée, meilleur est le résultat ; le petit chiffre indique le nombre de posts.</p>
                   </div>
-                  <div class="chart-card__actions">
-                    <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
-                    <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
+                  <div class="ts-tf-header-cluster">
+                    <div class="chart-card__actions">
+                      <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
+                      <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel jour et à quelle heure publier ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Selon le bouton : les impressions d'un post typique ou l'engagement moyen, pour chaque créneau jour × heure où tu as publié.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Repère les cases les plus foncées qui reposent sur plusieurs posts : ce sont tes créneaux les plus prometteurs.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée apparaissent. Beaucoup de cases ne contiennent qu'un post : c'est une piste à tester, pas une certitude.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body chart-card__body--table">
@@ -789,8 +1091,33 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Analyse différentielle</p>
-                      <h3 class="chart-card__title" id="compare-delta-title">Variation N vs N−1</h3>
+                      <p class="chart-card__label">Année contre année</p>
+                      <h3 class="chart-card__title" id="compare-delta-title">Comparaison des deux années</h3>
+                      <p class="chart-card__desc">Chaque ligne compare un indicateur entre les deux années sélectionnées.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Comparaison des deux années">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Les principaux indicateurs des deux années côte à côte : nombre de posts, impressions, post typique, engagement, taux de clics et actions totales.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">La barre montre la part de chacun. Le badge indique qui est en tête et de combien, en pourcentage. « ≈ égal » : moins de 0,5 % d'écart.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Les totaux (posts, impressions, actions) dépendent du nombre de posts : si l'un des années a beaucoup moins de posts, compare plutôt les taux et le post typique.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body chart-card__body--table">
@@ -806,8 +1133,29 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Publications cumulées</p>
-                      <h3 class="chart-card__title">Progression YTD par année</h3>
+                      <p class="chart-card__label">Rythme annuel</p>
+                      <h3 class="chart-card__title">Est-ce que je publie plus que l'an dernier ?</h3>
+                      <p class="chart-card__desc">Nombre de posts cumulés depuis janvier, pour les années sélectionnées.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Est-ce que je publie plus que l'an dernier ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque année, le nombre de posts publiés depuis le 1er janvier, mois après mois.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Une courbe au-dessus des autres au même mois : tu avais publié davantage à cette date. Une pente raide = mois très actif ; un palier = mois sans publication.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">L'année en cours s'arrête au dernier mois publié : compare-la aux mêmes mois des autres années.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -819,8 +1167,33 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Portée</p>
-                      <h3 class="chart-card__title">Distribution des impressions par post</h3>
+                      <p class="chart-card__label">Visibilité post par post</p>
+                      <h3 class="chart-card__title">Mes posts sont-ils plus vus qu'avant ?</h3>
+                      <p class="chart-card__desc">Un point par post. Le trait horizontal marque le post typique de chaque année.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts sont-ils plus vus qu'avant ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Les impressions de chaque post, regroupées par année.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Si le trait d'une année est plus haut, un post ordinaire y a été davantage vu. Les points isolés tout en haut sont des posts exceptionnels.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Un seul post viral ne déplace pas le trait : c'est voulu, il décrit le post typique.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -832,8 +1205,33 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Taux de performance</p>
-                      <h3 class="chart-card__title">Profil de performance</h3>
+                      <p class="chart-card__label">Vue d'ensemble</p>
+                      <h3 class="chart-card__title">Sur quels points une année fait-elle mieux qu'une autre ?</h3>
+                      <p class="chart-card__desc">Chaque branche est un indicateur : la meilleure année y touche le bord, les autres sont placées en proportion.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Sur quels points une année fait-elle mieux qu'une autre ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Quatre indicateurs : engagement moyen, taux de clics moyen, impressions d'un post typique et interactions par post, pour chaque année.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole un point pour voir la valeur réelle.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Chaque branche a sa propre échelle : la meilleure année y vaut 100, les autres sont placés en proportion. Compare branche par branche plutôt que la taille globale de la forme.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">Interactions = réactions + commentaires + republications. « Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -845,8 +1243,29 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Tendance mensuelle</p>
-                      <h3 class="chart-card__title">Engagement moyen par mois</h3>
+                      <p class="chart-card__label">Saisonnalité de l'engagement</p>
+                      <h3 class="chart-card__title">Quels mois de l'année sont les plus engageants ?</h3>
+                      <p class="chart-card__desc">Taux d'engagement moyen de chaque mois, une courbe par année.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels mois de l'année sont les plus engageants ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque mois, l'engagement moyen des posts publiés ce mois-là, année par année.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Compare les courbes au même mois : une année au-dessus en avril a eu des posts d'avril plus engageants.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable. Les mois sans publication sont sautés.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -858,23 +1277,31 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Saisonnalité</p>
-                      <h3 class="chart-card__title">Portée médiane par mois</h3>
+                      <p class="chart-card__label">Saisonnalité de la visibilité</p>
+                      <h3 class="chart-card__title">Quels mois de l'année mes posts sont-ils le plus vus ?</h3>
+                      <p class="chart-card__desc">Impressions d'un post typique de chaque mois, une courbe par année.</p>
                     </div>
                     <div class="chart-info-wrapper">
-                      <button class="chart-info-btn" type="button" aria-label="À propos de la saisonnalité de la portée">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels mois de l'année mes posts sont-ils le plus vus ?">
                         <i data-lucide="info" aria-hidden="true"></i>
                       </button>
                       <div class="chart-info-popover" role="tooltip">
-                        <p class="chart-info-popover__title">Comparer un mois au même mois</p>
-                        <p class="chart-info-popover__body">Chaque courbe est une année : impressions médianes des publications de chaque mois. Un mois de salon se compare au même mois des autres années, pas au mois précédent, qui n'a pas le même contexte.</p>
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Salon biennal</p>
-                          <p class="chart-info-popover__text">Si un salon n'a lieu qu'une année sur deux, comparez avec l'année N−2 : désélectionnez les années intermédiaires dans les pastilles ci-dessus.</p>
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque mois, combien de fois un post ordinaire a été affiché, année par année.</p>
                         </div>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Petits effectifs</p>
-                          <p class="chart-info-popover__text">Le nombre de publications de chaque point figure dans l'infobulle. Un mois à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Compare un mois de salon au même mois des autres années, pas au mois précédent, qui n'a pas le même contexte.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Le nombre de posts de chaque point figure dans l'infobulle : un mois à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">Salon qui n'a lieu qu'une année sur deux : désélectionne les années intermédiaires dans les pastilles ci-dessus pour comparer avec N−2. « Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
                         </div>
                       </div>
                     </div>
@@ -942,41 +1369,44 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Classement des publications</p>
-                      <h3 class="chart-card__title">Top 5 &amp; Flop 5</h3>
+                      <p class="chart-card__label">Classement du thème</p>
+                      <h3 class="chart-card__title">Quels posts de ce thème ont le mieux et le moins bien marché ?</h3>
+                      <p class="chart-card__desc">Trois façons de classer, au choix avec les boutons. Survole une ligne pour voir le détail.</p>
                     </div>
                     <div class="ts-tf-header-cluster">
                       <div class="chart-card__actions">
-                        <button class="btn btn--ghost btn--sm ts-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Performance globale</button>
-                        <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Score vs format</button>
-                        <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Engagement brut</button>
+                        <button class="btn btn--ghost btn--sm ts-tf-toggle is-active" data-mode="global" type="button" aria-pressed="true">Meilleurs au global</button>
+                        <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="normalized" type="button" aria-pressed="false">Meilleurs pour leur format</button>
+                        <button class="btn btn--ghost btn--sm ts-tf-toggle" data-mode="raw" type="button" aria-pressed="false">Taux d'engagement seul</button>
                       </div>
                       <div class="chart-info-wrapper">
-                        <button class="chart-info-btn" type="button" aria-label="À propos du classement">
+                        <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels posts de ce thème ont le mieux et le moins bien marché ?">
                           <i data-lucide="info" aria-hidden="true"></i>
                         </button>
                         <div class="chart-info-popover chart-info-popover--wide" role="tooltip">
-                        <p class="chart-info-popover__title">Comment lire ce classement ?</p>
-                        <p class="chart-info-popover__body">Mesurer la "réussite" d'un post sur un seul chiffre est piégeux : un taux d'engagement brut favorise les formats riches (carrousel, vidéo) <em>et</em> les posts à faible portée (le rate gonfle quand le dénominateur est petit). Trois angles complémentaires :</p>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Performance globale (recommandé)</p>
-                          <p class="chart-info-popover__text">Combine <strong>qualité × portée</strong> via la moyenne géométrique : <code>√(score_qualité × score_portée)</code>. Un post doit à la fois résonner avec son audience <em>et</em> toucher un volume significatif pour grimper en tête. C'est l'angle qu'utilisent les analyses pro pour répondre à "quel post a vraiment marché ?".</p>
-                        </div>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Score vs format</p>
-                          <p class="chart-info-popover__text">Mesure la <strong>qualité pure</strong> : taux d'engagement comparé à la médiane des posts du même média. Un score de <strong>1,5×</strong> = "50 % de mieux que la médiane de son format". Répond à "ce post a-t-il bien résonné parmi ceux qui l'ont vu ?". Indépendant du volume.</p>
-                        </div>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Engagement brut</p>
-                          <p class="chart-info-popover__text">Le taux d'engagement classique. Biaisé en faveur des formats riches et des petites audiences (un like compte plus en pourcentage sur 200 vues que sur 20 000).</p>
-                        </div>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Garde-fous statistiques</p>
-                          <p class="chart-info-popover__text">Sont exclus du classement : posts avec <strong>&lt; 100 impressions absolues</strong>, posts dont les impressions sont <strong>&lt; 50 % de la médiane de leur format</strong> (portée insuffisante), et formats qui comptent <strong>&lt; 5 publications</strong> (médiane non fiable). Chaque post est comparé à ses pairs <em>sans s'inclure lui-même</em> dans la baseline (méthode <em>leave-one-out</em>). Les posts éligibles mais avec une portée sous la médiane de leur format sont marqués d'un icône <i data-lucide="eye-off" aria-hidden="true" class="tf-low-reach-icon tf-low-reach-icon--inline"></i> "audience restreinte".</p>
+                          <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                          <div class="chart-info-popover__section">
+                            <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                            <p class="chart-info-popover__text">Les 5 posts qui ont le mieux marché et les 5 qui ont le moins bien marché sur la période, selon le mode choisi avec les boutons.</p>
+                          </div>
+                          <div class="chart-info-popover__section">
+                            <p class="chart-info-popover__section-label">Comment le lire</p>
+                            <p class="chart-info-popover__text"><strong>Meilleurs au global</strong> (recommandé) : un post doit à la fois bien engager <em>et</em> être bien vu, par rapport aux posts du même format (image, vidéo…).</p>
+                            <p class="chart-info-popover__text"><strong>Meilleurs pour leur format</strong> : l'engagement du post comparé à celui d'un post typique du même format. « 1,5× » = 50 % de mieux.</p>
+                            <p class="chart-info-popover__text"><strong>Taux d'engagement seul</strong> : le taux brut, sans comparaison.</p>
+                            <p class="chart-info-popover__text">Survole une ligne pour voir le détail du post.</p>
+                          </div>
+                          <div class="chart-info-popover__section">
+                            <p class="chart-info-popover__section-label">Attention à</p>
+                            <p class="chart-info-popover__text">Le taux seul avantage les formats riches (carrousel, vidéo) et les posts peu vus : quelques réactions sur 200 affichages donnent vite un taux élevé. L'icône <em>œil barré</em> signale un post moins vu qu'un post typique de son format.</p>
+                          </div>
+                          <div class="chart-info-popover__section chart-info-popover__section--more">
+                            <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                            <p class="chart-info-popover__text">Sont exclus du classement : les posts de moins de 100 impressions, ceux qui ont moins de la moitié des impressions d'un post typique de leur format, et les formats de moins de 5 posts. Chaque post est comparé aux autres posts de son format, sans lui-même (méthode <em>leave-one-out</em>). Le score global est la moyenne géométrique des deux rapports, engagement et impressions.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
                   </div>
                   <div class="chart-card__body chart-card__body--table">
                     <div class="tops-flops" id="ts-topflop-block"></div>
@@ -989,23 +1419,31 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Analyse de performance post par post</p>
-                      <h3 class="chart-card__title">Portée vs Engagement — Quels posts ont marché ?</h3>
+                      <p class="chart-card__label">Visibilité et engagement</p>
+                      <h3 class="chart-card__title">Quels posts ont été à la fois vus et engageants ?</h3>
+                      <p class="chart-card__desc">Un point par post. Les deux lignes marquent le post typique du thème et partagent le graphique en quatre zones.</p>
                     </div>
                     <div class="chart-info-wrapper">
-                      <button class="chart-info-btn" type="button" aria-label="À propos de ce graphique">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels posts ont été à la fois vus et engageants ?">
                         <i data-lucide="info" aria-hidden="true"></i>
                       </button>
                       <div class="chart-info-popover" role="tooltip">
-                        <p class="chart-info-popover__title">Qualité de votre contenu</p>
-                        <p class="chart-info-popover__body">Ce graphique évalue la pertinence de vos posts selon l'audience touchée.</p>
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Le pattern à repérer</p>
-                          <p class="chart-info-popover__text">Cherchez les points situés le plus haut possible.</p>
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Chaque post du thème, placé selon ses impressions (horizontalement) et son taux d'engagement (verticalement).</p>
                         </div>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">L'objectif</p>
-                          <p class="chart-info-popover__text">Identifiez les sujets de vos points "Niche" (en haut à gauche, ultra-fidélisants pour votre cœur de cible) et testez-les avec des formats plus accessibles (vidéo courte, carrousel) pour les pousser vers la zone "Virale" (en haut à droite).</p>
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">En haut à droite, <strong>Succès</strong> : très vu et très engageant. En haut à gauche, <strong>Petit public conquis</strong> : peu vu mais très engageant, à pousser avec un format plus accessible (vidéo courte, carrousel). En bas à droite, <strong>Vu mais peu engageant</strong>. En bas à gauche, <strong>À retravailler</strong>.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Les zones sont relatives à ce thème : « Succès » veut dire au-dessus du post typique du thème, pas forcément au-dessus de tout ton compte.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">Les lignes sont les médianes des impressions et de l'engagement des posts du thème.</p>
                         </div>
                       </div>
                     </div>
@@ -1021,23 +1459,27 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Portée vs réactions concrètes</p>
-                      <h3 class="chart-card__title">Impressions × Réactions</h3>
+                      <p class="chart-card__label">Visibilité et réactions</p>
+                      <h3 class="chart-card__title">Les posts les plus vus reçoivent-ils le plus de réactions ?</h3>
+                      <p class="chart-card__desc">Un point par post du thème. La ligne verticale marque les impressions d'un post typique.</p>
                     </div>
                     <div class="chart-info-wrapper">
-                      <button class="chart-info-btn" type="button" aria-label="À propos de ce graphique">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Les posts les plus vus reçoivent-ils le plus de réactions ?">
                         <i data-lucide="info" aria-hidden="true"></i>
                       </button>
                       <div class="chart-info-popover" role="tooltip">
-                        <p class="chart-info-popover__title">Volume des interactions</p>
-                        <p class="chart-info-popover__body">Ce graphique montre l'efficacité de vos posts en nombres réels. La logique veut que plus on vous voit, plus on réagit (la ligne diagonale imaginaire).</p>
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Le pattern à repérer</p>
-                          <p class="chart-info-popover__text">Repérez les points "atypiques" qui s'éloignent de la masse vers le haut. Ce sont les posts qui génèrent exceptionnellement plus de réactions que la moyenne à visibilité égale.</p>
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Chaque post du thème selon ses impressions (horizontalement) et son nombre de réactions (verticalement).</p>
                         </div>
                         <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">L'objectif</p>
-                          <p class="chart-info-popover__text">Analysez ces "pépites" (quel format ? quel sujet ? quelle accroche ?) pour comprendre ce qui déclenche massivement le passage à l'action de votre audience, et répliquez cette recette.</p>
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Normalement, plus un post est vu, plus il reçoit de réactions. Repère les points qui s'écartent vers le haut : à visibilité égale, ils déclenchent beaucoup plus de réactions. Analyse leur format, leur sujet et leur accroche pour les reproduire.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Ici on compte des réactions (un nombre), pas un taux : un post très vu en reçoit mécaniquement davantage.</p>
                         </div>
                       </div>
                     </div>
@@ -1054,8 +1496,29 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Timing de publication</p>
-                      <h3 class="chart-card__title">Meilleure heure pour publier</h3>
+                      <p class="chart-card__label">Heure de publication</p>
+                      <h3 class="chart-card__title">À quelle heure publier sur ce thème ?</h3>
+                      <p class="chart-card__desc">Engagement moyen selon l'heure de publication. La barre en couleur pleine est la meilleure heure.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : À quelle heure publier sur ce thème ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Le taux d'engagement moyen des posts du thème, selon leur heure de publication.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">La barre en couleur pleine est l'heure la plus engageante. Survole une barre pour voir combien de posts elle contient.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée sont pris en compte. Une heure avec un seul post n'est qu'une indication.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1071,8 +1534,29 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Tendance mensuelle</p>
-                      <h3 class="chart-card__title">Évolution de l'engagement</h3>
+                      <p class="chart-card__label">Saisonnalité du thème</p>
+                      <h3 class="chart-card__title">Quels mois de l'année ce thème engage-t-il le plus ?</h3>
+                      <p class="chart-card__desc">Engagement moyen par mois de l'année, toutes années confondues.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels mois de l'année ce thème engage-t-il le plus ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque mois (janvier, février…), l'engagement moyen des posts du thème publiés ce mois-là, toutes années confondues.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Un pic signale une période où ce sujet intéresse davantage ton audience, par exemple autour d'un salon.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Années.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1087,8 +1571,33 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Format de contenu</p>
-                      <h3 class="chart-card__title">Performance par type de média</h3>
+                      <p class="chart-card__label">Formats du thème</p>
+                      <h3 class="chart-card__title">Quel format marche le mieux pour ce thème ?</h3>
+                      <p class="chart-card__desc">Pour chaque format : impressions d'un post typique et engagement moyen.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel format marche le mieux pour ce thème ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque format utilisé dans ce thème (image, carrousel, vidéo…) : combien de fois un post typique a été affiché, et son engagement moyen.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Le meilleur format a des barres hautes sur les deux indicateurs. Un format très vu mais peu engageant attire l'œil sans retenir l'attention.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Le nombre de posts par format n'est pas affiché ici : un format utilisé une seule fois peut dominer par hasard. Vérifie dans le tableau ci-dessous.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1150,8 +1659,33 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Analyse différentielle</p>
-                      <h3 class="chart-card__title" id="ct-delta-title">Thème A vs Thème B — Variation</h3>
+                      <p class="chart-card__label">Thème contre thème</p>
+                      <h3 class="chart-card__title" id="ct-delta-title">Comparaison des deux thèmes</h3>
+                      <p class="chart-card__desc">Chaque ligne compare un indicateur entre les deux thèmes sélectionnés.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Comparaison des deux thèmes">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Les principaux indicateurs des deux thèmes côte à côte : nombre de posts, impressions, post typique, engagement, taux de clics et actions totales.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">La barre montre la part de chacun. Le badge indique qui est en tête et de combien, en pourcentage. « ≈ égal » : moins de 0,5 % d'écart.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Les totaux (posts, impressions, actions) dépendent du nombre de posts : si l'un des thèmes a beaucoup moins de posts, compare plutôt les taux et le post typique.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body chart-card__body--table">
@@ -1166,8 +1700,29 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Volume de contenu</p>
-                      <h3 class="chart-card__title">Publications par thème</h3>
+                      <p class="chart-card__label">Volume</p>
+                      <h3 class="chart-card__title">Sur quel thème ai-je le plus publié ?</h3>
+                      <p class="chart-card__desc">Nombre de posts de chaque thème sélectionné, sur la période filtrée.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Sur quel thème ai-je le plus publié ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Le nombre de posts publiés dans chaque thème sélectionné.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Mets-le en regard des autres graphiques : un thème très publié devrait aussi obtenir de bons résultats pour justifier l'effort.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Un thème avec peu de posts a des résultats moins fiables dans les autres graphiques.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1178,8 +1733,33 @@
                 <div class="chart-card">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Portée</p>
-                      <h3 class="chart-card__title">Distribution des impressions par post</h3>
+                      <p class="chart-card__label">Visibilité post par post</p>
+                      <h3 class="chart-card__title">Quel thème est le plus vu ?</h3>
+                      <p class="chart-card__desc">Un point par post. Le trait horizontal marque le post typique de chaque thème.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel thème est le plus vu ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Les impressions de chaque post, regroupées par thème.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Si le trait d'un thème est plus haut, un post ordinaire y a été davantage vu. Les points isolés tout en haut sont des posts exceptionnels.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Un seul post viral ne déplace pas le trait : c'est voulu, il décrit le post typique.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1190,8 +1770,33 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Taux de performance</p>
-                      <h3 class="chart-card__title">Profil de performance</h3>
+                      <p class="chart-card__label">Vue d'ensemble</p>
+                      <h3 class="chart-card__title">Sur quels points un thème fait-il mieux que l'autre ?</h3>
+                      <p class="chart-card__desc">Chaque branche est un indicateur : le meilleur thème y touche le bord, les autres sont placés en proportion.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Sur quels points un thème fait-il mieux que l'autre ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Quatre indicateurs : engagement moyen, taux de clics moyen, impressions d'un post typique et interactions par post, pour chaque thème.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Plus une forme s'étend vers un coin, meilleur est le résultat sur ce critère. Survole un point pour voir la valeur réelle.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Chaque branche a sa propre échelle : le meilleur thème y vaut 100, les autres sont placés en proportion. Compare branche par branche plutôt que la taille globale de la forme.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">Interactions = réactions + commentaires + republications. « Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1202,8 +1807,29 @@
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
-                      <p class="chart-card__label">Tendance mensuelle</p>
-                      <h3 class="chart-card__title">Engagement moyen par mois</h3>
+                      <p class="chart-card__label">Saisonnalité des thèmes</p>
+                      <h3 class="chart-card__title">Quels mois de l'année chaque thème engage-t-il le plus ?</h3>
+                      <p class="chart-card__desc">Engagement moyen par mois de l'année, toutes années confondues, une courbe par thème.</p>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels mois de l'année chaque thème engage-t-il le plus ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque mois, l'engagement moyen des posts de chaque thème publiés ce mois-là, toutes années confondues.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Compare les courbes au même mois : elles indiquent quel sujet mettre en avant selon la période de l'année.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Années. Un mois avec 1 ou 2 posts donne un point peu fiable.</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   <div class="chart-card__body">
@@ -1247,7 +1873,7 @@
             <section class="kpis" aria-label="Indicateurs abonnés">
               <div class="kpi-card" id="kpi-ab-pct">
                 <div class="kpi-card__header">
-                  <p class="kpi-card__label">Croissance en %</p>
+                  <p class="kpi-card__label">Croissance depuis le début</p>
                   <div class="kpi-card__icon"><i data-lucide="percent" aria-hidden="true"></i></div>
                 </div>
                 <p class="kpi-card__value">—</p>
@@ -1265,7 +1891,7 @@
 
               <div class="kpi-card" id="kpi-ab-ratio">
                 <div class="kpi-card__header">
-                  <p class="kpi-card__label">Portée / audience</p>
+                  <p class="kpi-card__label">Indice de visibilité</p>
                   <div class="kpi-card__icon"><i data-lucide="radar" aria-hidden="true"></i></div>
                 </div>
                 <p class="kpi-card__value">—</p>
@@ -1274,7 +1900,7 @@
 
               <div class="kpi-card" id="kpi-ab-conversion">
                 <div class="kpi-card__header">
-                  <p class="kpi-card__label">Impressions pour +1 abonné</p>
+                  <p class="kpi-card__label">Affichages pour gagner un abonné</p>
                   <div class="kpi-card__icon"><i data-lucide="target" aria-hidden="true"></i></div>
                 </div>
                 <p class="kpi-card__value">—</p>
@@ -1287,12 +1913,35 @@
               <div class="chart-card chart-card--wide">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Progression & variations</p>
-                    <h3 class="chart-card__title">Évolution et gains mensuels des abonnés</h3>
+                    <p class="chart-card__label">Croissance de l'audience</p>
+                    <h3 class="chart-card__title">Mon audience grandit-elle, et à quel rythme ?</h3>
+                    <p class="chart-card__desc">Courbe : nombre total d'abonnés. Barres : gain de chaque mois, en abonnés ou en %, selon le bouton.</p>
                   </div>
-                  <div class="chart-card__actions">
-                    <button class="btn btn--ghost btn--sm abo-delta-toggle is-active" data-mode="abs" type="button" aria-pressed="true">Gain</button>
-                    <button class="btn btn--ghost btn--sm abo-delta-toggle" data-mode="pct" type="button" aria-pressed="false">Croissance %</button>
+                  <div class="ts-tf-header-cluster">
+                    <div class="chart-card__actions">
+                      <button class="btn btn--ghost btn--sm abo-delta-toggle is-active" data-mode="abs" type="button" aria-pressed="true">Gain</button>
+                      <button class="btn btn--ghost btn--sm abo-delta-toggle" data-mode="pct" type="button" aria-pressed="false">Croissance %</button>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Mon audience grandit-elle, et à quel rythme ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">L'évolution de ton nombre d'abonnés, et ce que tu as gagné ou perdu chaque mois.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Le mode « Croissance % » est le plus parlant sur la durée : gagner 200 abonnés vaut +10 % à 2 000 abonnés, mais +4 % à 5 000. Une barre sous zéro (en rouge) est un mois de perte.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Si un relevé manque, la hausse est répartie sur les mois concernés ; l'infobulle le précise. Seul le filtre de dates s'applique ici : thème et format ne changent pas le nombre d'abonnés.</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
@@ -1306,27 +1955,31 @@
               <div class="chart-card chart-card--wide">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">KPI directeur</p>
-                    <h3 class="chart-card__title">Portée médiane rapportée à l'audience</h3>
+                    <p class="chart-card__label">Indicateur clé</p>
+                    <h3 class="chart-card__title">Ma visibilité suit-elle la croissance de mon audience ?</h3>
+                    <p class="chart-card__desc">Barres : impressions d'un post typique du mois. Courbe : ces impressions rapportées au nombre d'abonnés (indice de visibilité).</p>
                   </div>
                   <div class="chart-info-wrapper">
-                    <button class="chart-info-btn" type="button" aria-label="À propos du ratio portée / audience">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Ma visibilité suit-elle la croissance de mon audience ?">
                       <i data-lucide="info" aria-hidden="true"></i>
                     </button>
                     <div class="chart-info-popover" role="tooltip">
-                      <p class="chart-info-popover__title">Portée médiane ÷ total abonnés</p>
-                      <p class="chart-info-popover__body">Pour chaque mois : la <strong>médiane</strong> des impressions des publications du mois, divisée par le <strong>total d'abonnés</strong> relevé ce mois-là.</p>
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
                       <div class="chart-info-popover__section">
-                        <p class="chart-info-popover__section-label">Pourquoi la médiane</p>
-                        <p class="chart-info-popover__text">Un seul post viral suffit à doubler une moyenne mensuelle. La médiane décrit ce que fait une publication <em>ordinaire</em> du mois — c'est elle qui mesure la santé réelle de la diffusion.</p>
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Chaque mois, combien de fois un post ordinaire a été affiché, comparé à ton nombre d'abonnés.</p>
                       </div>
                       <div class="chart-info-popover__section">
                         <p class="chart-info-popover__section-label">Comment le lire</p>
-                        <p class="chart-info-popover__text"><strong>40 %</strong> = une publication typique touche l'équivalent de 40 % de l'audience. Le ratio isole la performance de diffusion de la simple croissance du compte : gagner des abonnés sans que le ratio suive signale une audience qui grossit mais décroche.</p>
+                        <p class="chart-info-popover__text"><strong>100 %</strong> : un post typique est affiché autant de fois que tu as d'abonnés. Si tes abonnés augmentent mais que l'indice baisse, ton audience grandit mais voit moins tes posts.</p>
                       </div>
                       <div class="chart-info-popover__section">
-                        <p class="chart-info-popover__section-label">Mois sans publication</p>
-                        <p class="chart-info-popover__text">Aucune médiane calculable : le point est laissé vide plutôt que ramené à zéro, ce qui fausserait la tendance.</p>
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">L'indice peut dépasser 100 % : tes posts sont aussi vus par des personnes qui ne te suivent pas. Les mois sans publication restent vides plutôt que ramenés à zéro. Si un thème ou un format est filtré, seuls ses posts comptent, mais les abonnés restent ceux de tout le compte.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Indice = impressions du post typique du mois ÷ abonnés du relevé du même mois. « Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
                       </div>
                     </div>
                   </div>
@@ -1342,8 +1995,29 @@
               <div class="chart-card chart-card--wide">
                 <div class="chart-card__header">
                   <div>
-                    <p class="chart-card__label">Publications · Abonnés</p>
-                    <h3 class="chart-card__title">Volume d'impressions et croissance des abonnés</h3>
+                    <p class="chart-card__label">Impressions et abonnés</p>
+                    <h3 class="chart-card__title">Les mois où je suis le plus vu font-ils gagner des abonnés ?</h3>
+                    <p class="chart-card__desc">Un cercle par mois : sa hauteur donne le nombre d'abonnés, sa taille les impressions totales du mois.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Les mois où je suis le plus vu font-ils gagner des abonnés ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque relevé mensuel : ton nombre d'abonnés (hauteur du cercle) et le total d'affichages de tes posts ce mois-là (taille et intensité du cercle).</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Si les gros cercles sont suivis d'une montée, tes mois les plus visibles font grandir ton audience.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Un mois très vu peut l'être grâce à un seul post viral. Les abonnés dépendent aussi d'autres facteurs : salon, recrutement, publicité.</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 <div class="chart-card__body">
