@@ -748,6 +748,75 @@ code, kbd {
   stroke-width: 2;
 }
 
+/* ─── Filtres actifs (rappel sur chaque onglet) ────────────── */
+.active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.active-filters > svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+
+.active-filters__label {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.active-filters__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.active-filters__count {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.active-filters .btn {
+  margin-left: auto;
+}
+
+/* Avertissement fonctionnel (filtre qui ne s'applique pas à tout) */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+.notice svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  stroke-width: 2;
+  color: var(--color-warning);
+}
+
+/* Repère « vs ta normale » sous la valeur d'un chiffre clé */
+.kpi-card__norm {
+  line-height: 1;
+}
+
 /* ─── Rappel de l'audience (Vue d'ensemble) ────────────────── */
 .audience-summary {
   display: flex;
@@ -1519,6 +1588,31 @@ code, kbd {
 .heatmap-jh-cell--value {
   font-weight: 400;
   border-radius: var(--radius-sm);
+}
+
+/* Échantillon faible : moins de MIN_RELIABLE_POSTS posts dans la case.
+   Une bordure pointillée plutôt qu'une teinte, déjà utilisée pour la valeur. */
+.heatmap-cell--thin {
+  outline: 1px dashed var(--color-warning);
+  outline-offset: -4px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  font-size: 12px;
+  color: var(--color-text-muted);
+  border-top: 1px solid var(--color-border);
+}
+
+.heatmap-legend__swatch {
+  width: 16px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 1px dashed var(--color-warning);
+  border-radius: 2px;
 }
 
 .heatmap-jh-count {

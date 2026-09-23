@@ -251,6 +251,15 @@
           </button>
         </div>
 
+        <!-- Filtres actifs : rappelés sur chaque onglet -->
+        <div class="active-filters" id="active-filters" hidden role="status" aria-live="polite">
+          <i data-lucide="filter" aria-hidden="true"></i>
+          <span class="active-filters__label">Filtres actifs :</span>
+          <span class="active-filters__list" id="active-filters-list"></span>
+          <span class="active-filters__count" id="active-filters-count"></span>
+          <button type="button" class="btn btn--ghost btn--sm" id="active-filters-reset">Tout réinitialiser</button>
+        </div>
+
 
         <!-- ══════════════════════════════════════════
              VUE D'ENSEMBLE — Comment va mon compte ?
@@ -265,6 +274,7 @@
                 <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-impressions-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub">
                 <span id="kpi-impressions-trend"></span>
                 Publications : <strong id="kpi-posts-count">0</strong>
@@ -280,6 +290,7 @@
                 <div class="kpi-card__icon"><i data-lucide="mouse-pointer-click" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-clics-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub">
                 <span id="kpi-clics-trend"></span>
                 Post typique : <strong id="kpi-clics-median">0 %</strong>
@@ -292,6 +303,7 @@
                 <div class="kpi-card__icon"><i data-lucide="trending-up" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-engagement-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub">
                 <span id="kpi-engagement-trend"></span>
                 Post typique : <strong id="kpi-engagement-median">0 %</strong>
@@ -308,6 +320,7 @@
                 <div class="kpi-card__icon"><i data-lucide="activity" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-interactions-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub">
                 <span id="kpi-interactions-trend"></span>
                 Réactions, commentaires, republications et clics
@@ -326,6 +339,10 @@
                 Voir l'onglet Audience <i data-lucide="arrow-right" aria-hidden="true"></i>
               </button>
             </div>
+            <p class="notice" id="ov-audience-note" hidden>
+              <i data-lucide="alert-triangle" aria-hidden="true"></i>
+              <span>Un thème ou un format est filtré : l'indice ne compte que ses posts, mais les abonnés restent ceux de tout le compte.</span>
+            </p>
             <div class="audience-summary__stats">
               <div class="audience-summary__stat">
                 <span class="audience-summary__value" id="ov-abonnes">—</span>
@@ -436,6 +453,7 @@
                 <div class="kpi-card__icon"><i data-lucide="thumbs-up" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-react-mille-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub" id="kpi-react-mille-sub"></p>
             </div>
 
@@ -445,6 +463,7 @@
                 <div class="kpi-card__icon"><i data-lucide="message-circle" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-coms-post-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub" id="kpi-coms-post-sub"></p>
             </div>
 
@@ -454,6 +473,7 @@
                 <div class="kpi-card__icon"><i data-lucide="repeat-2" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-republi-post-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub" id="kpi-republi-post-sub"></p>
             </div>
 
@@ -463,6 +483,7 @@
                 <div class="kpi-card__icon"><i data-lucide="message-circle-off" aria-hidden="true"></i></div>
               </div>
               <p class="kpi-card__value">—</p>
+              <p class="kpi-card__norm" id="kpi-zero-coms-norm" hidden title="Ta normale : le même indicateur sur tout ton historique, sans filtre"></p>
               <p class="kpi-card__sub" id="kpi-zero-coms-sub"></p>
             </div>
           </section>
@@ -784,7 +805,7 @@
                       </div>
                       <div class="chart-info-popover__section">
                         <p class="chart-info-popover__section-label">Attention à</p>
-                        <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée apparaissent. Beaucoup de cases ne contiennent qu'un post : c'est une piste à tester, pas une certitude.</p>
+                        <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée apparaissent. Les cases entourées de pointillés contiennent moins de 3 posts : ce sont des pistes à tester, pas des certitudes.</p>
                       </div>
                       <div class="chart-info-popover__section chart-info-popover__section--more">
                         <p class="chart-info-popover__section-label">Pour aller plus loin</p>
@@ -1181,7 +1202,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable. Les mois sans publication sont sautés.</p>
+                          <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable : l'infobulle indique le nombre de posts de chaque point. Les mois sans publication sont sautés.</p>
                         </div>
                       </div>
                     </div>
@@ -1268,7 +1289,7 @@
                   <div>
                     <p class="chart-card__label">Sujets × formats</p>
                     <h3 class="chart-card__title">Quel format pour quel sujet ?</h3>
-                    <p class="chart-card__desc">Plus la case est foncée, meilleur est le résultat. Le petit chiffre indique le nombre de posts : en dessous de 3, n'en tire pas de conclusion.</p>
+                    <p class="chart-card__desc">Plus la case est foncée, meilleur est le résultat. Le petit chiffre indique le nombre de posts ; une case entourée de pointillés en a moins de 3.</p>
                   </div>
                   <div class="ts-tf-header-cluster">
                     <div class="chart-card__actions">
@@ -1291,7 +1312,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Les couleurs sont relatives : la case la plus foncée est la meilleure du tableau, pas forcément un bon résultat dans l'absolu. Une case à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                          <p class="chart-info-popover__text">Les couleurs sont relatives : la case la plus foncée est la meilleure du tableau, pas forcément un bon résultat dans l'absolu. Une case entourée de pointillés (1 ou 2 posts) reflète ces posts, pas une tendance.</p>
                         </div>
                         <div class="chart-info-popover__section chart-info-popover__section--more">
                           <p class="chart-info-popover__section-label">Pour aller plus loin</p>
@@ -1640,7 +1661,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Le nombre de posts par format n'est pas affiché ici : un format utilisé une seule fois peut dominer par hasard. Vérifie dans le tableau ci-dessous.</p>
+                          <p class="chart-info-popover__text">Le nombre de posts de chaque format est indiqué sous son nom : un format utilisé une ou deux fois peut dominer par hasard.</p>
                         </div>
                         <div class="chart-info-popover__section chart-info-popover__section--more">
                           <p class="chart-info-popover__section-label">Pour aller plus loin</p>
@@ -1876,7 +1897,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Historique. Un mois avec 1 ou 2 posts donne un point peu fiable.</p>
+                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Historique. Un mois avec 1 ou 2 posts donne un point peu fiable : l'infobulle indique le nombre de posts de chaque point.</p>
                         </div>
                       </div>
                     </div>
@@ -1907,6 +1928,11 @@
 
           <!-- Contenu principal -->
           <div id="abonnes-content" hidden style="display:flex;flex-direction:column;gap:var(--space-8)">
+
+            <p class="notice" id="abonnes-filter-note" hidden>
+              <i data-lucide="alert-triangle" aria-hidden="true"></i>
+              <span id="abonnes-filter-note-text"></span>
+            </p>
 
             <!-- Hero : total abonnés + croissance -->
             <div class="ab-hero">
