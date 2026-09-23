@@ -207,45 +207,53 @@
 
         <!-- Page title -->
         <section class="dashboard-main__header">
-          <p class="section-label" id="tab-section-label">Le Bilan</p>
-          <h2 class="section-title" id="tab-section-title">Synthèse du compte</h2>
+          <div>
+            <p class="section-label" id="tab-section-label">Vue d'ensemble</p>
+            <h2 class="section-title" id="tab-section-title">Comment va mon compte ?</h2>
+          </div>
+          <div class="view-toggle" role="group" aria-label="Niveau de détail">
+            <button class="btn btn--ghost btn--sm view-toggle__btn is-active" data-view="essentielle" type="button" aria-pressed="true"
+                    title="Montre les blocs indispensables de chaque onglet">Vue essentielle</button>
+            <button class="btn btn--ghost btn--sm view-toggle__btn" data-view="complete" type="button" aria-pressed="false"
+                    title="Ajoute les analyses détaillées : nuages de points, radars, distributions…">Vue complète</button>
+          </div>
         </section>
 
         <!-- ── Tab Bar ── -->
         <div class="tab-bar" role="tablist" aria-label="Sections du dashboard">
-          <button class="tab-btn is-active" role="tab" data-tab="bilan" aria-selected="true">
-            <i data-lucide="bar-chart-2" aria-hidden="true"></i>
-            Résumé
+          <button class="tab-btn is-active" role="tab" data-tab="bilan" aria-selected="true" title="Comment va mon compte ?">
+            <i data-lucide="layout-dashboard" aria-hidden="true"></i>
+            Vue d'ensemble
           </button>
-          <button class="tab-btn" role="tab" data-tab="laboratoire" aria-selected="false">
-            <i data-lucide="list" aria-hidden="true"></i>
-            Liste
-          </button>
-          <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false">
-            <i data-lucide="calendar-days" aria-hidden="true"></i>
-            Années
-          </button>
-          <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false">
-            <i data-lucide="layers" aria-hidden="true"></i>
-            Thèmes
-          </button>
-          <button class="tab-btn" role="tab" data-tab="matrice" aria-selected="false">
-            <i data-lucide="grid-3x3" aria-hidden="true"></i>
-            Matrice Stratégique
-          </button>
-          <button class="tab-btn" role="tab" data-tab="entonnoir" aria-selected="false">
-            <i data-lucide="filter" aria-hidden="true"></i>
-            Entonnoir
-          </button>
-          <button class="tab-btn" role="tab" data-tab="abonnes" aria-selected="false">
+          <button class="tab-btn" role="tab" data-tab="abonnes" aria-selected="false" title="Mon audience grandit-elle ?">
             <i data-lucide="users" aria-hidden="true"></i>
-            Abonnés
+            Audience
+          </button>
+          <button class="tab-btn" role="tab" data-tab="laboratoire" aria-selected="false" title="Quels posts ont marché ?">
+            <i data-lucide="list" aria-hidden="true"></i>
+            Publications
+          </button>
+          <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false" title="Quels sujets et formats marchent ?">
+            <i data-lucide="layers" aria-hidden="true"></i>
+            Contenus
+          </button>
+          <button class="tab-btn" role="tab" data-tab="entonnoir" aria-selected="false" title="Comment les gens réagissent-ils ?">
+            <i data-lucide="heart" aria-hidden="true"></i>
+            Réactions
+          </button>
+          <button class="tab-btn" role="tab" data-tab="calendrier" aria-selected="false" title="Quand et à quel rythme publier ?">
+            <i data-lucide="calendar-clock" aria-hidden="true"></i>
+            Calendrier
+          </button>
+          <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false" title="Est-ce que je progresse d'année en année ?">
+            <i data-lucide="history" aria-hidden="true"></i>
+            Historique
           </button>
         </div>
 
 
         <!-- ══════════════════════════════════════════
-             TAB 1 — LE BILAN
+             VUE D'ENSEMBLE — Comment va mon compte ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel is-active" id="panel-bilan" role="tabpanel">
 
@@ -307,6 +315,33 @@
             </div>
           </section>
 
+          <!-- Rappel de l'audience (détail dans l'onglet Audience) -->
+          <section class="chart-card audience-summary" id="overview-audience" hidden aria-label="Résumé de l'audience">
+            <div class="audience-summary__head">
+              <div>
+                <p class="chart-card__label">Audience</p>
+                <p class="audience-summary__question">Mon audience grandit-elle, et me voit-elle ?</p>
+              </div>
+              <button type="button" class="btn btn--ghost btn--sm" id="overview-audience-link">
+                Voir l'onglet Audience <i data-lucide="arrow-right" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="audience-summary__stats">
+              <div class="audience-summary__stat">
+                <span class="audience-summary__value" id="ov-abonnes">—</span>
+                <span class="audience-summary__label">Abonnés</span>
+              </div>
+              <div class="audience-summary__stat">
+                <span class="audience-summary__value" id="ov-croissance">—</span>
+                <span class="audience-summary__label">Croissance d'un mois typique</span>
+              </div>
+              <div class="audience-summary__stat">
+                <span class="audience-summary__value" id="ov-visibilite">—</span>
+                <span class="audience-summary__label" id="ov-visibilite-label">Indice de visibilité</span>
+              </div>
+            </div>
+          </section>
+
           <!-- Charts -->
           <section class="charts-grid" aria-label="Graphiques">
             <!-- Timeline: dual axis -->
@@ -335,7 +370,7 @@
                       </div>
                       <div class="chart-info-popover__section">
                         <p class="chart-info-popover__section-label">Attention à</p>
-                        <p class="chart-info-popover__text">Le total dépend du nombre de posts : pour comparer les mois entre eux, regarde plutôt « Publier plus, est-ce toucher moins ? » juste en dessous. Un mois avec un seul post peut faire bondir la courbe.</p>
+                        <p class="chart-info-popover__text">Le total dépend du nombre de posts : pour comparer les mois entre eux, regarde plutôt « Publier plus, est-ce toucher moins ? » dans l'onglet Calendrier. Un mois avec un seul post peut faire bondir la courbe.</p>
                       </div>
                       <div class="chart-info-popover__section chart-info-popover__section--more">
                         <p class="chart-info-popover__section-label">Pour aller plus loin</p>
@@ -350,43 +385,6 @@
               </div>
             </div>
 
-            <!-- Cadence × portée médiane -->
-            <div class="chart-card chart-card--wide">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Rythme de publication</p>
-                  <h3 class="chart-card__title">Publier plus, est-ce toucher moins ?</h3>
-                  <p class="chart-card__desc">Barres : nombre de posts du mois. Courbe : impressions d'un post typique ce mois-là. Pointillés : le post typique sur toute la période.</p>
-                </div>
-                <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Publier plus, est-ce toucher moins ?">
-                    <i data-lucide="info" aria-hidden="true"></i>
-                  </button>
-                  <div class="chart-info-popover" role="tooltip">
-                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
-                      <p class="chart-info-popover__text">Combien tu publies chaque mois, et combien de fois un post ordinaire de ce mois a été affiché.</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Comment le lire</p>
-                      <p class="chart-info-popover__text">Courbe stable quand les barres montent : publier davantage ne coûte rien. Courbe qui baisse : tes posts se font concurrence auprès des mêmes personnes. Courbe qui monte : la régularité est récompensée.</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Attention à</p>
-                      <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable. Les mois sans publication restent affichés, avec une barre à zéro.</p>
-                    </div>
-                    <div class="chart-info-popover__section chart-info-popover__section--more">
-                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
-                      <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="chart-card__body">
-                <canvas id="chart-cadence-portee" aria-label="Nombre de publications par mois et impressions médianes par publication"></canvas>
-              </div>
-            </div>
           </section>
 
           <!-- Podium Express -->
@@ -409,7 +407,7 @@
                   </div>
                   <div class="chart-info-popover__section">
                     <p class="chart-info-popover__section-label">Comment le lire</p>
-                    <p class="chart-info-popover__text">C'est un classement de visibilité, pas de qualité : un post peut être très vu et peu engageant. Pour savoir quels posts ont vraiment marché, consulte le classement de l'onglet Liste.</p>
+                    <p class="chart-info-popover__text">C'est un classement de visibilité, pas de qualité : un post peut être très vu et peu engageant. Pour savoir quels posts ont vraiment marché, consulte le classement de l'onglet Publications.</p>
                   </div>
                   <div class="chart-info-popover__section">
                     <p class="chart-info-popover__section-label">Attention à</p>
@@ -423,138 +421,10 @@
         </div>
 
 
-        <!-- ══════════════════════════════════════════
-             TAB 2 — LA MATRICE STRATÉGIQUE
-        ══════════════════════════════════════════ -->
-        <div class="tab-panel" id="panel-matrice" role="tabpanel">
-          <section class="charts-grid" aria-label="Matrice stratégique">
-
-            <!-- Heatmap -->
-            <div class="chart-card chart-card--wide">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Sujets × formats</p>
-                  <h3 class="chart-card__title">Quel format pour quel sujet ?</h3>
-                  <p class="chart-card__desc">Plus la case est foncée, meilleur est le résultat. Le petit chiffre indique le nombre de posts : en dessous de 3, n'en tire pas de conclusion.</p>
-                </div>
-                <div class="ts-tf-header-cluster">
-                  <div class="chart-card__actions">
-                    <button class="btn btn--ghost btn--sm heatmap-toggle is-active" data-metric="engagement">Engagement</button>
-                    <button class="btn btn--ghost btn--sm heatmap-toggle" data-metric="impressions">Impressions</button>
-                  </div>
-                  <div class="chart-info-wrapper">
-                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel format pour quel sujet ?">
-                      <i data-lucide="info" aria-hidden="true"></i>
-                    </button>
-                    <div class="chart-info-popover" role="tooltip">
-                      <p class="chart-info-popover__title">Comment lire ce tableau</p>
-                      <div class="chart-info-popover__section">
-                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
-                        <p class="chart-info-popover__text">Pour chaque thème (lignes) et chaque format (colonnes) : l'engagement moyen ou les impressions d'un post typique, selon le bouton choisi.</p>
-                      </div>
-                      <div class="chart-info-popover__section">
-                        <p class="chart-info-popover__section-label">Comment le lire</p>
-                        <p class="chart-info-popover__text">Compare les cases d'une même ligne : elles indiquent quel format marche le mieux pour ce sujet. Une case « — » est une combinaison jamais publiée.</p>
-                      </div>
-                      <div class="chart-info-popover__section">
-                        <p class="chart-info-popover__section-label">Attention à</p>
-                        <p class="chart-info-popover__text">Les couleurs sont relatives : la case la plus foncée est la meilleure du tableau, pas forcément un bon résultat dans l'absolu. Une case à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
-                      </div>
-                      <div class="chart-info-popover__section chart-info-popover__section--more">
-                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
-                        <p class="chart-info-popover__text">Engagement = moyenne des taux des posts de la case. Impressions = post typique (médiane).</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="chart-card__body chart-card__body--table">
-                <div class="table-wrapper" id="heatmap-container"></div>
-              </div>
-            </div>
-
-            <!-- Effort vs Reward -->
-            <div class="chart-card chart-card--wide">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Effort et résultat</p>
-                  <h3 class="chart-card__title">Les sujets où je publie le plus rapportent-ils autant ?</h3>
-                  <p class="chart-card__desc">Pour chaque thème : le nombre de posts publiés et leur engagement moyen. Pointillés : ton engagement moyen.</p>
-                </div>
-                <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Les sujets où je publie le plus rapportent-ils autant ?">
-                    <i data-lucide="info" aria-hidden="true"></i>
-                  </button>
-                  <div class="chart-info-popover" role="tooltip">
-                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
-                      <p class="chart-info-popover__text">Pour chaque thème, le nombre de posts publiés (l'effort) et leur taux d'engagement moyen (le résultat).</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Comment le lire</p>
-                      <p class="chart-info-popover__text">Beaucoup de posts mais un engagement sous les pointillés : ce sujet te coûte du temps pour peu de résultat. Peu de posts mais un engagement au-dessus : ce sujet mérite peut-être d'être développé.</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Attention à</p>
-                      <p class="chart-info-popover__text">Un thème avec 2 ou 3 posts peut afficher un engagement élevé par hasard.</p>
-                    </div>
-                    <div class="chart-info-popover__section chart-info-popover__section--more">
-                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
-                      <p class="chart-info-popover__text">Pointillés = engagement moyen de tous tes posts, sur tout l'historique. Taux d'engagement = définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="chart-card__body">
-                <canvas id="chart-effort-reward" aria-label="Comparaison volume de publication vs engagement par thème"></canvas>
-              </div>
-            </div>
-
-            <!-- Natif vs re-post -->
-            <div class="chart-card chart-card--wide">
-              <div class="chart-card__header">
-                <div>
-                  <p class="chart-card__label">Origine des posts</p>
-                  <h3 class="chart-card__title">Mes posts originaux marchent-ils mieux que les contenus que je relaie ?</h3>
-                  <p class="chart-card__desc">Une ligne par valeur de la colonne « Type » de ton fichier. La meilleure valeur de chaque colonne est mise en évidence.</p>
-                </div>
-                <div class="chart-info-wrapper">
-                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts originaux marchent-ils mieux que les contenus que je relaie ?">
-                    <i data-lucide="info" aria-hidden="true"></i>
-                  </button>
-                  <div class="chart-info-popover" role="tooltip">
-                    <p class="chart-info-popover__title">Comment lire ce tableau</p>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
-                      <p class="chart-info-popover__text">Pour chaque type de post : combien tu en as publié et leurs résultats (impressions d'un post typique, engagement, réactions pour 1 000 impressions, commentaires par post).</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Comment le lire</p>
-                      <p class="chart-info-popover__text">Compare les lignes colonne par colonne. « Réactions pour 1 000 impr. » : combien de réactions un post obtient pour 1 000 affichages, c'est-à-dire la qualité de la visibilité, indépendamment du nombre de posts.</p>
-                    </div>
-                    <div class="chart-info-popover__section">
-                      <p class="chart-info-popover__section-label">Attention à</p>
-                      <p class="chart-info-popover__text">Un groupe de moins de 5 posts est signalé par un triangle : ses chiffres ne sont pas fiables et l'écart avec l'autre groupe ne doit pas être interprété.</p>
-                    </div>
-                    <div class="chart-info-popover__section chart-info-popover__section--more">
-                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
-                      <p class="chart-info-popover__text">Impressions et engagement en post typique (médiane) : les deux groupes ont rarement le même nombre de posts, et une moyenne se laisserait emporter par un post exceptionnel.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="chart-card__body chart-card__body--table">
-                <div class="table-wrapper" id="type-compare-container"></div>
-              </div>
-            </div>
-
-          </section>
-        </div>
 
 
         <!-- ══════════════════════════════════════════
-             TAB 3 — L'ENTONNOIR DE L'AUDIENCE
+             RÉACTIONS — Comment les gens réagissent-ils ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-entonnoir" role="tabpanel">
 
@@ -600,7 +470,7 @@
           <section class="charts-grid" aria-label="Entonnoir de l'audience">
 
             <!-- Funnel -->
-            <div class="chart-card chart-card--wide">
+            <div class="chart-card is-detail chart-card--wide">
               <div class="chart-card__header">
                 <div>
                   <p class="chart-card__label">Du regard à l'action</p>
@@ -678,7 +548,7 @@
 
 
         <!-- ══════════════════════════════════════════
-             TAB 4 — LE LABORATOIRE
+             PUBLICATIONS — Quels posts ont marché ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-laboratoire" role="tabpanel">
 
@@ -843,7 +713,98 @@
         </div>
 
         <!-- ══════════════════════════════════════════
-             TAB 5 — ANNÉES (Tendances + Comparaison)
+             CALENDRIER — Quand et à quel rythme publier ?
+        ══════════════════════════════════════════ -->
+        <div class="tab-panel" id="panel-calendrier" role="tabpanel">
+          <section class="charts-grid" aria-label="Calendrier de publication">
+
+            <!-- Cadence × portée médiane -->
+            <div class="chart-card chart-card--wide">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Rythme de publication</p>
+                  <h3 class="chart-card__title">Publier plus, est-ce toucher moins ?</h3>
+                  <p class="chart-card__desc">Barres : nombre de posts du mois. Courbe : impressions d'un post typique ce mois-là. Pointillés : le post typique sur toute la période.</p>
+                </div>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Publier plus, est-ce toucher moins ?">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover" role="tooltip">
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Combien tu publies chaque mois, et combien de fois un post ordinaire de ce mois a été affiché.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Courbe stable quand les barres montent : publier davantage ne coûte rien. Courbe qui baisse : tes posts se font concurrence auprès des mêmes personnes. Courbe qui monte : la régularité est récompensée.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Un mois avec 1 ou 2 posts donne un point peu fiable. Les mois sans publication restent affichés, avec une barre à zéro.</p>
+                    </div>
+                    <div class="chart-info-popover__section chart-info-popover__section--more">
+                      <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                      <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-cadence-portee" aria-label="Nombre de publications par mois et impressions médianes par publication"></canvas>
+              </div>
+            </div>
+            <!-- Heatmap Jour × Heure -->
+            <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Moments de publication</p>
+                  <h3 class="chart-card__title">Quel jour et à quelle heure publier ?</h3>
+                  <p class="chart-card__desc">Chaque case croise un jour et une heure de publication. Plus elle est foncée, meilleur est le résultat ; le petit chiffre indique le nombre de posts.</p>
+                </div>
+                <div class="ts-tf-header-cluster">
+                  <div class="chart-card__actions">
+                    <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
+                    <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel jour et à quelle heure publier ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Selon le bouton : les impressions d'un post typique ou l'engagement moyen, pour chaque créneau jour × heure où tu as publié.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Repère les cases les plus foncées qui reposent sur plusieurs posts : ce sont tes créneaux les plus prometteurs.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée apparaissent. Beaucoup de cases ne contiennent qu'un post : c'est une piste à tester, pas une certitude.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="chart-card__body chart-card__body--table">
+                <div id="heatmap-jour-heure" style="overflow-x: auto;"></div>
+              </div>
+            </div>
+
+          </section>
+        </div>
+
+
+        <!-- ══════════════════════════════════════════
+             HISTORIQUE — Est-ce que je progresse d'année en année ?
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-statistiques" role="tabpanel">
 
@@ -1014,49 +975,6 @@
                 </div>
               </div>
 
-              <!-- Heatmap Jour × Heure -->
-              <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
-                <div class="chart-card__header">
-                  <div>
-                    <p class="chart-card__label">Moments de publication</p>
-                    <h3 class="chart-card__title">Quel jour et à quelle heure publier ?</h3>
-                    <p class="chart-card__desc">Chaque case croise un jour et une heure de publication. Plus elle est foncée, meilleur est le résultat ; le petit chiffre indique le nombre de posts.</p>
-                  </div>
-                  <div class="ts-tf-header-cluster">
-                    <div class="chart-card__actions">
-                      <button class="btn btn--secondary heatmap-jh-toggle is-active" data-metric="impressions">Impressions</button>
-                      <button class="btn btn--secondary heatmap-jh-toggle" data-metric="engagement">Engagement</button>
-                    </div>
-                    <div class="chart-info-wrapper">
-                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel jour et à quelle heure publier ?">
-                        <i data-lucide="info" aria-hidden="true"></i>
-                      </button>
-                      <div class="chart-info-popover" role="tooltip">
-                        <p class="chart-info-popover__title">Comment lire ce tableau</p>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
-                          <p class="chart-info-popover__text">Selon le bouton : les impressions d'un post typique ou l'engagement moyen, pour chaque créneau jour × heure où tu as publié.</p>
-                        </div>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Comment le lire</p>
-                          <p class="chart-info-popover__text">Repère les cases les plus foncées qui reposent sur plusieurs posts : ce sont tes créneaux les plus prometteurs.</p>
-                        </div>
-                        <div class="chart-info-popover__section">
-                          <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Seuls les posts dont l'heure est renseignée apparaissent. Beaucoup de cases ne contiennent qu'un post : c'est une piste à tester, pas une certitude.</p>
-                        </div>
-                        <div class="chart-info-popover__section chart-info-popover__section--more">
-                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
-                          <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="chart-card__body chart-card__body--table">
-                  <div id="heatmap-jour-heure" style="overflow-x: auto;"></div>
-                </div>
-              </div>
 
             </section>
           </div><!-- /#sy-tendances -->
@@ -1130,7 +1048,7 @@
               <section class="charts-grid" aria-label="Graphiques de comparaison">
 
                 <!-- Cumulative YTD line chart -->
-                <div class="chart-card">
+                <div class="chart-card is-detail">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Rythme annuel</p>
@@ -1164,7 +1082,7 @@
                 </div>
 
                 <!-- Impressions distribution scatter -->
-                <div class="chart-card">
+                <div class="chart-card is-detail">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Visibilité post par post</p>
@@ -1202,7 +1120,7 @@
                 </div>
 
                 <!-- Radar performance profile -->
-                <div class="chart-card chart-card--wide">
+                <div class="chart-card is-detail chart-card--wide">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Vue d'ensemble</p>
@@ -1320,24 +1238,155 @@
         </div><!-- /#panel-statistiques -->
 
         <!-- ══════════════════════════════════════════
-             TAB 7 — THÈMES (Analyse + Comparaison)
+             CONTENUS — Quels sujets et formats marchent ? (ex-Thèmes + Matrice)
         ══════════════════════════════════════════ -->
         <div class="tab-panel" id="panel-compare-themes" role="tabpanel">
 
           <!-- Mode toggle : Analyse / Comparaison -->
-          <div class="ct-mode-bar" id="ct-mode-bar" role="group" aria-label="Mode d'analyse des thèmes">
-            <button class="ct-mode-toggle is-active" data-mode="analyse" type="button" aria-pressed="true">
+          <div class="ct-mode-bar" id="ct-mode-bar" role="group" aria-label="Mode d'analyse des contenus">
+            <button class="ct-mode-toggle is-active" data-mode="overview" type="button" aria-pressed="true">
+              <i data-lucide="layout-grid" aria-hidden="true"></i>
+              Tous les sujets
+            </button>
+            <button class="ct-mode-toggle" data-mode="analyse" type="button" aria-pressed="false">
               <i data-lucide="search" aria-hidden="true"></i>
-              Analyse
+              Un thème en détail
             </button>
             <button class="ct-mode-toggle" data-mode="compare" type="button" aria-pressed="false">
               <i data-lucide="git-compare-arrows" aria-hidden="true"></i>
-              Comparaison
+              Deux thèmes face à face
             </button>
           </div>
 
+          <!-- ─── MODE TOUS LES SUJETS ─── -->
+          <div id="ct-overview">
+  <section class="charts-grid" aria-label="Matrice stratégique">
+
+              <!-- Heatmap -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Sujets × formats</p>
+                    <h3 class="chart-card__title">Quel format pour quel sujet ?</h3>
+                    <p class="chart-card__desc">Plus la case est foncée, meilleur est le résultat. Le petit chiffre indique le nombre de posts : en dessous de 3, n'en tire pas de conclusion.</p>
+                  </div>
+                  <div class="ts-tf-header-cluster">
+                    <div class="chart-card__actions">
+                      <button class="btn btn--ghost btn--sm heatmap-toggle is-active" data-metric="engagement">Engagement</button>
+                      <button class="btn btn--ghost btn--sm heatmap-toggle" data-metric="impressions">Impressions</button>
+                    </div>
+                    <div class="chart-info-wrapper">
+                      <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel format pour quel sujet ?">
+                        <i data-lucide="info" aria-hidden="true"></i>
+                      </button>
+                      <div class="chart-info-popover" role="tooltip">
+                        <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                          <p class="chart-info-popover__text">Pour chaque thème (lignes) et chaque format (colonnes) : l'engagement moyen ou les impressions d'un post typique, selon le bouton choisi.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Comment le lire</p>
+                          <p class="chart-info-popover__text">Compare les cases d'une même ligne : elles indiquent quel format marche le mieux pour ce sujet. Une case « — » est une combinaison jamais publiée.</p>
+                        </div>
+                        <div class="chart-info-popover__section">
+                          <p class="chart-info-popover__section-label">Attention à</p>
+                          <p class="chart-info-popover__text">Les couleurs sont relatives : la case la plus foncée est la meilleure du tableau, pas forcément un bon résultat dans l'absolu. Une case à 1 ou 2 posts reflète ces posts, pas une tendance.</p>
+                        </div>
+                        <div class="chart-info-popover__section chart-info-popover__section--more">
+                          <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                          <p class="chart-info-popover__text">Engagement = moyenne des taux des posts de la case. Impressions = post typique (médiane).</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="chart-card__body chart-card__body--table">
+                  <div class="table-wrapper" id="heatmap-container"></div>
+                </div>
+              </div>
+
+              <!-- Effort vs Reward -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Effort et résultat</p>
+                    <h3 class="chart-card__title">Les sujets où je publie le plus rapportent-ils autant ?</h3>
+                    <p class="chart-card__desc">Pour chaque thème : le nombre de posts publiés et leur engagement moyen. Pointillés : ton engagement moyen.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Les sujets où je publie le plus rapportent-ils autant ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque thème, le nombre de posts publiés (l'effort) et leur taux d'engagement moyen (le résultat).</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Beaucoup de posts mais un engagement sous les pointillés : ce sujet te coûte du temps pour peu de résultat. Peu de posts mais un engagement au-dessus : ce sujet mérite peut-être d'être développé.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Un thème avec 2 ou 3 posts peut afficher un engagement élevé par hasard.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Pointillés = engagement moyen de tous tes posts, sur tout l'historique. Taux d'engagement = définition LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés, divisés par les impressions.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="chart-card__body">
+                  <canvas id="chart-effort-reward" aria-label="Comparaison volume de publication vs engagement par thème"></canvas>
+                </div>
+              </div>
+
+              <!-- Natif vs re-post -->
+              <div class="chart-card chart-card--wide">
+                <div class="chart-card__header">
+                  <div>
+                    <p class="chart-card__label">Origine des posts</p>
+                    <h3 class="chart-card__title">Mes posts originaux marchent-ils mieux que les contenus que je relaie ?</h3>
+                    <p class="chart-card__desc">Une ligne par valeur de la colonne « Type » de ton fichier. La meilleure valeur de chaque colonne est mise en évidence.</p>
+                  </div>
+                  <div class="chart-info-wrapper">
+                    <button class="chart-info-btn" type="button" aria-label="Comment lire : Mes posts originaux marchent-ils mieux que les contenus que je relaie ?">
+                      <i data-lucide="info" aria-hidden="true"></i>
+                    </button>
+                    <div class="chart-info-popover" role="tooltip">
+                      <p class="chart-info-popover__title">Comment lire ce tableau</p>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                        <p class="chart-info-popover__text">Pour chaque type de post : combien tu en as publié et leurs résultats (impressions d'un post typique, engagement, réactions pour 1 000 impressions, commentaires par post).</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Comment le lire</p>
+                        <p class="chart-info-popover__text">Compare les lignes colonne par colonne. « Réactions pour 1 000 impr. » : combien de réactions un post obtient pour 1 000 affichages, c'est-à-dire la qualité de la visibilité, indépendamment du nombre de posts.</p>
+                      </div>
+                      <div class="chart-info-popover__section">
+                        <p class="chart-info-popover__section-label">Attention à</p>
+                        <p class="chart-info-popover__text">Un groupe de moins de 5 posts est signalé par un triangle : ses chiffres ne sont pas fiables et l'écart avec l'autre groupe ne doit pas être interprété.</p>
+                      </div>
+                      <div class="chart-info-popover__section chart-info-popover__section--more">
+                        <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                        <p class="chart-info-popover__text">Impressions et engagement en post typique (médiane) : les deux groupes ont rarement le même nombre de posts, et une moyenne se laisserait emporter par un post exceptionnel.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="chart-card__body chart-card__body--table">
+                  <div class="table-wrapper" id="type-compare-container"></div>
+                </div>
+              </div>
+
+            </section>
+          </div>
+
           <!-- ─── MODE ANALYSE ─── -->
-          <div id="ct-analyse">
+          <div id="ct-analyse" hidden>
 
             <!-- Sélecteur de thème — bandeau -->
             <div class="compare-controls">
@@ -1415,7 +1464,7 @@
               </section>
 
               <!-- Scatter -->
-              <section>
+              <section class="is-detail">
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
@@ -1455,7 +1504,7 @@
               </section>
 
               <!-- Scatter Impressions × Réactions -->
-              <section>
+              <section class="is-detail">
                 <div class="chart-card chart-card--wide">
                   <div class="chart-card__header">
                     <div>
@@ -1531,7 +1580,7 @@
                   </div>
                 </div>
 
-                <div class="chart-card">
+                <div class="chart-card is-detail">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Saisonnalité du thème</p>
@@ -1554,7 +1603,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Années.</p>
+                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Historique.</p>
                         </div>
                       </div>
                     </div>
@@ -1612,7 +1661,7 @@
               </section>
 
               <!-- Top 5 / Flop 5 -->
-              <section id="ts-topflop" aria-label="Top 5 et Flop 5 des publications"></section>
+              <section id="ts-topflop" class="is-detail" aria-label="Toutes les publications du thème"></section>
 
             </div><!-- /#ts-content -->
           </div><!-- /#ct-analyse -->
@@ -1730,7 +1779,7 @@
                   </div>
                 </div>
 
-                <div class="chart-card">
+                <div class="chart-card is-detail">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Visibilité post par post</p>
@@ -1767,7 +1816,7 @@
                   </div>
                 </div>
 
-                <div class="chart-card chart-card--wide">
+                <div class="chart-card is-detail chart-card--wide">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Vue d'ensemble</p>
@@ -1804,7 +1853,7 @@
                   </div>
                 </div>
 
-                <div class="chart-card chart-card--wide">
+                <div class="chart-card is-detail chart-card--wide">
                   <div class="chart-card__header">
                     <div>
                       <p class="chart-card__label">Saisonnalité des thèmes</p>
@@ -1827,7 +1876,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Années. Un mois avec 1 ou 2 posts donne un point peu fiable.</p>
+                          <p class="chart-info-popover__text">Ce n'est pas une évolution dans le temps : les posts d'avril de toutes les années sont regroupés. Pour suivre l'évolution d'une année sur l'autre, utilise l'onglet Historique. Un mois avec 1 ou 2 posts donne un point peu fiable.</p>
                         </div>
                       </div>
                     </div>
@@ -1992,7 +2041,7 @@
 
             <!-- Overlay impressions / abonnés -->
             <section class="charts-grid" aria-label="Croisement publications et abonnés">
-              <div class="chart-card chart-card--wide">
+              <div class="chart-card is-detail chart-card--wide">
                 <div class="chart-card__header">
                   <div>
                     <p class="chart-card__label">Impressions et abonnés</p>
@@ -2029,6 +2078,13 @@
           </div><!-- /#abonnes-content -->
 
         </div><!-- /#panel-abonnes -->
+
+        <!-- Vue essentielle : ce qui est masqué dans l'onglet -->
+        <div class="view-hint" id="view-hint" hidden>
+          <i data-lucide="eye-off" aria-hidden="true"></i>
+          <span id="view-hint-text"></span>
+          <button type="button" class="btn btn--secondary btn--sm" id="view-hint-btn">Afficher la vue complète</button>
+        </div>
 
       </div><!-- /.dashboard-main -->
     </main>

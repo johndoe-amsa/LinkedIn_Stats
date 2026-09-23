@@ -49,7 +49,10 @@ const state = {
   statsMode: 'tendances',  // 'tendances' | 'compare'
 
   /* Thèmes tab: mode toggle + selected theme for analyse */
-  themeMode:  'analyse',   // 'analyse' | 'compare'
+  themeMode:  'overview',  // 'overview' | 'analyse' | 'compare'
+
+  /* Niveau de détail : 'essentielle' masque les analyses détaillées (.is-detail) */
+  viewLevel: 'essentielle', // 'essentielle' | 'complete'
   themeStats: '',          // selected theme in analyse mode
 
   /* Thèmes -> Analyse: Top/Flop ranking mode */
@@ -454,6 +457,10 @@ function initDashboard() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
+  $('overview-audience-link').addEventListener('click', () => switchTab('abonnes'));
+
+  /* Vue essentielle / complète */
+  initViewToggle();
 
   /* Stacked toggle */
   document.querySelectorAll('.stacked-toggle').forEach(btn => {
@@ -504,7 +511,7 @@ function initDashboard() {
     });
   }
 
-  /* Thèmes tab — mode toggle (Analyse / Comparaison).
+  /* Contenus — mode toggle (Tous les sujets / Un thème / Deux thèmes).
      Limité à la barre de Thèmes : les boutons d'Années portent aussi la classe
      ct-mode-toggle pour le style, et passer Années en Comparaison basculait
      Thèmes en Comparaison par la même occasion. */
@@ -659,7 +666,7 @@ function resetDashboard() {
   state.heatmapJHMetric = 'impressions';
   state.compareYears = [];
   state.compareThemes = [];
-  state.themeMode  = 'analyse';
+  state.themeMode  = 'overview';
   state.themeStats = '';
   state.charts = {};
 
@@ -673,14 +680,28 @@ function resetDashboard() {
    TAB NAVIGATION
    ═══════════════════════════════════════════════════════════════ */
 
+/* Un onglet par question. Les identifiants internes datent de l'ancienne
+   organisation (bilan = Vue d'ensemble, laboratoire = Publications,
+   compare-themes = Contenus, entonnoir = Réactions, statistiques = Historique). */
 const TAB_META = {
-  bilan:            { label: 'Résumé',                      title: 'Synthèse du compte' },
-  matrice:          { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
-  entonnoir:        { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
-  laboratoire:      { label: 'La Liste',                    title: 'Tops & Flops' },
-  statistiques:     { label: 'Années',                      title: 'Tendances annuelles' },
-  'compare-themes': { label: 'Thèmes',                      title: 'Analyse & comparaison de thèmes' },
-  abonnes:          { label: 'Abonnés',                     title: 'Évolution des abonnés' },
+  bilan:            { label: "Vue d'ensemble", title: 'Comment va mon compte ?' },
+  abonnes:          { label: 'Audience',       title: 'Mon audience grandit-elle ?' },
+  laboratoire:      { label: 'Publications',   title: 'Quels posts ont marché ?' },
+  'compare-themes': { label: 'Contenus',       title: 'Quels sujets et formats marchent ?' },
+  entonnoir:        { label: 'Réactions',      title: 'Comment les gens réagissent-ils ?' },
+  calendrier:       { label: 'Calendrier',     title: 'Quand et à quel rythme publier ?' },
+  statistiques:     { label: 'Historique',     title: "Est-ce que je progresse d'année en année ?" },
+};
+
+/* Question affichée selon le mode des onglets à plusieurs vues */
+const CONTENUS_TITLES = {
+  overview: 'Quels sujets et formats marchent ?',
+  analyse:  'Que donne un thème en détail ?',
+  compare:  'Quel thème marche le mieux ?',
+};
+const HISTORIQUE_TITLES = {
+  tendances: "Est-ce que je progresse d'année en année ?",
+  compare:   'Comment se comparent mes années ?',
 };
 
 function switchTab(tabId) {
@@ -707,7 +728,7 @@ function renderActiveTab() {
   const data = state.filteredData;
   switch (state.activeTab) {
     case 'bilan':       renderBilan(data); break;
-    case 'matrice':     renderMatrice(data); break;
+    case 'calendrier':  renderCalendrier(data); break;
     case 'entonnoir':   renderEntonnoir(data); break;
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatsPanel(data); break;
@@ -715,6 +736,61 @@ function renderActiveTab() {
     case 'abonnes':         renderAbonnesPanel();        break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   VUE ESSENTIELLE / VUE COMPLÈTE
+   La vue essentielle masque les analyses détaillées (nuages de points,
+   radars, distributions…), marquées .is-detail dans le HTML, pour qu'un
+   débutant voie d'abord les 3 ou 4 blocs indispensables de chaque onglet.
+   Préférence de lecture propre à chaque navigateur : localStorage suffit.
+   ═══════════════════════════════════════════════════════════════ */
+
+const VIEW_KEY = 'linkedin-analytics-view';
+
+function initViewToggle() {
+  let saved = null;
+  try { saved = localStorage.getItem(VIEW_KEY); } catch (e) { /* stockage indisponible */ }
+  state.viewLevel = saved === 'complete' ? 'complete' : 'essentielle';
+
+  const setLevel = (level) => {
+    state.viewLevel = level;
+    try { localStorage.setItem(VIEW_KEY, level); } catch (e) { /* stockage indisponible */ }
+    applyViewLevel();
+  };
+  document.querySelectorAll('.view-toggle__btn').forEach(btn =>
+    btn.addEventListener('click', () => setLevel(btn.dataset.view)));
+  $('view-hint-btn').addEventListener('click', () => setLevel('complete'));
+
+  applyViewLevel();
+}
+
+function applyViewLevel() {
+  document.querySelector('.dashboard-main').dataset.view = state.viewLevel;
+  document.querySelectorAll('.view-toggle__btn').forEach(btn => {
+    const on = btn.dataset.view === state.viewLevel;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on);
+  });
+  updateViewHint();
+}
+
+/* Indique combien d'analyses détaillées la vue essentielle masque dans l'onglet */
+function updateViewHint() {
+  const hint  = $('view-hint');
+  const panel = document.querySelector('.tab-panel.is-active');
+  if (!hint) return;
+  const hidden = state.viewLevel === 'essentielle' && panel
+    ? [...panel.querySelectorAll('.is-detail')].filter(el => !el.closest('[hidden]')).length
+    : 0;
+  hint.hidden = hidden === 0;
+  if (hidden) {
+    $('view-hint-text').textContent = hidden > 1
+      ? `${hidden} analyses détaillées sont masquées dans cet onglet.`
+      : '1 analyse détaillée est masquée dans cet onglet.';
+  }
 }
 
 
@@ -914,9 +990,42 @@ function accountAvgEngagement() {
 
 function renderBilan(data) {
   renderKPIs(data);
+  renderOverviewAudience(data);
   renderTimelineChart(data);
-  renderCadencePortee(data);
   renderPodium(data);
+}
+
+/* ── Rappel de l'audience ──
+   Mêmes calculs que l'onglet Audience (croissance d'un mois typique, indice de
+   visibilité du dernier mois), pour que les deux onglets affichent les mêmes
+   chiffres. Masqué quand le fichier n'a pas de feuille Abonnés. */
+function renderOverviewAudience(postData) {
+  const box = $('overview-audience');
+  if (!box) return;
+  const sub = filteredSubscriberData();
+  box.hidden = sub.length === 0;
+  if (sub.length === 0) return;
+
+  $('ov-abonnes').textContent = fmt(sub[sub.length - 1].abonnes);
+
+  const growthPct = buildMonthlyGrowthSeries(sub).filter(g => g !== null).map(g => g.pct);
+  $('ov-croissance').textContent = growthPct.length ? fmtSignedPct(median(growthPct)) : '—';
+
+  const points = buildReachRatioSeries(sub, postData).filter(r => r.ratio !== null);
+  const last   = points[points.length - 1];
+  $('ov-visibilite').textContent = last ? fmtPct(last.ratio) : '—';
+  $('ov-visibilite-label').textContent = last
+    ? `Indice de visibilité (${last.date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })})`
+    : 'Indice de visibilité';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CALENDRIER — Quand et à quel rythme publier ?
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderCalendrier(data) {
+  renderCadencePortee(data);
+  renderHeatmapJourHeure(data);
 }
 
 /* ── Cadence × portée médiane ──
@@ -2050,15 +2159,16 @@ function renderStatsPanel(data) {
   if (state.statsMode === 'tendances') {
     if (tendancesSection) tendancesSection.hidden = false;
     if (compareSection)   compareSection.hidden   = true;
-    $('tab-section-title').textContent = 'Tendances annuelles';
+    $('tab-section-title').textContent = HISTORIQUE_TITLES.tendances;
     renderStatistiques(data);
   } else {
     if (tendancesSection) tendancesSection.hidden = true;
     if (compareSection)   compareSection.hidden   = false;
-    $('tab-section-title').textContent = 'Comparaison multi-années';
+    $('tab-section-title').textContent = HISTORIQUE_TITLES.compare;
     renderComparaison(data);
   }
   if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
 }
 
 function renderStatsModeToggle(data) {
@@ -2086,7 +2196,6 @@ function renderStatistiques(data) {
   renderYearlyTotalChart(data);
   renderYearlyImpressionsChart(data);
   renderYearlyEngClicksChart(data);
-  renderHeatmapJourHeure(data);
 }
 
 function renderYtdCumulChart(data) {
@@ -2542,6 +2651,7 @@ function renderYearPills(allYears, yearColorMap) {
       }
       renderStatsModeToggle(state.filteredData);
       renderComparaison(state.filteredData);
+      updateViewHint();
     });
   });
 }
@@ -3058,6 +3168,7 @@ function renderCTSelectors(allThemes) {
       state.compareThemes[changedIdx] = newVal;
       state.compareThemes = state.compareThemes.filter(Boolean);
       renderCompareThemes(state.filteredData);
+      updateViewHint();
     };
   }
 
@@ -3070,6 +3181,7 @@ function renderCTSelectors(allThemes) {
   newSwap.addEventListener('click', () => {
     state.compareThemes = [state.compareThemes[1], state.compareThemes[0]].filter(Boolean);
     renderCompareThemes(state.filteredData);
+    updateViewHint();
   });
 }
 
@@ -3423,21 +3535,16 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
 function renderThemePanel(data) {
   renderTSModeToggle();
 
-  const analyseSection = $('ct-analyse');
-  const compareSection = $('ct-compare');
+  const sections = { overview: $('ct-overview'), analyse: $('ct-analyse'), compare: $('ct-compare') };
+  Object.entries(sections).forEach(([mode, el]) => { if (el) el.hidden = mode !== state.themeMode; });
+  $('tab-section-title').textContent = CONTENUS_TITLES[state.themeMode];
 
-  if (state.themeMode === 'analyse') {
-    if (analyseSection) analyseSection.hidden = false;
-    if (compareSection) compareSection.hidden = true;
-    $('tab-section-title').textContent = 'Analyse détaillée d\'un thème';
-    renderThemeStats(data);
-  } else {
-    if (analyseSection) analyseSection.hidden = true;
-    if (compareSection) compareSection.hidden = false;
-    $('tab-section-title').textContent = 'Comparaison entre thèmes';
-    renderCompareThemes(data);
-  }
+  if (state.themeMode === 'overview')     renderMatrice(data);
+  else if (state.themeMode === 'analyse') renderThemeStats(data);
+  else                                    renderCompareThemes(data);
+
   if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
 }
 
 function renderTSModeToggle() {
@@ -3493,6 +3600,7 @@ function renderTSSelector(allThemes) {
   fresh.addEventListener('change', () => {
     state.themeStats = fresh.value;
     renderThemeStats(state.filteredData);
+    updateViewHint();
   });
 }
 
@@ -4619,13 +4727,16 @@ function groupBy(arr, key) {
    TAB — ABONNÉS
    ═══════════════════════════════════════════════════════════════ */
 
-function renderAbonnesPanel() {
+/* Relevés d'abonnés de la période : seul le filtre de dates s'applique,
+   thème et format ne changent pas le nombre d'abonnés du compte. */
+function filteredSubscriberData() {
   const { dateFrom, dateTo } = state.filters;
-  const data = state.subscriberData.filter(d => {
-    if (dateFrom && d.date < dateFrom) return false;
-    if (dateTo   && d.date > dateTo)   return false;
-    return true;
-  });
+  return state.subscriberData.filter(d =>
+    (!dateFrom || d.date >= dateFrom) && (!dateTo || d.date <= dateTo));
+}
+
+function renderAbonnesPanel() {
+  const data = filteredSubscriberData();
   const empty   = $('abonnes-empty');
   const content = $('abonnes-content');
 
@@ -4671,7 +4782,6 @@ function renderAbonnesPanel() {
      qu'un mois de campagne ne suffise pas à embellir toute la période. */
   const growth    = buildMonthlyGrowthSeries(data);
   const growthPct = growth.filter(g => g !== null).map(g => g.pct);
-  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + '\u202f%';
   if (growthPct.length > 0) {
     setAbKPI('kpi-ab-avg',
       fmtSignedPct(median(growthPct)),
@@ -4865,7 +4975,6 @@ function renderAbonnesCombined(subData, deltas, growth) {
   const [c1, c2]   = DATA_COLORS();
   const errorColor = cssVar('--color-error');
   const pctMode    = state.aboDeltaMode === 'pct';
-  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
 
   const labels      = subData.map(d => fmtMois(d.date));
   const abonneVals  = subData.map(d => d.abonnes);
@@ -5054,6 +5163,8 @@ function renderAbonnesOverlay(subData, postData) {
 function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
 /* Nombre décimal au format français : 2,3 et non 2.3 */
 function fmtDec(n, digits = 1) { return (+n).toFixed(digits).replace('.', ','); }
+/* Pourcentage signé : +4,9 % / −1,2 % */
+function fmtSignedPct(n) { return (n >= 0 ? '+' : '') + fmtDec(n) + '\u202f%'; }
 function fmtK(n)    {
   if (Math.abs(n) >= 1_000_000) return `${fmtDec(n / 1_000_000)}\u202fM`;
   if (Math.abs(n) >= 1_000)     return `${fmtDec(n / 1_000)}\u202fk`;
