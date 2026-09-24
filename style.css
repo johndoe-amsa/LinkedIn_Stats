@@ -1543,6 +1543,12 @@ code, kbd {
   min-height: 240px;
 }
 
+.chart-card__note {
+  margin-top: var(--space-3);
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
 .chart-card__body--tall {
   min-height: 320px;
 }
@@ -2158,6 +2164,19 @@ code, kbd {
 .ab-hero__growth-sub {
   font-size: 13px;
   color: var(--color-text-subtle);
+}
+
+/* Comparaison sur un an (même mois de l'année précédente) */
+.ab-hero__yoy {
+  margin-top: var(--space-2);
+  font-size: 14px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.ab-hero__yoy strong {
+  font-weight: 600;
+  color: var(--color-text);
 }
 
 

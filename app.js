@@ -58,6 +58,9 @@ const state = {
   /* Thèmes -> Analyse: Top/Flop ranking mode */
   tsTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
 
+  /* Publications : mois du « mois en bref » (clé 'AAAA-MM', '' = le plus récent) */
+  topFlopMonth: '',
+
   /* Laboratoire (Liste): Top/Flop ranking mode */
   labTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
 
@@ -1084,7 +1087,121 @@ function renderOverviewAudience(postData) {
 function renderCalendrier(data) {
   renderTakeaways('calendrier', takeawaysCalendrier(data));
   renderCadencePortee(data);
+  renderGroupPerfChart('chart-weekday', weekdayGroups(data));
+  renderGroupPerfChart('chart-slots', slotGroups(data));
   renderHeatmapJourHeure(data);
+}
+
+/* ── Jour de la semaine et créneau horaire ──
+   Impressions d'un post typique (barres) et engagement moyen (courbe) par
+   groupe. Sous chaque nom : le nombre de posts, et « peu fiable » sous
+   MIN_GROUP_POSTS posts (le mot accompagne la couleur atténuée). */
+const TIME_SLOTS = [
+  { name: 'Tôt',        short: 'Tôt',   range: 'avant 9 h',   test: h => h < 9 },
+  { name: 'Matinée',    short: 'Matin', range: '9 h – 12 h',  test: h => h >= 9 && h < 12 },
+  { name: 'Midi',       short: 'Midi',  range: '12 h – 14 h', test: h => h >= 12 && h < 14 },
+  { name: 'Après-midi', short: 'Aprèm', range: '14 h – 18 h', test: h => h >= 14 && h < 18 },
+  { name: 'Soir',       short: 'Soir',  range: 'après 18 h',  test: h => h >= 18 },
+];
+const hasHour = d => d.heure !== null && d.heure !== undefined;
+
+function weekdayGroups(data) {
+  return JOURS_ORDER.map(day => ({ name: JOURS_LABELS[day], full: JOURS_LONGS[day], posts: data.filter(d => d.date.getDay() === day) }));
+}
+
+function slotGroups(data) {
+  const timed = data.filter(hasHour);
+  return TIME_SLOTS.map(sl => ({ name: sl.name, short: sl.short, full: `${sl.name} (${sl.range})`, posts: timed.filter(d => sl.test(d.heure)) }));
+}
+
+function renderGroupPerfChart(canvasId, groups) {
+  destroyChart(canvasId);
+  const canvas = $(canvasId);
+  if (!canvas) return;
+  const [d1, d2] = DATA_COLORS();
+  const rows = groups.map(g => ({
+    ...g,
+    n:    g.posts.length,
+    thin: g.posts.length > 0 && g.posts.length < MIN_GROUP_POSTS,
+    imp:  g.posts.length ? typicalImp(g.posts) : null,
+    eng:  g.posts.length ? avg(g.posts, 'tauxEngagement') : null,
+  }));
+  const sub = r => r.n === 0 ? 'aucun post' : `${postsLabel(r.n)}${r.thin ? ' · peu fiable' : ''}`;
+  /* Étiquettes adaptées à la largeur : sur mobile, nom court et nombre seul.
+     « * » signale un groupe peu fiable (en plus de la barre pâle) : la couleur n'est pas le seul indice. */
+  const tickLabels = width => {
+    const per = (width - 90) / rows.length;
+    return rows.map(r => [
+      per < 60 && r.short ? r.short : r.name,
+      (per < 75 ? String(r.n) : r.n === 0 ? 'aucun post' : postsLabel(r.n)) + (r.thin ? '*' : ''),
+    ]);
+  };
+
+  state.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tickLabels(canvas.parentElement.clientWidth),
+      datasets: [
+        {
+          label: 'Impressions (post typique)',
+          type: 'bar',
+          data: rows.map(r => r.imp),
+          backgroundColor: rows.map(r => r.thin ? hexToRgba(d1, 0.35) : d1),
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Engagement moyen (%)',
+          type: 'line',
+          data: rows.map(r => r.eng),
+          borderColor: d2,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: d2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          tension: 0,
+          spanGaps: true,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onResize: (chart, size) => { chart.data.labels = tickLabels(size.width); },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => { const r = rows[items[0].dataIndex]; return `${r.full} · ${sub(r)}`; },
+            label: ctx => {
+              if (ctx.raw === null) return null;
+              return ctx.dataset.yAxisID === 'y'
+                ? ` Post typique : ${fmt(ctx.raw)} impressions`
+                : ` Engagement moyen : ${fmtPct(ctx.raw)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
+        y:  { ...scaleY({ beginAtZero: true, ticks: { callback: v => fmtK(v) } }), position: 'left' },
+        y1: {
+          position: 'right',
+          beginAtZero: true,
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => `${fmtDec(v)} %` },
+        },
+      },
+    },
+  });
 }
 
 /* ── Cadence × portée médiane ──
@@ -1461,7 +1578,7 @@ function renderTimelineChart(data) {
         },
       },
       scales: {
-        x:  scaleX({ ticks: { maxRotation: 0 } }),
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
         y:  { ...scaleY({ ticks: { callback: (v) => fmtK(v) } }), position: 'left' },
         y1: {
           position: 'right',
@@ -2046,6 +2163,52 @@ function renderTopsFlops(data) {
     toggleSelector: '.lab-tf-toggle',
     secondCol: { key: 'theme', label: 'Thème' },
     emptyIcon: 'flask-conical',
+    onModeChange: (newMode) => {
+      if (state.labTopFlopMode === newMode) return;
+      state.labTopFlopMode = newMode;
+      renderTopsFlops(state.filteredData);
+    },
+  });
+  renderMonthTopFlop(data);
+}
+
+/* ── Le mois en bref (Top 3 / Flop 3 du mois) ──
+   Même classement que ci-dessus, restreint aux posts du mois choisi. Les
+   références de format (médianes) restent celles de toute la période : un mois
+   faible ne fait pas passer un post moyen pour un succès. */
+const monthKeyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+function renderMonthTopFlop(data) {
+  const cardEl = $('month-topflop-card');
+  const sel    = $('month-topflop-select');
+  if (!cardEl || !sel) return;
+
+  const months = [...new Set(data.map(d => monthKeyOf(d.date)))].sort().reverse();
+  cardEl.hidden = months.length === 0;
+  if (!months.length) return;
+  const countOf = k => data.filter(d => monthKeyOf(d.date) === k).length;
+  /* Par défaut : le mois le plus récent qui compte au moins 2 posts (un classement
+     à 1 post ne dit rien) ; le mois en cours reste sélectionnable. */
+  if (!months.includes(state.topFlopMonth)) {
+    state.topFlopMonth = months.find(k => countOf(k) >= 2) || months[0];
+  }
+
+  sel.innerHTML = months.map(k => {
+    const [y, m] = k.split('-');
+    const label = new Date(+y, +m - 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return `<option value="${k}"${k === state.topFlopMonth ? ' selected' : ''}>${label} (${postsLabel(countOf(k))})</option>`;
+  }).join('');
+  sel.onchange = () => { state.topFlopMonth = sel.value; renderMonthTopFlop(state.filteredData); };
+
+  renderTopFlopBlock({
+    containerId: 'month-topflop',
+    posts: data.filter(d => monthKeyOf(d.date) === state.topFlopMonth),
+    allData: data,
+    mode: state.labTopFlopMode,
+    count: 3,
+    toggleSelector: '.lab-tf-toggle',
+    secondCol: { key: 'theme', label: 'Thème' },
+    emptyIcon: 'calendar',
     onModeChange: (newMode) => {
       if (state.labTopFlopMode === newMode) return;
       state.labTopFlopMode = newMode;
@@ -4201,6 +4364,7 @@ function scoreRatioPillClass(r) {
  * @param {Function} cfg.onModeChange    - callback(newMode) déclenché au clic toggle
  * @param {object} cfg.secondCol         - { key: 'theme'|'media', label: 'Thème'|'Média' }
  * @param {string} [cfg.emptyIcon]       - lucide icon pour l'empty state
+ * @param {number} [cfg.count=5]         - nombre de posts de chaque côté
  */
 function renderTopFlopBlock(cfg) {
   const container = $(cfg.containerId);
@@ -4284,8 +4448,27 @@ function renderTopFlopBlock(cfg) {
     ? scored.filter(p => p._score !== -Infinity).sort((a, b) => b._score - a._score)
     : [...scored].sort((a, b) => b._score - a._score);
 
-  const top5  = ranked.slice(0, Math.min(5, ranked.length));
-  const flop5 = ranked.slice(-Math.min(5, ranked.length)).reverse();
+  /* Comparer à son format exige au moins 5 posts du même format dans la référence :
+     sur une période courte, aucun post n'est classable dans ces modes. */
+  if (ranked.length < 2) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i data-lucide="${cfg.emptyIcon || 'bar-chart-2'}" aria-hidden="true"></i>
+        <p class="empty-state__title">Pas assez de posts par format</p>
+        <p class="empty-state__desc">Pour comparer un post à son format, il faut au moins ${MIN_FORMAT_SAMPLES} posts du même format (image, vidéo…) sur la période. Choisis « Taux d'engagement seul » ou élargis la période.</p>
+      </div>`;
+    if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+    syncTopFlopToggle(cfg);
+    return;
+  }
+
+  /* Avec peu de posts classés, les deux listes se partagent le classement
+     (moitié haute / moitié basse) au lieu de montrer un même post des deux côtés. */
+  const count = cfg.count || 5;
+  const nTop  = Math.min(count, Math.ceil(ranked.length / 2));
+  const nFlop = Math.min(count, ranked.length - nTop);
+  const top5  = ranked.slice(0, nTop);
+  const flop5 = ranked.slice(ranked.length - nFlop).reverse();
 
   const secondKey   = cfg.secondCol.key;
   const secondLabel = cfg.secondCol.label;
@@ -4337,16 +4520,18 @@ function renderTopFlopBlock(cfg) {
       </tbody></table></div>`;
   }
 
+  /* « Les 5 posts qui… », « Le post qui… » : le nombre affiché est le nombre réel */
+  const posts = (n, plural, singular) => n > 1 ? `Les ${n} posts ${plural}` : `Le post ${singular}`;
   let topLabel, flopLabel;
   if (mode === 'global') {
-    topLabel  = 'Les 5 posts qui ont le mieux marché';
-    flopLabel = 'Les 5 posts qui ont le moins bien marché';
+    topLabel  = posts(top5.length,  'qui ont le mieux marché', 'qui a le mieux marché');
+    flopLabel = posts(flop5.length, 'qui ont le moins bien marché', 'qui a le moins bien marché');
   } else if (mode === 'normalized') {
-    topLabel  = 'Les 5 posts les plus au-dessus de leur format';
-    flopLabel = 'Les 5 posts les plus en dessous de leur format';
+    topLabel  = posts(top5.length,  'les plus au-dessus de leur format', 'le plus au-dessus de son format');
+    flopLabel = posts(flop5.length, 'les plus en dessous de leur format', 'le plus en dessous de son format');
   } else {
-    topLabel  = 'Les 5 posts les plus engageants';
-    flopLabel = 'Les 5 posts les moins engageants';
+    topLabel  = posts(top5.length,  'les plus engageants', 'le plus engageant');
+    flopLabel = posts(flop5.length, 'les moins engageants', 'le moins engageant');
   }
 
   container.innerHTML = `
@@ -4824,6 +5009,15 @@ function groupBy(arr, key) {
    TAB — ABONNÉS
    ═══════════════════════════════════════════════════════════════ */
 
+/* Relevé du même mois, un an plus tôt, dans tout l'historique : { date, abonnes, diff, pct } */
+function yearAgoComparison(point) {
+  const key = `${point.date.getFullYear() - 1}-${point.date.getMonth()}`;
+  const ref = state.subscriberData.find(d => `${d.date.getFullYear()}-${d.date.getMonth()}` === key);
+  if (!ref || ref.abonnes <= 0) return null;
+  const diff = point.abonnes - ref.abonnes;
+  return { date: ref.date, abonnes: ref.abonnes, diff, pct: diff / ref.abonnes * 100 };
+}
+
 /* Relevés d'abonnés de la période : seul le filtre de dates s'applique,
    thème et format ne changent pas le nombre d'abonnés du compte. */
 function filteredSubscriberData() {
@@ -4880,6 +5074,15 @@ function renderAbonnesPanel() {
   gainEl.textContent                 = (gainAbs >= 0 ? '+' : '') + fmt(gainAbs) + ' abonnés';
   gainEl.style.color                 = gainAbs >= 0 ? cssVar('--color-success') : cssVar('--color-error');
   $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
+
+  /* Sur un an : relevé du même mois l'année précédente, cherché dans tout
+     l'historique (il peut précéder la période filtrée) */
+  const yoy = yearAgoComparison(last);
+  $('ab-hero-yoy').hidden = !yoy;
+  if (yoy) {
+    $('ab-hero-yoy').innerHTML = `Sur un an : <strong>${yoy.diff >= 0 ? '+' : '−'}${fmt(Math.abs(yoy.diff))} abonnés</strong> ` +
+      `(${fmtSignedPct(yoy.pct)}) par rapport à ${yoy.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} (${fmt(yoy.abonnes)})`;
+  }
 
   setAbKPI('kpi-ab-pct',
     fmtSignedPct(gainPct),
@@ -5134,11 +5337,15 @@ function renderAbonnesCombined(subData, deltas, growth) {
           ...tooltipBase(),
           callbacks: {
             title: items => items[0].label,
+            afterBody: items => {
+              const yoy = yearAgoComparison(subData[items[0].dataIndex]);
+              return yoy ? `Il y a un an : ${fmt(yoy.abonnes)} (${fmtSignedPct(yoy.pct)})` : [];
+            },
             label: ctx => {
               if (ctx.dataset.label === 'Abonnés') return `Abonnés : ${fmt(ctx.raw)}`;
               if (ctx.raw === null) return null;
               const abs = absVals[ctx.dataIndex];
-              const absStr = `${abs >= 0 ? '+' : ''}${fmt(abs)} abonnés`;
+              const absStr = `${abs >= 0 ? '+' : '−'}${fmt(Math.abs(abs))} abonnés`;
               if (!pctMode) return `Variation : ${absStr}`;
               const g = growth[ctx.dataIndex];
               return g.months > 1
@@ -5337,6 +5544,9 @@ function takeawaysAudience(sub, postData) {
   const since = first.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
   const out = [`Tu as ${gain >= 0 ? 'gagné' : 'perdu'} ${strong(fmt(Math.abs(gain)))} abonnés depuis ${since} (${strong(fmtSignedPct(pct))}).`];
 
+  const yoy = yearAgoComparison(last);
+  if (yoy) out.push(`Sur un an, ton audience a évolué de ${strong(fmtSignedPct(yoy.pct))} (${yoy.diff >= 0 ? '+' : '−'}${fmt(Math.abs(yoy.diff))} abonnés).`);
+
   const growth = buildMonthlyGrowthSeries(sub).filter(g => g !== null).map(g => g.pct);
   if (growth.length) out.push(`Un mois typique fait évoluer ton audience de ${strong(fmtSignedPct(median(growth)))}.`);
 
@@ -5433,11 +5643,11 @@ function takeawaysCalendrier(data) {
     out.push(`Le ${strong(JOURS_LONGS[days[0].key])} est ton meilleur jour : un post typique y est affiché ${strong(fmt(days[0].typ))} fois ` +
              `(${postsLabel(days[0].posts.length)}), contre ${fmt(typicalImp(data))} pour l'ensemble de tes posts.`);
   }
-  const hours = reliableGroups(data.filter(d => d.heure !== null && d.heure !== undefined), d => d.heure)
+  const slots = slotGroups(data).filter(g => g.posts.length >= MIN_GROUP_POSTS)
     .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
-  out.push(hours.length >= 2
-    ? `C'est à ${strong(hours[0].key + ' h')} que tes posts sont le plus vus (post typique : ${fmt(hours[0].typ)}, ${postsLabel(hours[0].posts.length)}).`
-    : `Pas encore assez de posts avec l'heure renseignée pour désigner une meilleure heure (il en faut au moins ${MIN_GROUP_POSTS} par créneau).`);
+  out.push(slots.length >= 2
+    ? `Meilleur moment de la journée : ${strong(slots[0].full.replace(/^./, c => c.toLowerCase()))}, avec un post typique affiché ${strong(fmt(slots[0].typ))} fois (${postsLabel(slots[0].posts.length)}).`
+    : `Pas encore assez de posts avec l'heure renseignée pour désigner un meilleur moment de la journée (il en faut au moins ${MIN_GROUP_POSTS} par créneau).`);
   return out;
 }
 

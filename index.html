@@ -642,6 +642,41 @@
           </section>
 
           <!-- Data table -->
+          <!-- Le mois en bref : Top 3 / Flop 3 -->
+          <section class="chart-card chart-card--wide" id="month-topflop-card" hidden>
+            <div class="chart-card__header">
+              <div>
+                <p class="chart-card__label">Le mois en bref</p>
+                <h3 class="chart-card__title">Quels posts ont marché ce mois-ci ?</h3>
+                <p class="chart-card__desc">Les 3 meilleurs et les 3 plus faibles posts du mois choisi, selon le mode du classement ci-dessus.</p>
+              </div>
+              <div class="ts-tf-header-cluster">
+                <select class="ct-selector__select" id="month-topflop-select" aria-label="Choisir le mois à analyser"></select>
+                <div class="chart-info-wrapper">
+                  <button class="chart-info-btn" type="button" aria-label="Comment lire : Quels posts ont marché ce mois-ci ?">
+                    <i data-lucide="info" aria-hidden="true"></i>
+                  </button>
+                  <div class="chart-info-popover chart-info-popover--wide" role="tooltip">
+                    <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                      <p class="chart-info-popover__text">Le classement ci-dessus, appliqué aux seuls posts du mois sélectionné : les 3 qui ont le mieux marché et les 3 qui ont le moins bien marché.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Comment le lire</p>
+                      <p class="chart-info-popover__text">Chaque post est comparé aux posts du même format sur toute la période, pas seulement au mois : un mois faible ne fait pas passer un post moyen pour un succès. Le mode (global, par format, taux seul) se change avec les boutons du classement ci-dessus.</p>
+                    </div>
+                    <div class="chart-info-popover__section">
+                      <p class="chart-info-popover__section-label">Attention à</p>
+                      <p class="chart-info-popover__text">Avec moins de 6 posts classables dans le mois, les deux listes sont plus courtes pour ne jamais montrer le même post des deux côtés. Les posts trop peu vus sont exclus, comme dans le classement principal.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tops-flops" id="month-topflop"></div>
+          </section>
+
           <section class="table-section" aria-label="Tableau des publications">
             <div class="table-section__header">
               <div class="table-section__title-group">
@@ -804,6 +839,82 @@
                 <canvas id="chart-cadence-portee" aria-label="Nombre de publications par mois et impressions médianes par publication"></canvas>
               </div>
             </div>
+            <!-- Jour de la semaine / créneau horaire -->
+            <div class="chart-card">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Jour de publication</p>
+                  <h3 class="chart-card__title">Quel jour de la semaine publier ?</h3>
+                  <p class="chart-card__desc">Barres : impressions d'un post typique selon le jour de publication. Courbe : engagement moyen. Sous chaque jour, le nombre de posts.</p>
+                </div>
+              <div class="chart-info-wrapper">
+                <button class="chart-info-btn" type="button" aria-label="Comment lire : Quel jour de la semaine publier ?">
+                  <i data-lucide="info" aria-hidden="true"></i>
+                </button>
+                <div class="chart-info-popover" role="tooltip">
+                  <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                    <p class="chart-info-popover__text">Pour chaque jour de la semaine, combien de fois un post ordinaire publié ce jour-là a été affiché, et son engagement moyen. Tous les posts datés comptent, même sans heure.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Comment le lire</p>
+                    <p class="chart-info-popover__text">Cherche le jour dont la barre et la courbe sont hautes ensemble : c'est celui où tes posts sont à la fois vus et engageants.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Attention à</p>
+                    <p class="chart-info-popover__text">Un jour ou un créneau de moins de 5 posts est marqué d'un astérisque (*) et d'une barre pâle : son résultat reflète ces posts, pas une tendance. Un jour peut aussi bénéficier d'un contexte (salon, annonce) plutôt que du jour lui-même.</p>
+                  </div>
+                  <div class="chart-info-popover__section chart-info-popover__section--more">
+                    <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                    <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                  </div>
+                </div>
+              </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-weekday" aria-label="Impressions d'un post typique et engagement moyen par jour de la semaine"></canvas>
+              </div>
+              <p class="chart-card__note">* moins de 5 posts : résultat peu fiable (barre pâle).</p>
+            </div>
+            <div class="chart-card">
+              <div class="chart-card__header">
+                <div>
+                  <p class="chart-card__label">Créneau horaire</p>
+                  <h3 class="chart-card__title">À quel moment de la journée publier ?</h3>
+                  <p class="chart-card__desc">Mêmes indicateurs, par tranche horaire. Seuls les posts dont l'heure est renseignée comptent.</p>
+                </div>
+              <div class="chart-info-wrapper">
+                <button class="chart-info-btn" type="button" aria-label="Comment lire : À quel moment de la journée publier ?">
+                  <i data-lucide="info" aria-hidden="true"></i>
+                </button>
+                <div class="chart-info-popover" role="tooltip">
+                  <p class="chart-info-popover__title">Comment lire ce graphique</p>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                    <p class="chart-info-popover__text">Les posts regroupés en cinq tranches horaires (tôt, matinée, midi, après-midi, soir) : impressions d'un post typique et engagement moyen.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Comment le lire</p>
+                    <p class="chart-info-popover__text">Les tranches regroupent assez de posts pour dégager une tendance, là où la heatmap jour × heure n'a souvent qu'un post par case.</p>
+                  </div>
+                  <div class="chart-info-popover__section">
+                    <p class="chart-info-popover__section-label">Attention à</p>
+                    <p class="chart-info-popover__text">Un jour ou un créneau de moins de 5 posts est marqué d'un astérisque (*) et d'une barre pâle : son résultat reflète ces posts, pas une tendance. Les posts sans heure renseignée n'apparaissent pas.</p>
+                  </div>
+                  <div class="chart-info-popover__section chart-info-popover__section--more">
+                    <p class="chart-info-popover__section-label">Pour aller plus loin</p>
+                    <p class="chart-info-popover__text">« Post typique » = la médiane : la moitié des posts font mieux, l'autre moitié moins. Contrairement à la moyenne, un post viral ne la fait pas bondir.</p>
+                  </div>
+                </div>
+              </div>
+              </div>
+              <div class="chart-card__body">
+                <canvas id="chart-slots" aria-label="Impressions d'un post typique et engagement moyen par tranche horaire"></canvas>
+              </div>
+              <p class="chart-card__note">* moins de 5 posts : résultat peu fiable (barre pâle).</p>
+            </div>
+
             <!-- Heatmap Jour × Heure -->
             <div class="chart-card chart-card--wide" id="card-heatmap-jour-heure">
               <div class="chart-card__header">
@@ -1988,6 +2099,7 @@
                 <span class="ab-hero__growth-value" id="ab-hero-gain">—</span>
                 <span class="ab-hero__growth-sub" id="ab-hero-gain-sub"></span>
               </div>
+              <p class="ab-hero__yoy" id="ab-hero-yoy" hidden></p>
             </div>
 
             <!-- 4 KPIs -->
@@ -2059,7 +2171,7 @@
                         </div>
                         <div class="chart-info-popover__section">
                           <p class="chart-info-popover__section-label">Attention à</p>
-                          <p class="chart-info-popover__text">Si un relevé manque, la hausse est répartie sur les mois concernés ; l'infobulle le précise. Seul le filtre de dates s'applique ici : thème et format ne changent pas le nombre d'abonnés.</p>
+                          <p class="chart-info-popover__text">Si un relevé manque, la hausse est répartie sur les mois concernés ; l'infobulle le précise, ainsi que le nombre d'abonnés un an plus tôt quand il est connu. Seul le filtre de dates s'applique ici : thème et format ne changent pas le nombre d'abonnés.</p>
                         </div>
                       </div>
                     </div>
