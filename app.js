@@ -49,11 +49,17 @@ const state = {
   statsMode: 'tendances',  // 'tendances' | 'compare'
 
   /* Thèmes tab: mode toggle + selected theme for analyse */
-  themeMode:  'analyse',   // 'analyse' | 'compare'
+  themeMode:  'overview',  // 'overview' | 'analyse' | 'compare'
+
+  /* Niveau de détail : 'essentielle' masque les analyses détaillées (.is-detail) */
+  viewLevel: 'essentielle', // 'essentielle' | 'complete'
   themeStats: '',          // selected theme in analyse mode
 
   /* Thèmes -> Analyse: Top/Flop ranking mode */
   tsTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
+
+  /* Publications : mois du « mois en bref » (clé 'AAAA-MM', '' = le plus récent) */
+  topFlopMonth: '',
 
   /* Laboratoire (Liste): Top/Flop ranking mode */
   labTopFlopMode: 'global', // 'global' | 'normalized' | 'raw'
@@ -291,7 +297,7 @@ function parseRows(rows) {
       const republis      = parseNum(get('Republi') || get('Republications'));
       const clics         = parseNum(get('Clics'));
       const tauxClics     = parsePct(get('Taux de clics') || get('Tauxdeclics'));
-      const tauxEngagement= parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
+      const tauxEngagement = parsePct(get("Taux d'engagement") || get('Tauxdengagement'));
       const theme         = (get('Theme') || get('Thème') || get('Thematique') || '—').trim() || '—';
       const media         = (get('Media') || get('Média') || '—').trim() || '—';
       const type          = (get('Type') || '—').trim() || '—';
@@ -300,20 +306,22 @@ function parseRows(rows) {
       const interactions      = reactions + commentaires + republis;
       const totalInteractions = interactions + clics;
 
-      /* Taux d'engagement social — recalculé ici, volontairement.
-         La colonne "Taux d'engagement" du fichier LinkedIn agrège les clics
-         avec les interactions sociales : elle mesure donc un mélange de
-         curiosité (clic) et d'adhésion (réaction / commentaire / republication).
-         On isole la part sociale pour pouvoir la lire indépendamment du taux
-         de clics, qui reste disponible dans sa propre colonne. */
-      const tauxEngagementSocial = impressions > 0
+      /* Taux d'engagement : celui de LinkedIn, lu tel quel dans le fichier
+         (clics, réactions, commentaires, republications et abonnés gagnés,
+         ÷ impressions). C'est lui qu'utilise tout le tableau de bord, pour que
+         les chiffres correspondent à l'interface LinkedIn et aux références du
+         secteur.
+         Engagement hors clics = (réactions + commentaires + republications)
+         ÷ impressions : complément affiché en référence, qui isole l'adhésion
+         (réagir, commenter, partager) de la simple curiosité (cliquer). */
+      const tauxEngagementHorsClics = impressions > 0
         ? (interactions / impressions) * 100
         : 0;
 
       return {
         date, heure, publication, impressions, vues,
         reactions, commentaires, republis, clics,
-        tauxClics, tauxEngagement, tauxEngagementSocial,
+        tauxClics, tauxEngagement, tauxEngagementHorsClics,
         theme, media, type,
         interactions, totalInteractions,
         dateRaw: get('Date'),
@@ -447,11 +455,19 @@ function initDashboard() {
     btn.addEventListener('click', () => applyQuickDateFilter(btn.dataset.preset));
   });
   resetFiltersBtn.addEventListener('click', resetFilters);
+  $('active-filters-reset').addEventListener('click', resetFilters);
 
   /* Tabs */
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
+  $('overview-audience-link').addEventListener('click', () => switchTab('abonnes'));
+
+  /* Vue essentielle / complète */
+  initViewToggle();
+
+  /* Visite guidée au premier chargement, une fois la page dessinée */
+  setTimeout(maybeStartTour, 400);
 
   /* Stacked toggle */
   document.querySelectorAll('.stacked-toggle').forEach(btn => {
@@ -502,8 +518,11 @@ function initDashboard() {
     });
   }
 
-  /* Thèmes tab — mode toggle (Analyse / Comparaison) */
-  document.querySelectorAll('.ct-mode-toggle').forEach(btn => {
+  /* Contenus — mode toggle (Tous les sujets / Un thème / Deux thèmes).
+     Limité à la barre de Thèmes : les boutons d'Années portent aussi la classe
+     ct-mode-toggle pour le style, et passer Années en Comparaison basculait
+     Thèmes en Comparaison par la même occasion. */
+  document.querySelectorAll('#ct-mode-bar .ct-mode-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       state.themeMode = btn.dataset.mode;
       renderThemePanel(state.filteredData);
@@ -560,6 +579,9 @@ let filterTheme, filterMedia, filterDateFrom, filterDateTo, resetFiltersBtn;
 let tableSearch, tableBody, tableEmpty, tableCount, clearSearchBtn, resetBtn;
 
 document.addEventListener('DOMContentLoaded', () => {
+  initInfoPopovers();
+  initGlossary();
+  initTour();
   filterTheme     = $('filter-theme');
   filterMedia     = $('filter-media');
   filterDateFrom  = $('filter-date-from');
@@ -654,7 +676,7 @@ function resetDashboard() {
   state.heatmapJHMetric = 'impressions';
   state.compareYears = [];
   state.compareThemes = [];
-  state.themeMode  = 'analyse';
+  state.themeMode  = 'overview';
   state.themeStats = '';
   state.charts = {};
 
@@ -668,14 +690,28 @@ function resetDashboard() {
    TAB NAVIGATION
    ═══════════════════════════════════════════════════════════════ */
 
+/* Un onglet par question. Les identifiants internes datent de l'ancienne
+   organisation (bilan = Vue d'ensemble, laboratoire = Publications,
+   compare-themes = Contenus, entonnoir = Réactions, statistiques = Historique). */
 const TAB_META = {
-  bilan:            { label: 'Résumé',                      title: 'Synthèse du compte' },
-  matrice:          { label: 'La Matrice Stratégique',      title: 'Croisement Thème × Média' },
-  entonnoir:        { label: "L'Entonnoir de l'Audience",   title: 'Conversion & Interactions' },
-  laboratoire:      { label: 'La Liste',                    title: 'Tops & Flops' },
-  statistiques:     { label: 'Années',                      title: 'Tendances annuelles' },
-  'compare-themes': { label: 'Thèmes',                      title: 'Analyse & comparaison de thèmes' },
-  abonnes:          { label: 'Abonnés',                     title: 'Évolution des abonnés' },
+  bilan:            { label: "Vue d'ensemble", title: 'Comment va mon compte ?' },
+  abonnes:          { label: 'Audience',       title: 'Mon audience grandit-elle ?' },
+  laboratoire:      { label: 'Publications',   title: 'Quels posts ont marché ?' },
+  'compare-themes': { label: 'Contenus',       title: 'Quels sujets et formats marchent ?' },
+  entonnoir:        { label: 'Réactions',      title: 'Comment les gens réagissent-ils ?' },
+  calendrier:       { label: 'Calendrier',     title: 'Quand et à quel rythme publier ?' },
+  statistiques:     { label: 'Historique',     title: "Est-ce que je progresse d'année en année ?" },
+};
+
+/* Question affichée selon le mode des onglets à plusieurs vues */
+const CONTENUS_TITLES = {
+  overview: 'Quels sujets et formats marchent ?',
+  analyse:  'Que donne un thème en détail ?',
+  compare:  'Quel thème marche le mieux ?',
+};
+const HISTORIQUE_TITLES = {
+  tendances: "Est-ce que je progresse d'année en année ?",
+  compare:   'Comment se comparent mes années ?',
 };
 
 function switchTab(tabId) {
@@ -702,7 +738,7 @@ function renderActiveTab() {
   const data = state.filteredData;
   switch (state.activeTab) {
     case 'bilan':       renderBilan(data); break;
-    case 'matrice':     renderMatrice(data); break;
+    case 'calendrier':  renderCalendrier(data); break;
     case 'entonnoir':   renderEntonnoir(data); break;
     case 'laboratoire':  renderLaboratoire(data); break;
     case 'statistiques': renderStatsPanel(data); break;
@@ -710,6 +746,61 @@ function renderActiveTab() {
     case 'abonnes':         renderAbonnesPanel();        break;
   }
   lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   VUE ESSENTIELLE / VUE COMPLÈTE
+   La vue essentielle masque les analyses détaillées (nuages de points,
+   radars, distributions…), marquées .is-detail dans le HTML, pour qu'un
+   débutant voie d'abord les 3 ou 4 blocs indispensables de chaque onglet.
+   Préférence de lecture propre à chaque navigateur : localStorage suffit.
+   ═══════════════════════════════════════════════════════════════ */
+
+const VIEW_KEY = 'linkedin-analytics-view';
+
+function initViewToggle() {
+  let saved = null;
+  try { saved = localStorage.getItem(VIEW_KEY); } catch (e) { /* stockage indisponible */ }
+  state.viewLevel = saved === 'complete' ? 'complete' : 'essentielle';
+
+  const setLevel = (level) => {
+    state.viewLevel = level;
+    try { localStorage.setItem(VIEW_KEY, level); } catch (e) { /* stockage indisponible */ }
+    applyViewLevel();
+  };
+  document.querySelectorAll('.view-toggle__btn').forEach(btn =>
+    btn.addEventListener('click', () => setLevel(btn.dataset.view)));
+  $('view-hint-btn').addEventListener('click', () => setLevel('complete'));
+
+  applyViewLevel();
+}
+
+function applyViewLevel() {
+  document.querySelector('.dashboard-main').dataset.view = state.viewLevel;
+  document.querySelectorAll('.view-toggle__btn').forEach(btn => {
+    const on = btn.dataset.view === state.viewLevel;
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-pressed', on);
+  });
+  updateViewHint();
+}
+
+/* Indique combien d'analyses détaillées la vue essentielle masque dans l'onglet */
+function updateViewHint() {
+  const hint  = $('view-hint');
+  const panel = document.querySelector('.tab-panel.is-active');
+  if (!hint) return;
+  const hidden = state.viewLevel === 'essentielle' && panel
+    ? [...panel.querySelectorAll('.is-detail')].filter(el => !el.closest('[hidden]')).length
+    : 0;
+  hint.hidden = hidden === 0;
+  if (hidden) {
+    $('view-hint-text').textContent = hidden > 1
+      ? `${hidden} analyses détaillées sont masquées dans cet onglet.`
+      : '1 analyse détaillée est masquée dans cet onglet.';
+  }
 }
 
 
@@ -736,7 +827,56 @@ function applyFilters() {
   $('sidebar-count').textContent = countText;
 
   state.page = 1;
+  renderActiveFilters();
   renderActiveTab();
+}
+
+function hasActiveFilter() {
+  const f = state.filters;
+  return !!(f.theme || f.media || f.dateFrom || f.dateTo);
+}
+
+/* Rappelle les filtres en tête de chaque onglet : sans ce rappel, on oublie
+   vite qu'un filtre posé dans la barre latérale change tous les chiffres. */
+function renderActiveFilters() {
+  const bar = $('active-filters');
+  if (!bar) return;
+  bar.hidden = !hasActiveFilter();
+  if (bar.hidden) return;
+
+  const f = state.filters;
+  const chips = [];
+  if (f.dateFrom && f.dateTo) chips.push(`Période : ${formatDisplayDate(f.dateFrom)} → ${formatDisplayDate(f.dateTo)}`);
+  else if (f.dateFrom)        chips.push(`Depuis le ${formatDisplayDate(f.dateFrom)}`);
+  else if (f.dateTo)          chips.push(`Jusqu'au ${formatDisplayDate(f.dateTo)}`);
+  if (f.theme) chips.push(`Thème : ${f.theme}`);
+  if (f.media) chips.push(`Format : ${f.media}`);
+
+  $('active-filters-list').innerHTML = chips
+    .map(c => `<span class="badge badge--neutral">${escHtml(c)}</span>`).join('');
+  $('active-filters-count').textContent =
+    `${postsLabel(state.filteredData.length)} sur ${fmt(state.rawData.length)}`;
+}
+
+/* ── Repère « vs ta normale » ──
+   Quand un filtre est actif, compare le chiffre de la sélection au même
+   indicateur sur tout l'historique. Sans filtre, la sélection est la normale :
+   le repère est masqué. Le mot accompagne toujours la couleur. */
+function setNormBadge(id, value, normal, { higherIsBetter = true, what = '' } = {}) {
+  const el = $(id);
+  if (!el) return;
+  if (!hasActiveFilter() || !normal || !isFinite(value)) { el.hidden = true; return; }
+  el.hidden = false;
+  const suffix = what ? ` (${what})` : '';
+  const diff = ((value - normal) / Math.abs(normal)) * 100;
+  if (Math.abs(diff) <= 5) {
+    el.innerHTML = `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ ta normale${suffix}</span>`;
+    return;
+  }
+  const up   = diff > 0;
+  const good = up === higherIsBetter;
+  el.innerHTML = `<span class="ts-kpi-delta ts-kpi-delta--${good ? 'up' : 'down'}">` +
+    `${up ? '▲ +' : '▼ −'}${fmtDec(Math.abs(diff))}\u202f% vs ta normale${suffix}</span>`;
 }
 
 function resetFilters() {
@@ -908,10 +1048,160 @@ function accountAvgEngagement() {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderBilan(data) {
+  renderTakeaways('bilan', takeawaysBilan(data));
   renderKPIs(data);
+  renderOverviewAudience(data);
   renderTimelineChart(data);
-  renderCadencePortee(data);
   renderPodium(data);
+}
+
+/* ── Rappel de l'audience ──
+   Mêmes calculs que l'onglet Audience (croissance d'un mois typique, indice de
+   visibilité du dernier mois), pour que les deux onglets affichent les mêmes
+   chiffres. Masqué quand le fichier n'a pas de feuille Abonnés. */
+function renderOverviewAudience(postData) {
+  const box = $('overview-audience');
+  if (!box) return;
+  const sub = filteredSubscriberData();
+  box.hidden = sub.length === 0;
+  if (sub.length === 0) return;
+
+  $('ov-abonnes').textContent = fmt(sub[sub.length - 1].abonnes);
+  $('ov-audience-note').hidden = !(state.filters.theme || state.filters.media);
+
+  const growthPct = buildMonthlyGrowthSeries(sub).filter(g => g !== null).map(g => g.pct);
+  $('ov-croissance').textContent = growthPct.length ? fmtSignedPct(median(growthPct)) : '—';
+
+  const points = buildReachRatioSeries(sub, postData).filter(r => r.ratio !== null);
+  const last   = points[points.length - 1];
+  $('ov-visibilite').textContent = last ? fmtPct(last.ratio) : '—';
+  $('ov-visibilite-label').textContent = last
+    ? `Indice de visibilité (${last.date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })})`
+    : 'Indice de visibilité';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CALENDRIER — Quand et à quel rythme publier ?
+   ═══════════════════════════════════════════════════════════════ */
+
+function renderCalendrier(data) {
+  renderTakeaways('calendrier', takeawaysCalendrier(data));
+  renderCadencePortee(data);
+  renderGroupPerfChart('chart-weekday', weekdayGroups(data));
+  renderGroupPerfChart('chart-slots', slotGroups(data));
+  renderHeatmapJourHeure(data);
+}
+
+/* ── Jour de la semaine et créneau horaire ──
+   Impressions d'un post typique (barres) et engagement moyen (courbe) par
+   groupe. Sous chaque nom : le nombre de posts, et « peu fiable » sous
+   MIN_GROUP_POSTS posts (le mot accompagne la couleur atténuée). */
+const TIME_SLOTS = [
+  { name: 'Tôt',        short: 'Tôt',   range: 'avant 9 h',   test: h => h < 9 },
+  { name: 'Matinée',    short: 'Matin', range: '9 h – 12 h',  test: h => h >= 9 && h < 12 },
+  { name: 'Midi',       short: 'Midi',  range: '12 h – 14 h', test: h => h >= 12 && h < 14 },
+  { name: 'Après-midi', short: 'Aprèm', range: '14 h – 18 h', test: h => h >= 14 && h < 18 },
+  { name: 'Soir',       short: 'Soir',  range: 'après 18 h',  test: h => h >= 18 },
+];
+const hasHour = d => d.heure !== null && d.heure !== undefined;
+
+function weekdayGroups(data) {
+  return JOURS_ORDER.map(day => ({ name: JOURS_LABELS[day], full: JOURS_LONGS[day], posts: data.filter(d => d.date.getDay() === day) }));
+}
+
+function slotGroups(data) {
+  const timed = data.filter(hasHour);
+  return TIME_SLOTS.map(sl => ({ name: sl.name, short: sl.short, full: `${sl.name} (${sl.range})`, posts: timed.filter(d => sl.test(d.heure)) }));
+}
+
+function renderGroupPerfChart(canvasId, groups) {
+  destroyChart(canvasId);
+  const canvas = $(canvasId);
+  if (!canvas) return;
+  const [d1, d2] = DATA_COLORS();
+  const rows = groups.map(g => ({
+    ...g,
+    n:    g.posts.length,
+    thin: g.posts.length > 0 && g.posts.length < MIN_GROUP_POSTS,
+    imp:  g.posts.length ? typicalImp(g.posts) : null,
+    eng:  g.posts.length ? avg(g.posts, 'tauxEngagement') : null,
+  }));
+  const sub = r => r.n === 0 ? 'aucun post' : `${postsLabel(r.n)}${r.thin ? ' · peu fiable' : ''}`;
+  /* Étiquettes adaptées à la largeur : sur mobile, nom court et nombre seul.
+     « * » signale un groupe peu fiable (en plus de la barre pâle) : la couleur n'est pas le seul indice. */
+  const tickLabels = width => {
+    const per = (width - 90) / rows.length;
+    return rows.map(r => [
+      per < 60 && r.short ? r.short : r.name,
+      (per < 75 ? String(r.n) : r.n === 0 ? 'aucun post' : postsLabel(r.n)) + (r.thin ? '*' : ''),
+    ]);
+  };
+
+  state.charts[canvasId] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: tickLabels(canvas.parentElement.clientWidth),
+      datasets: [
+        {
+          label: 'Impressions (post typique)',
+          type: 'bar',
+          data: rows.map(r => r.imp),
+          backgroundColor: rows.map(r => r.thin ? hexToRgba(d1, 0.35) : d1),
+          borderRadius: 4,
+          borderSkipped: false,
+          yAxisID: 'y',
+          order: 2,
+        },
+        {
+          label: 'Engagement moyen (%)',
+          type: 'line',
+          data: rows.map(r => r.eng),
+          borderColor: d2,
+          backgroundColor: 'transparent',
+          pointBackgroundColor: d2,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          borderWidth: 2,
+          tension: 0,
+          spanGaps: true,
+          yAxisID: 'y1',
+          order: 1,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onResize: (chart, size) => { chart.data.labels = tickLabels(size.width); },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: legendSpec('top', 'end'),
+        tooltip: {
+          ...tooltipBase(),
+          callbacks: {
+            title: items => { const r = rows[items[0].dataIndex]; return `${r.full} · ${sub(r)}`; },
+            label: ctx => {
+              if (ctx.raw === null) return null;
+              return ctx.dataset.yAxisID === 'y'
+                ? ` Post typique : ${fmt(ctx.raw)} impressions`
+                : ` Engagement moyen : ${fmtPct(ctx.raw)}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
+        y:  { ...scaleY({ beginAtZero: true, ticks: { callback: v => fmtK(v) } }), position: 'left' },
+        y1: {
+          position: 'right',
+          beginAtZero: true,
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: C.muted(), font: { size: 11 }, callback: v => `${fmtDec(v)} %` },
+        },
+      },
+    },
+  });
 }
 
 /* ── Cadence × portée médiane ──
@@ -965,7 +1255,7 @@ function renderCadencePortee(data) {
           order: 2,
         },
         {
-          label: 'Impressions médianes / publication',
+          label: 'Impressions (post typique)',
           type: 'line',
           data: months.map(m => m.medImp),
           borderColor: d2,
@@ -997,7 +1287,7 @@ function renderCadencePortee(data) {
               if (ctx.dataset.yAxisID === 'y') {
                 return `Publications : ${m.count}`;
               }
-              return m.medImp === null ? null : `Impressions médianes : ${fmt(m.medImp)}`;
+              return m.medImp === null ? null : `Post typique : ${fmt(m.medImp)} impressions`;
             },
           },
         },
@@ -1013,7 +1303,7 @@ function renderCadencePortee(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Médiane période ${fmt(periodMedian)}`,
+                content: `Post typique de la période : ${fmt(periodMedian)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1036,7 +1326,7 @@ function renderCadencePortee(data) {
           grid:   { display: false },
           border: { display: false },
           ticks:  { color: C.muted(), font: { size: 11 }, callback: v => fmtK(v) },
-          title: { display: true, text: 'Impressions médianes', color: C.muted(), font: { size: 11 } },
+          title: { display: true, text: 'Impressions (post typique)', color: C.muted(), font: { size: 11 } },
         },
       },
     },
@@ -1050,12 +1340,10 @@ function renderKPIs(data) {
   const medianImpressions = median(data.map(d => d.impressions));
   const avgClics = avg(data, 'tauxClics');
   const medianClics = median(data.map(d => d.tauxClics));
-  /* Engagement social = (réactions + coms + republi.) / impressions.
-     Le taux du fichier (avgEngagementRaw) inclut les clics et reste affiché
-     en référence dans la carte, pour rendre l'écart lisible. */
-  const avgEngagement    = avg(data, 'tauxEngagementSocial');
-  const medianEngagement = median(data.map(d => d.tauxEngagementSocial));
-  const avgEngagementRaw = avg(data, 'tauxEngagement');
+  /* L'engagement hors clics est affiché en complément dans la carte */
+  const avgEngagement    = avg(data, 'tauxEngagement');
+  const medianEngagement = median(data.map(d => d.tauxEngagement));
+  const avgEngagementHorsClics = avg(data, 'tauxEngagementHorsClics');
   const totalInteractions = data.reduce((acc, d) => acc + d.totalInteractions, 0);
 
   setKPI('kpi-impressions', fmtK(totalImpressions));
@@ -1064,10 +1352,17 @@ function renderKPIs(data) {
   setKPI('kpi-interactions', fmt(totalInteractions));
 
   $('kpi-posts-count').textContent = count;
+
+  const all = state.rawData;
+  setNormBadge('kpi-impressions-norm', medianImpressions, median(all.map(d => d.impressions)), { what: 'post typique' });
+  setNormBadge('kpi-clics-norm', avgClics, avg(all, 'tauxClics'));
+  setNormBadge('kpi-engagement-norm', avgEngagement, avg(all, 'tauxEngagement'));
+  setNormBadge('kpi-interactions-norm', count ? totalInteractions / count : 0,
+    all.length ? sum(all, 'totalInteractions') / all.length : 0, { what: 'par post' });
   $('kpi-impressions-median').textContent = fmt(medianImpressions);
   $('kpi-clics-median').textContent = fmtPct(medianClics);
   $('kpi-engagement-median').textContent = fmtPct(medianEngagement);
-  $('kpi-engagement-raw').textContent = fmtPct(avgEngagementRaw);
+  $('kpi-engagement-horsclics').textContent = fmtPct(avgEngagementHorsClics);
 
   /* Trend arrows: compare first half vs second half */
   if (data.length >= 4) {
@@ -1077,14 +1372,14 @@ function renderKPIs(data) {
     const secondHalf = sorted.slice(mid);
 
     renderTrend('kpi-impressions-trend',
-      sum(firstHalf, 'impressions') / firstHalf.length,
-      sum(secondHalf, 'impressions') / secondHalf.length);
+      median(firstHalf.map(d => d.impressions)),
+      median(secondHalf.map(d => d.impressions)));
     renderTrend('kpi-clics-trend',
       avg(firstHalf, 'tauxClics'),
       avg(secondHalf, 'tauxClics'));
     renderTrend('kpi-engagement-trend',
-      avg(firstHalf, 'tauxEngagementSocial'),
-      avg(secondHalf, 'tauxEngagementSocial'));
+      avg(firstHalf, 'tauxEngagement'),
+      avg(secondHalf, 'tauxEngagement'));
     renderTrend('kpi-interactions-trend',
       firstHalf.reduce((a, d) => a + d.totalInteractions, 0) / firstHalf.length,
       secondHalf.reduce((a, d) => a + d.totalInteractions, 0) / secondHalf.length);
@@ -1102,7 +1397,10 @@ function renderTrend(elementId, oldVal, newVal) {
   const icon = isUp ? 'trending-up' : 'trending-down';
   const cls  = isUp ? 'kpi-card__trend--up' : 'kpi-card__trend--down';
   const sign = isUp ? '+' : '';
-  el.innerHTML = `<span class="kpi-card__trend ${cls}"><i data-lucide="${icon}"></i>${sign}${pctChange.toFixed(1).replace('.', ',')}%</span>`;
+  /* Les posts de la période sont triés par date et coupés en deux moitiés :
+     la flèche compare la moitié récente à la moitié ancienne. Sans cette
+     précision, "+22 %" se lit spontanément comme "vs le mois dernier". */
+  el.innerHTML = `<span class="kpi-card__trend ${cls}" title="Compare la moitié la plus récente des publications de la période à la moitié la plus ancienne"><i data-lucide="${icon}"></i>${sign}${fmtDec(pctChange)}\u202f%<span class="kpi-card__trend-ref">vs 1re moitié de la période</span></span>`;
 }
 
 function setKPI(cardId, value) {
@@ -1117,9 +1415,12 @@ function animateCounter(el, targetText) {
   const numMatch = targetText.match(/[\d\s,.]+/);
   if (!numMatch) { el.textContent = targetText; return; }
 
-  const numStr = numMatch[0].trim();
-  const prefix = targetText.slice(0, numMatch.index);
-  const suffix = targetText.slice(numMatch.index + numMatch[0].length);
+  const numRaw = numMatch[0];
+  const numStr = numRaw.trim();
+  /* L'espace avant l'unité ("56,3 k", "2,60 %") fait partie du suffixe,
+     sinon il disparaît pendant l'animation puis réapparaît à la fin. */
+  const prefix = targetText.slice(0, numMatch.index) + numRaw.match(/^\s*/)[0];
+  const suffix = numRaw.match(/\s*$/)[0] + targetText.slice(numMatch.index + numRaw.length);
 
   /* Detect decimal separator (comma in fr-FR) */
   const hasDecimal = numStr.includes(',');
@@ -1185,6 +1486,7 @@ function renderTimelineChart(data) {
       .toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
   });
   const impressionValues = sorted.map(([, v]) => v.impressions);
+  const monthCounts = sorted.map(([, v]) => v.count);
   const engagementValues = sorted.map(([, v]) =>
     +(v.engagements.reduce((a, b) => a + b, 0) / v.engagements.length).toFixed(2)
   );
@@ -1221,7 +1523,7 @@ function renderTimelineChart(data) {
           order: 2,
         },
         {
-          label: 'Engagement fichier (%)',
+          label: 'Engagement (%)',
           type: 'line',
           data: engagementValues,
           borderColor: d2,
@@ -1247,9 +1549,9 @@ function renderTimelineChart(data) {
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title:  (items) => items[0].label,
-            label:  (ctx)   => ctx.dataset.label === 'Engagement fichier (%)'
-              ? `Engagement fichier : ${fmtPct(ctx.raw)}`
+            title:  (items) => `${items[0].label} · ${postsLabel(monthCounts[items[0].dataIndex])}`,
+            label:  (ctx)   => ctx.dataset.label === 'Engagement (%)'
+              ? `Engagement : ${fmtPct(ctx.raw)}`
               : `Impressions : ${fmt(ctx.raw)}`,
           },
         },
@@ -1265,7 +1567,7 @@ function renderTimelineChart(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. fichier ${fmtPct(avgEng)}`,
+                content: `Moy. ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1276,7 +1578,7 @@ function renderTimelineChart(data) {
         },
       },
       scales: {
-        x:  scaleX({ ticks: { maxRotation: 0 } }),
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
         y:  { ...scaleY({ ticks: { callback: (v) => fmtK(v) } }), position: 'left' },
         y1: {
           position: 'right',
@@ -1388,7 +1690,7 @@ function renderTypeCompare(data) {
       count:      group.length,
       share:      (group.length / typed.length) * 100,
       medImp:     median(group.map(d => d.impressions)),
-      medEngSoc:  median(group.map(d => d.tauxEngagementSocial)),
+      medEng:  median(group.map(d => d.tauxEngagement)),
       reactPerK:  groupImpressions > 0 ? (sum(group, 'reactions') / groupImpressions) * 1000 : 0,
       comsPerPost: avg(group, 'commentaires'),
       thin:       group.length < MIN_TYPE_SAMPLES,
@@ -1401,14 +1703,13 @@ function renderTypeCompare(data) {
   const best = (key) => solid.length >= 2 ? Math.max(...solid.map(r => r[key])) : null;
   const bests = {
     medImp:      best('medImp'),
-    medEngSoc:   best('medEngSoc'),
+    medEng:   best('medEng'),
     reactPerK:   best('reactPerK'),
     comsPerPost: best('comsPerPost'),
   };
   const mark = (row, key) =>
     (!row.thin && bests[key] !== null && row[key] === bests[key]) ? ' cell--top' : '';
 
-  const fmtDec = n => n.toFixed(1).replace('.', ',');
 
   let html = `<table class="data-table" aria-label="Comparaison des publications natives et des re-posts">
     <thead>
@@ -1416,10 +1717,10 @@ function renderTypeCompare(data) {
         <th scope="col">Type</th>
         <th class="text-right" scope="col">Publications</th>
         <th class="text-right" scope="col">Part du volume</th>
-        <th class="text-right" scope="col">Impressions méd.</th>
-        <th class="text-right" scope="col">Eng. social méd.</th>
-        <th class="text-right" scope="col">Réactions / 1 000</th>
-        <th class="text-right" scope="col">Coms / publi.</th>
+        <th class="text-right" scope="col">Impressions (post typique)</th>
+        <th class="text-right" scope="col">Engagement (post typique)</th>
+        <th class="text-right" scope="col">Réactions pour 1 000 impr.</th>
+        <th class="text-right" scope="col">Commentaires par post</th>
       </tr>
     </thead>
     <tbody>`;
@@ -1433,7 +1734,7 @@ function renderTypeCompare(data) {
       <td class="text-right">${fmt(r.count)}</td>
       <td class="text-right">${fmtPct(r.share)}</td>
       <td class="text-right${mark(r, 'medImp')}">${fmt(r.medImp)}</td>
-      <td class="text-right${mark(r, 'medEngSoc')}">${fmtPct(r.medEngSoc)}</td>
+      <td class="text-right${mark(r, 'medEng')}">${fmtPct(r.medEng)}</td>
       <td class="text-right${mark(r, 'reactPerK')}">${fmtDec(r.reactPerK)}</td>
       <td class="text-right${mark(r, 'comsPerPost')}">${fmtDec(r.comsPerPost)}</td>
     </tr>`;
@@ -1453,8 +1754,15 @@ function renderTypeCompare(data) {
 }
 
 /* ── Heatmap: Theme x Media ── */
+/* Sous ce nombre de posts, une case de heatmap reflète ces posts et non une
+   tendance : elle est entourée de pointillés et la légende le rappelle. */
+const MIN_RELIABLE_POSTS = 3;
+const THIN_LEGEND = `<p class="heatmap-legend"><span class="heatmap-legend__swatch" aria-hidden="true"></span>` +
+  `Pointillés : moins de ${MIN_RELIABLE_POSTS} posts, résultat peu fiable.</p>`;
+
 function renderHeatmap(data) {
   const container = $('heatmap-container');
+  let hasThin = false;
   const metric = state.heatmapMetric; // 'engagement' or 'impressions'
 
   const themes = [...new Set(data.map(d => d.theme))].filter(t => t !== '—').sort();
@@ -1481,7 +1789,7 @@ function renderHeatmap(data) {
       if (matches.length > 0) {
         const val = metric === 'engagement'
           ? avg(matches, 'tauxEngagement')
-          : avg(matches, 'impressions');
+          : median(matches.map(d => d.impressions));
         matrix[theme][media] = { value: val, count: matches.length };
         if (val < globalMin) globalMin = val;
         if (val > globalMax) globalMax = val;
@@ -1513,7 +1821,9 @@ function renderHeatmap(data) {
         const textColor  = isDark ? bgCol : cssVar('--color-text');
         const countColor = isDark ? hexToRgba(bgCol, 0.75) : cssVar('--color-text-muted');
         const displayVal = metric === 'engagement' ? fmtPct(cell.value) : fmt(Math.round(cell.value));
-        html += `<td class="heatmap-cell--value" style="background:${bg};color:${textColor}">${displayVal}<span class="heatmap-count" style="color:${countColor}">${cell.count} post${cell.count > 1 ? 's' : ''}</span></td>`;
+        const thin = cell.count < MIN_RELIABLE_POSTS;
+        if (thin) hasThin = true;
+        html += `<td class="heatmap-cell--value${thin ? ' heatmap-cell--thin' : ''}" style="background:${bg};color:${textColor}"${thin ? ` title="Moins de ${MIN_RELIABLE_POSTS} posts : résultat peu fiable"` : ''}>${displayVal}<span class="heatmap-count" style="color:${countColor}">${cell.count} post${cell.count > 1 ? 's' : ''}</span></td>`;
       } else {
         html += `<td class="heatmap-cell--empty">—</td>`;
       }
@@ -1522,7 +1832,7 @@ function renderHeatmap(data) {
   });
 
   html += '</tbody></table>';
-  container.innerHTML = html;
+  container.innerHTML = html + (hasThin ? THIN_LEGEND : '');
 }
 
 /* ── Effort vs Reward: grouped bar ── */
@@ -1602,7 +1912,7 @@ function renderEffortVsReward(data) {
               borderDash: [6, 4],
               label: {
                 display: true,
-                content: `Moy. fichier ${fmtPct(avgEng)}`,
+                content: `Moy. ${fmtPct(avgEng)}`,
                 position: 'start',
                 font: { size: 11, family: "'Geist', system-ui, sans-serif" },
                 color: C.muted(),
@@ -1634,6 +1944,7 @@ function renderEffortVsReward(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderEntonnoir(data) {
+  renderTakeaways('reactions', takeawaysReactions(data));
   renderEngagementDepth(data);
   renderFunnelChart(data);
   renderStackedEngagement(data);
@@ -1663,7 +1974,6 @@ function renderEngagementDepth(data) {
     return;
   }
 
-  const fmtDec = n => n.toFixed(1).replace('.', ',');
 
   /* Réactions / 1 000 impressions — agrégé sur la période (rapport de totaux),
      complété par la médiane par publication qui décrit le post typique. */
@@ -1675,24 +1985,32 @@ function renderEngagementDepth(data) {
     .map(d => (d.reactions / d.impressions) * 1000);
   setDepthKPI('kpi-react-mille', fmtDec(reactPerK),
     perPostReactPerK.length > 0
-      ? `Médiane par publication : ${fmtDec(median(perPostReactPerK))}`
+      ? `Post typique : ${fmtDec(median(perPostReactPerK))}`
       : '');
 
   /* Commentaires par publication */
   const avgComs = avg(data, 'commentaires');
   setDepthKPI('kpi-coms-post', fmtDec(avgComs),
-    `Médiane : ${fmtDec(median(data.map(d => d.commentaires)))} · ${fmt(sum(data, 'commentaires'))} au total`);
+    `Post typique : ${fmtDec(median(data.map(d => d.commentaires)))} · ${fmt(sum(data, 'commentaires'))} au total`);
 
   /* Republications par publication */
   const avgRepublis = avg(data, 'republis');
   setDepthKPI('kpi-republi-post', fmtDec(avgRepublis),
-    `Médiane : ${fmtDec(median(data.map(d => d.republis)))} · ${fmt(sum(data, 'republis'))} au total`);
+    `Post typique : ${fmtDec(median(data.map(d => d.republis)))} · ${fmt(sum(data, 'republis'))} au total`);
 
   /* Part des publications sans aucun commentaire */
   const zeroComs = data.filter(d => d.commentaires === 0).length;
   const zeroPct  = (zeroComs / data.length) * 100;
   setDepthKPI('kpi-zero-coms', fmtPct(zeroPct),
     `${fmt(zeroComs)} publication${zeroComs > 1 ? 's' : ''} sur ${fmt(data.length)}`);
+
+  const all = state.rawData;
+  const allImpressions = sum(all, 'impressions');
+  setNormBadge('kpi-react-mille-norm', reactPerK, allImpressions ? sum(all, 'reactions') / allImpressions * 1000 : 0);
+  setNormBadge('kpi-coms-post-norm', avgComs, avg(all, 'commentaires'));
+  setNormBadge('kpi-republi-post-norm', avgRepublis, avg(all, 'republis'));
+  setNormBadge('kpi-zero-coms-norm', zeroPct,
+    all.length ? all.filter(d => d.commentaires === 0).length / all.length * 100 : 0, { higherIsBetter: false });
 }
 
 /* ── Funnel ── */
@@ -1734,8 +2052,8 @@ function renderFunnelChart(data) {
             title: (items) => items[0].label,
             label: (ctx) => {
               const pct = totalImpressions > 0
-                ? ((ctx.raw / totalImpressions) * 100).toFixed(1) : 0;
-              return `${fmt(ctx.raw)} (${pct}% des impressions)`;
+                ? fmtDec((ctx.raw / totalImpressions) * 100) : '0';
+              return `${fmt(ctx.raw)} (${pct} % des impressions)`;
             },
           },
         },
@@ -1812,7 +2130,7 @@ function renderStackedEngagement(data) {
           ...tooltipBase(),
           callbacks: {
             title: (items) => items[0].label,
-            label: (ctx)   => `${ctx.dataset.label} : ${ctx.raw.toFixed(1)}%`,
+            label: (ctx)   => `${ctx.dataset.label} : ${fmtDec(ctx.raw)} %`,
           },
         },
       },
@@ -1830,6 +2148,7 @@ function renderStackedEngagement(data) {
    ═══════════════════════════════════════════════════════════════ */
 
 function renderLaboratoire(data) {
+  renderTakeaways('publications', takeawaysPublications(data));
   renderTopsFlops(data);
   renderLeaderboardTable();
 }
@@ -1844,6 +2163,52 @@ function renderTopsFlops(data) {
     toggleSelector: '.lab-tf-toggle',
     secondCol: { key: 'theme', label: 'Thème' },
     emptyIcon: 'flask-conical',
+    onModeChange: (newMode) => {
+      if (state.labTopFlopMode === newMode) return;
+      state.labTopFlopMode = newMode;
+      renderTopsFlops(state.filteredData);
+    },
+  });
+  renderMonthTopFlop(data);
+}
+
+/* ── Le mois en bref (Top 3 / Flop 3 du mois) ──
+   Même classement que ci-dessus, restreint aux posts du mois choisi. Les
+   références de format (médianes) restent celles de toute la période : un mois
+   faible ne fait pas passer un post moyen pour un succès. */
+const monthKeyOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+function renderMonthTopFlop(data) {
+  const cardEl = $('month-topflop-card');
+  const sel    = $('month-topflop-select');
+  if (!cardEl || !sel) return;
+
+  const months = [...new Set(data.map(d => monthKeyOf(d.date)))].sort().reverse();
+  cardEl.hidden = months.length === 0;
+  if (!months.length) return;
+  const countOf = k => data.filter(d => monthKeyOf(d.date) === k).length;
+  /* Par défaut : le mois le plus récent qui compte au moins 2 posts (un classement
+     à 1 post ne dit rien) ; le mois en cours reste sélectionnable. */
+  if (!months.includes(state.topFlopMonth)) {
+    state.topFlopMonth = months.find(k => countOf(k) >= 2) || months[0];
+  }
+
+  sel.innerHTML = months.map(k => {
+    const [y, m] = k.split('-');
+    const label = new Date(+y, +m - 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    return `<option value="${k}"${k === state.topFlopMonth ? ' selected' : ''}>${label} (${postsLabel(countOf(k))})</option>`;
+  }).join('');
+  sel.onchange = () => { state.topFlopMonth = sel.value; renderMonthTopFlop(state.filteredData); };
+
+  renderTopFlopBlock({
+    containerId: 'month-topflop',
+    posts: data.filter(d => monthKeyOf(d.date) === state.topFlopMonth),
+    allData: data,
+    mode: state.labTopFlopMode,
+    count: 3,
+    toggleSelector: '.lab-tf-toggle',
+    secondCol: { key: 'theme', label: 'Thème' },
+    emptyIcon: 'calendar',
     onModeChange: (newMode) => {
       if (state.labTopFlopMode === newMode) return;
       state.labTopFlopMode = newMode;
@@ -1869,7 +2234,7 @@ function renderLeaderboardTable() {
 
   /* Compute percentile thresholds */
   const engValues   = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engSocValues = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
+  const engHcValues = data.map(d => d.tauxEngagementHorsClics).sort((a, b) => a - b);
   const imprValues  = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues  = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -1881,7 +2246,7 @@ function renderLeaderboardTable() {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10 = p10(engValues),       engP90 = p90(engValues);
-  const engSocP10 = p10(engSocValues), engSocP90 = p90(engSocValues);
+  const engHcP10 = p10(engHcValues),   engHcP90 = p90(engHcValues);
   const imprP10 = p10(imprValues),     imprP90 = p90(imprValues);
   const reactP10 = p10(reactValues),   reactP90 = p90(reactValues);
   const commP10 = p10(commValues),     commP90 = p90(commValues);
@@ -1944,12 +2309,12 @@ function renderLeaderboardTable() {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
-      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
+      <td class="text-right ${cellClass(row.tauxEngagementHorsClics, engHcP10, engHcP90)}">${fmtPct(row.tauxEngagementHorsClics)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
@@ -1960,9 +2325,26 @@ function renderLeaderboardTable() {
    TABLE SORT
    ═══════════════════════════════════════════════════════════════ */
 
+/* Pastilles d'engagement : repères relatifs à la normale du compte, et non
+   seuils absolus qui ne valent que pour un compte donné. Haute = quart des
+   publications le plus engageant de tout l'historique, basse = quart le moins
+   engageant. Calculé sur rawData (et non sur la période filtrée) pour qu'un
+   même post garde la même pastille quel que soit le filtre. */
+let engagementBandsCache = { source: null, p25: 0, p75: 0 };
+
+function engagementBands() {
+  if (engagementBandsCache.source !== state.rawData) {
+    const rates = state.rawData.map(d => d.tauxEngagement).sort((a, b) => a - b);
+    const at = q => rates.length ? rates[Math.min(rates.length - 1, Math.floor(rates.length * q))] : 0;
+    engagementBandsCache = { source: state.rawData, p25: at(0.25), p75: at(0.75) };
+  }
+  return engagementBandsCache;
+}
+
 function engagementClass(pct) {
-  if (pct >= 5) return 'engagement-pill--high';
-  if (pct >= 2) return 'engagement-pill--mid';
+  const { p25, p75 } = engagementBands();
+  if (pct >= p75) return 'engagement-pill--high';
+  if (pct > p25)  return 'engagement-pill--mid';
   return 'engagement-pill--low';
 }
 
@@ -1989,7 +2371,7 @@ function sortData(data, col, dir) {
       case 'republis':      return mult * (a.republis - b.republis);
       case 'clics':         return mult * (a.clics - b.clics);
       case 'tauxClics':     return mult * (a.tauxClics - b.tauxClics);
-      case 'engagementSocial': return mult * (a.tauxEngagementSocial - b.tauxEngagementSocial);
+      case 'engagementHorsClics': return mult * (a.tauxEngagementHorsClics - b.tauxEngagementHorsClics);
       case 'engagement':   return mult * (a.tauxEngagement - b.tauxEngagement);
       default:             return 0;
     }
@@ -2018,6 +2400,7 @@ function buildYearColorMap(data) {
  * selon state.statsMode.
  */
 function renderStatsPanel(data) {
+  renderTakeaways('historique', takeawaysHistorique(data));
   renderStatsModeToggle(data);
 
   const tendancesSection = document.getElementById('sy-tendances');
@@ -2026,15 +2409,16 @@ function renderStatsPanel(data) {
   if (state.statsMode === 'tendances') {
     if (tendancesSection) tendancesSection.hidden = false;
     if (compareSection)   compareSection.hidden   = true;
-    $('tab-section-title').textContent = 'Tendances annuelles';
+    $('tab-section-title').textContent = HISTORIQUE_TITLES.tendances;
     renderStatistiques(data);
   } else {
     if (tendancesSection) tendancesSection.hidden = true;
     if (compareSection)   compareSection.hidden   = false;
-    $('tab-section-title').textContent = 'Comparaison multi-années';
+    $('tab-section-title').textContent = HISTORIQUE_TITLES.compare;
     renderComparaison(data);
   }
   if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
 }
 
 function renderStatsModeToggle(data) {
@@ -2062,7 +2446,6 @@ function renderStatistiques(data) {
   renderYearlyTotalChart(data);
   renderYearlyImpressionsChart(data);
   renderYearlyEngClicksChart(data);
-  renderHeatmapJourHeure(data);
 }
 
 function renderYtdCumulChart(data) {
@@ -2228,14 +2611,15 @@ function renderYearlyImpressionsChart(data) {
   data.forEach(d => {
     if (!d.date) return;
     const y = d.date.getFullYear();
-    if (!byYear[y]) byYear[y] = { total: 0, count: 0 };
+    if (!byYear[y]) byYear[y] = { total: 0, imps: [] };
     byYear[y].total += (d.impressions || 0);
-    byYear[y].count++;
+    byYear[y].imps.push(d.impressions || 0);
   });
 
   const years = Object.keys(byYear).map(Number).sort((a, b) => a - b);
   const totals   = years.map(y => byYear[y].total);
-  const averages = years.map(y => Math.round(byYear[y].total / byYear[y].count));
+  /* Post typique = médiane : un post viral ne tire pas l'année vers le haut */
+  const typicals = years.map(y => Math.round(median(byYear[y].imps)));
 
   const [d1, d2] = DATA_COLORS();
 
@@ -2256,9 +2640,9 @@ function renderYearlyImpressionsChart(data) {
           order: 2,
         },
         {
-          label: 'Moy. par post',
+          label: 'Post typique (médiane)',
           type: 'line',
-          data: averages,
+          data: typicals,
           borderColor: d2,
           borderWidth: 2,
           backgroundColor: 'transparent',
@@ -2282,8 +2666,8 @@ function renderYearlyImpressionsChart(data) {
           ...tooltipBase(),
           callbacks: {
             title: (items) => items[0].label,
-            label: (item) => item.dataset.label === 'Moy. par post'
-              ? ` Moy. par post : ${fmt(item.raw)}`
+            label: (item) => item.dataset.label === 'Post typique (médiane)'
+              ? ` Post typique : ${fmt(item.raw)} impressions`
               : ` Total : ${fmtK(item.raw)}`,
           },
         },
@@ -2359,7 +2743,7 @@ function renderYearlyEngClicksChart(data) {
         tooltip: {
           ...tooltipBase(),
           callbacks: {
-            title: (items) => items[0].label,
+            title: (items) => `${items[0].label} · ${postsLabel(byYear[years[items[0].dataIndex]].eng.length)}`,
             label: (item) => ` ${item.dataset.label} : ${fmtPct(item.raw)}`,
           },
         },
@@ -2377,6 +2761,7 @@ const JOURS_ORDER  = [1, 2, 3, 4, 5, 6, 0]; // Lun–Dim (JS: 0=Dim)
 
 function renderHeatmapJourHeure(data) {
   const container = $('heatmap-jour-heure');
+  let hasThin = false;
   if (!container) return;
 
   const withHeure = data.filter(d => d.heure !== null && d.heure !== undefined);
@@ -2403,7 +2788,9 @@ function renderHeatmapJourHeure(data) {
     for (let h = 0; h < 24; h++) {
       const matches = withHeure.filter(d => d.date.getDay() === dayIdx && d.heure === h);
       if (matches.length > 0) {
-        const val = avg(matches, metricKey);
+        const val = metricKey === 'impressions'
+          ? median(matches.map(d => d.impressions))
+          : avg(matches, metricKey);
         matrix[dayIdx][h] = { value: val, count: matches.length };
         if (val < globalMin) globalMin = val;
         if (val > globalMax) globalMax = val;
@@ -2435,7 +2822,9 @@ function renderHeatmapJourHeure(data) {
         const textColor  = isDark ? bgCol : cssVar('--color-text');
         const countColor = isDark ? hexToRgba(bgCol, 0.75) : cssVar('--color-text-muted');
         const displayVal = metric === 'engagement' ? fmtPct(cell.value) : fmtK(cell.value);
-        html += `<td class="heatmap-jh-cell--value" style="background:${bg};color:${textColor}" title="${cell.count} post${cell.count > 1 ? 's' : ''}">`;
+        const thin = cell.count < MIN_RELIABLE_POSTS;
+        if (thin) hasThin = true;
+        html += `<td class="heatmap-jh-cell--value${thin ? ' heatmap-cell--thin' : ''}" style="background:${bg};color:${textColor}" title="${postsLabel(cell.count)}${thin ? ' : résultat peu fiable' : ''}">`;
         html += `${escHtml(displayVal)}<span class="heatmap-jh-count" style="color:${countColor}">${cell.count}</span></td>`;
       } else {
         html += `<td class="heatmap-jh-cell--empty">—</td>`;
@@ -2445,7 +2834,7 @@ function renderHeatmapJourHeure(data) {
   });
 
   html += '</tbody></table>';
-  container.innerHTML = html;
+  container.innerHTML = html + (hasThin ? THIN_LEGEND : '');
 }
 
 
@@ -2483,7 +2872,7 @@ function renderComparaison(data) {
   const deltaSection = $('compare-delta-section');
   if (selected.length === 2) {
     deltaSection.hidden = false;
-    $('compare-delta-title').textContent = `${selected[0]} → ${selected[1]} — Variation`;
+    $('compare-delta-title').textContent = `${selected[1]} comparé à ${selected[0]}`;
     renderCompareDelta(yearDataMap, selected[0], selected[1], yearColorMap);
   } else {
     deltaSection.hidden = true;
@@ -2515,6 +2904,7 @@ function renderYearPills(allYears, yearColorMap) {
       }
       renderStatsModeToggle(state.filteredData);
       renderComparaison(state.filteredData);
+      updateViewHint();
     });
   });
 }
@@ -2538,11 +2928,11 @@ function renderCompareKPIs(yearDataMap, years, yearColorMap) {
           <p class="compare-kpi-item__value">${fmtK(sum(d, 'impressions'))}</p>
         </div>
         <div class="compare-kpi-item">
-          <p class="compare-kpi-item__label">Engagement moy.</p>
+          <p class="compare-kpi-item__label">Engagement moyen</p>
           <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxEngagement'))}</p>
         </div>
         <div class="compare-kpi-item">
-          <p class="compare-kpi-item__label">Taux de clics moy.</p>
+          <p class="compare-kpi-item__label">Taux de clics moyen</p>
           <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxClics'))}</p>
         </div>
       </div>`;
@@ -2630,13 +3020,13 @@ function renderCompareDistImpressionsChart(yearDataMap, years, yearColorMap) {
     pointHoverRadius: 6,
   }));
 
-  // Average marker: short horizontal dashed segment per year
+  // Repère du post typique (médiane) : court segment horizontal par année
   const avgDatasets = years.map((y, i) => {
-    const mean = yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0;
+    const typical = median(yearDataMap[y].map(d => d.impressions));
     return {
       label: `_avg_${y}`,
       type: 'line',
-      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      data: [{ x: i - 0.32, y: typical }, { x: i + 0.32, y: typical }],
       borderColor: yearColorMap[y],
       borderWidth: 2.5,
       borderDash: [4, 3],
@@ -2698,8 +3088,8 @@ function renderCompareRadarChart(yearDataMap, years, yearColorMap) {
   const radarMetrics = [
     { label: 'Engagement',        getValue: (y) => avg(yearDataMap[y], 'tauxEngagement'),                                                    fmt: fmtPct },
     { label: 'Taux de clics',     getValue: (y) => avg(yearDataMap[y], 'tauxClics'),                                                         fmt: fmtPct },
-    { label: 'Impressions/post',  getValue: (y) => yearDataMap[y].length ? sum(yearDataMap[y], 'impressions') / yearDataMap[y].length : 0,   fmt: fmtK   },
-    { label: 'Interactions/post', getValue: (y) => avg(yearDataMap[y], 'interactions'),                                                      fmt: (v) => v.toFixed(1) },
+    { label: 'Impressions (post typique)', getValue: (y) => median(yearDataMap[y].map(d => d.impressions)), fmt: fmtK },
+    { label: 'Interactions par post', getValue: (y) => avg(yearDataMap[y], 'interactions'),                                                      fmt: (v) => fmtDec(v) },
   ];
 
   // Raw values indexed as [metricIndex][yearIndex]
@@ -2769,9 +3159,11 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
       const rows = d.filter(r => r.date && r.date.getMonth() === m);
       return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
     });
+    const counts = Array.from({ length: 12 }, (_, m) => d.filter(r => r.date && r.date.getMonth() === m).length);
     return {
       label: String(y),
       data: byMonth,
+      counts,
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
@@ -2799,7 +3191,7 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
           callbacks: {
             title: (items) => MONTH_LABELS[items[0].dataIndex],
             label: (item) => item.parsed.y !== null
-              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`
+              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)} (${postsLabel(item.dataset.counts[item.dataIndex])})`
               : ` ${item.dataset.label} : —`,
           },
         },
@@ -2808,7 +3200,7 @@ function renderCompareTrendChart(yearDataMap, years, yearColorMap) {
         x: scaleX(),
         y: scaleY({
           beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+          ticks: { callback: (v) => `${fmtDec(v)} %` },
         }),
       },
     },
@@ -2888,10 +3280,10 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
   const metrics = [
     { label: 'Publications',        valA: dA.length,                                           valB: dB.length,                                           fmtFn: fmt    },
     { label: 'Impressions totales', valA: sum(dA, 'impressions'),                               valB: sum(dB, 'impressions'),                               fmtFn: fmtK   },
-    { label: 'Impressions / post',  valA: dA.length ? sum(dA, 'impressions') / dA.length : 0,  valB: dB.length ? sum(dB, 'impressions') / dB.length : 0,  fmtFn: fmtK   },
+    { label: 'Impressions (post typique)', valA: median(dA.map(d => d.impressions)), valB: median(dB.map(d => d.impressions)), fmtFn: fmtK },
     { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                            valB: avg(dB, 'tauxEngagement'),                            fmtFn: fmtPct },
     { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                 valB: avg(dB, 'tauxClics'),                                 fmtFn: fmtPct },
-    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
+    { label: 'Actions totales',     valA: sum(dA, 'totalInteractions'),                         valB: sum(dB, 'totalInteractions'),                         fmtFn: fmt    },
   ];
 
   const rows = metrics.map(m => {
@@ -2908,10 +3300,10 @@ function renderCompareDelta(yearDataMap, yearA, yearB, yearColorMap) {
       badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
     } else if (m.valA >= m.valB) {
       const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">${yearA}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">${yearA}&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     } else {
       const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">${yearB}&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">${yearB}&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     }
 
     return `<tr>
@@ -2982,7 +3374,7 @@ function renderCompareThemes(data) {
   renderCTKPIs(themeDataMap, selected, themeColorMap);
 
   /* Delta table first */
-  $('ct-delta-title').textContent = `${selected[0]} vs ${selected[1]} — Variation`;
+  $('ct-delta-title').textContent = `${selected[1]} comparé à ${selected[0]}`;
   renderCTDelta(themeDataMap, selected[0], selected[1], themeColorMap);
 
   /* Then charts */
@@ -3031,6 +3423,7 @@ function renderCTSelectors(allThemes) {
       state.compareThemes[changedIdx] = newVal;
       state.compareThemes = state.compareThemes.filter(Boolean);
       renderCompareThemes(state.filteredData);
+      updateViewHint();
     };
   }
 
@@ -3043,6 +3436,7 @@ function renderCTSelectors(allThemes) {
   newSwap.addEventListener('click', () => {
     state.compareThemes = [state.compareThemes[1], state.compareThemes[0]].filter(Boolean);
     renderCompareThemes(state.filteredData);
+    updateViewHint();
   });
 }
 
@@ -3065,11 +3459,11 @@ function renderCTKPIs(themeDataMap, themes, themeColorMap) {
           <p class="compare-kpi-item__value">${fmtK(sum(d, 'impressions'))}</p>
         </div>
         <div class="compare-kpi-item">
-          <p class="compare-kpi-item__label">Engagement moy.</p>
+          <p class="compare-kpi-item__label">Engagement moyen</p>
           <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxEngagement'))}</p>
         </div>
         <div class="compare-kpi-item">
-          <p class="compare-kpi-item__label">Taux de clics moy.</p>
+          <p class="compare-kpi-item__label">Taux de clics moyen</p>
           <p class="compare-kpi-item__value">${fmtPct(avg(d, 'tauxClics'))}</p>
         </div>
       </div>`;
@@ -3131,13 +3525,13 @@ function renderCTImpressionsChart(themeDataMap, themes, themeColorMap) {
     pointHoverRadius: 6,
   }));
 
-  // Average marker: short horizontal segment per theme
+  // Repère du post typique (médiane) : court segment horizontal par thème
   const avgDatasets = themes.map((t, i) => {
-    const mean = themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0;
+    const typical = median(themeDataMap[t].map(d => d.impressions));
     return {
       label: `_avg_${t}`,
       type: 'line',
-      data: [{ x: i - 0.32, y: mean }, { x: i + 0.32, y: mean }],
+      data: [{ x: i - 0.32, y: typical }, { x: i + 0.32, y: typical }],
       borderColor: themeColorMap[t],
       borderWidth: 2.5,
       borderDash: [4, 3],
@@ -3199,8 +3593,8 @@ function renderCTPerfChart(themeDataMap, themes, themeColorMap) {
   const radarMetrics = [
     { label: 'Engagement',       getValue: (t) => avg(themeDataMap[t], 'tauxEngagement'),                                                   fmt: fmtPct },
     { label: 'Taux de clics',    getValue: (t) => avg(themeDataMap[t], 'tauxClics'),                                                        fmt: fmtPct },
-    { label: 'Impressions/post', getValue: (t) => themeDataMap[t].length ? sum(themeDataMap[t], 'impressions') / themeDataMap[t].length : 0, fmt: fmtK   },
-    { label: 'Interactions/post',getValue: (t) => avg(themeDataMap[t], 'interactions'),                                                     fmt: (v) => v.toFixed(1) },
+    { label: 'Impressions (post typique)', getValue: (t) => median(themeDataMap[t].map(d => d.impressions)), fmt: fmtK },
+    { label: 'Interactions par post',getValue: (t) => avg(themeDataMap[t], 'interactions'),                                                     fmt: (v) => fmtDec(v) },
   ];
 
   // Raw values indexed as [metricIndex][themeIndex]
@@ -3270,9 +3664,11 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
       const rows = d.filter(r => r.date && r.date.getMonth() === m);
       return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
     });
+    const counts = Array.from({ length: 12 }, (_, m) => d.filter(r => r.date && r.date.getMonth() === m).length);
     return {
       label: t,
       data: byMonth,
+      counts,
       borderColor: color,
       backgroundColor: 'transparent',
       pointBackgroundColor: color,
@@ -3300,7 +3696,7 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
           callbacks: {
             title: (items) => MONTH_LABELS[items[0].dataIndex],
             label: (item) => item.parsed.y !== null
-              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)}`
+              ? ` ${item.dataset.label} : ${fmtPct(item.parsed.y)} (${postsLabel(item.dataset.counts[item.dataIndex])})`
               : ` ${item.dataset.label} : —`,
           },
         },
@@ -3309,7 +3705,7 @@ function renderCTTrendChart(themeDataMap, themes, themeColorMap) {
         x: scaleX(),
         y: scaleY({
           beginAtZero: true,
-          ticks: { callback: (v) => `${v.toFixed(1)} %` },
+          ticks: { callback: (v) => `${fmtDec(v)} %` },
         }),
       },
     },
@@ -3325,10 +3721,10 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
   const metrics = [
     { label: 'Publications',        valA: dA.length,                                          valB: dB.length,                                          fmtFn: fmt    },
     { label: 'Impressions totales', valA: sum(dA, 'impressions'),                              valB: sum(dB, 'impressions'),                              fmtFn: fmtK   },
-    { label: 'Impressions / post',  valA: dA.length ? sum(dA,'impressions')/dA.length : 0,    valB: dB.length ? sum(dB,'impressions')/dB.length : 0,    fmtFn: fmtK   },
+    { label: 'Impressions (post typique)', valA: median(dA.map(d => d.impressions)), valB: median(dB.map(d => d.impressions)), fmtFn: fmtK },
     { label: 'Engagement moyen',    valA: avg(dA, 'tauxEngagement'),                           valB: avg(dB, 'tauxEngagement'),                           fmtFn: fmtPct },
     { label: 'Taux de clics moyen', valA: avg(dA, 'tauxClics'),                                valB: avg(dB, 'tauxClics'),                                fmtFn: fmtPct },
-    { label: 'Total interactions',  valA: sum(dA, 'totalInteractions'),                        valB: sum(dB, 'totalInteractions'),                        fmtFn: fmt    },
+    { label: 'Actions totales',     valA: sum(dA, 'totalInteractions'),                        valB: sum(dB, 'totalInteractions'),                        fmtFn: fmt    },
   ];
 
   const rows = metrics.map(m => {
@@ -3345,10 +3741,10 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
       badgeHtml = `<span class="ct-adv-badge ct-adv-badge--neutral">≈ égal</span>`;
     } else if (m.valA >= m.valB) {
       const diff = m.valB === 0 ? 100 : ((m.valA - m.valB) / Math.abs(m.valB)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">A&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorA}">A&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     } else {
       const diff = m.valA === 0 ? 100 : ((m.valB - m.valA) / Math.abs(m.valA)) * 100;
-      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">B&nbsp;+${diff.toFixed(1)}&thinsp;%</span>`;
+      badgeHtml = `<span class="ct-adv-badge" style="color:${colorB}">B&nbsp;+${fmtDec(diff)}&thinsp;%</span>`;
     }
 
     return `<tr>
@@ -3396,21 +3792,16 @@ function renderCTDelta(themeDataMap, themeA, themeB, themeColorMap) {
 function renderThemePanel(data) {
   renderTSModeToggle();
 
-  const analyseSection = $('ct-analyse');
-  const compareSection = $('ct-compare');
+  const sections = { overview: $('ct-overview'), analyse: $('ct-analyse'), compare: $('ct-compare') };
+  Object.entries(sections).forEach(([mode, el]) => { if (el) el.hidden = mode !== state.themeMode; });
+  $('tab-section-title').textContent = CONTENUS_TITLES[state.themeMode];
 
-  if (state.themeMode === 'analyse') {
-    if (analyseSection) analyseSection.hidden = false;
-    if (compareSection) compareSection.hidden = true;
-    $('tab-section-title').textContent = 'Analyse détaillée d\'un thème';
-    renderThemeStats(data);
-  } else {
-    if (analyseSection) analyseSection.hidden = true;
-    if (compareSection) compareSection.hidden = false;
-    $('tab-section-title').textContent = 'Comparaison entre thèmes';
-    renderCompareThemes(data);
-  }
+  if (state.themeMode === 'overview')     { renderTakeaways('contenus', takeawaysContenus(data)); renderMatrice(data); }
+  else if (state.themeMode === 'analyse') renderThemeStats(data);
+  else                                    renderCompareThemes(data);
+
   if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+  updateViewHint();
 }
 
 function renderTSModeToggle() {
@@ -3466,6 +3857,7 @@ function renderTSSelector(allThemes) {
   fresh.addEventListener('change', () => {
     state.themeStats = fresh.value;
     renderThemeStats(state.filteredData);
+    updateViewHint();
   });
 }
 
@@ -3474,21 +3866,21 @@ function renderTSKPIs(posts, allData) {
   const container = $('ts-kpis');
   if (!container) return;
 
-  const globalAvgImp = avg(allData, 'impressions');
+  const globalTypImp = median(allData.map(d => d.impressions));
   const globalAvgEng = avg(allData, 'tauxEngagement');
   const globalAvgClic= avg(allData, 'tauxClics');
 
-  const avgImp    = avg(posts, 'impressions');
+  const typImp    = median(posts.map(d => d.impressions));
   const avgEng    = avg(posts, 'tauxEngagement');
   const avgClic   = avg(posts, 'tauxClics');
 
   function deltaBadge(val, ref, unit = '') {
     if (!ref || ref === 0) return '';
     const diff = ((val - ref) / ref) * 100;
-    const abs  = Math.abs(diff).toFixed(1);
-    if (diff > 5)  return `<span class="ts-kpi-delta ts-kpi-delta--up">▲ +${abs}% vs global</span>`;
-    if (diff < -5) return `<span class="ts-kpi-delta ts-kpi-delta--down">▼ −${abs}% vs global</span>`;
-    return `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ égal au global</span>`;
+    const abs  = fmtDec(Math.abs(diff));
+    if (diff > 5)  return `<span class="ts-kpi-delta ts-kpi-delta--up">▲ +${abs} % vs tous tes posts</span>`;
+    if (diff < -5) return `<span class="ts-kpi-delta ts-kpi-delta--down">▼ −${abs} % vs tous tes posts</span>`;
+    return `<span class="ts-kpi-delta ts-kpi-delta--neutral">≈ comme tous tes posts</span>`;
   }
 
   container.innerHTML = `
@@ -3502,11 +3894,11 @@ function renderTSKPIs(posts, allData) {
     </div>
     <div class="kpi-card">
       <div class="kpi-card__header">
-        <p class="kpi-card__label">Impressions / post</p>
+        <p class="kpi-card__label">Impressions (post typique)</p>
         <div class="kpi-card__icon"><i data-lucide="bar-chart-2" aria-hidden="true"></i></div>
       </div>
-      <p class="kpi-card__value">${fmtK(avgImp)}</p>
-      ${deltaBadge(avgImp, globalAvgImp)}
+      <p class="kpi-card__value">${fmtK(typImp)}</p>
+      ${deltaBadge(typImp, globalTypImp)}
     </div>
     <div class="kpi-card">
       <div class="kpi-card__header">
@@ -3599,36 +3991,40 @@ function renderTSScatterChart(posts) {
               type: 'label',
               xValue: maxImp * 0.95,
               yValue: maxEng * 0.95,
-              content: ['Viral'],
+              content: ['Succès'],
+              position: { x: 'end', y: 'center' },
               color: C.subtle(),
-              font: { size: 11, style: 'italic' },
+              font: { size: 12, style: 'italic' },
               textAlign: 'right',
             },
             labelNiche: {
               type: 'label',
               xValue: medImp * 0.08,
               yValue: maxEng * 0.95,
-              content: ['Niche'],
+              content: ['Petit public', 'conquis'],
+              position: { x: 'start', y: 'center' },
               color: C.subtle(),
-              font: { size: 11, style: 'italic' },
+              font: { size: 12, style: 'italic' },
               textAlign: 'left',
             },
             labelReach: {
               type: 'label',
               xValue: maxImp * 0.95,
               yValue: medEng * 0.1,
-              content: ['Reach'],
+              content: ['Vu mais', 'peu engageant'],
+              position: { x: 'end', y: 'center' },
               color: C.subtle(),
-              font: { size: 11, style: 'italic' },
+              font: { size: 12, style: 'italic' },
               textAlign: 'right',
             },
             labelFaible: {
               type: 'label',
               xValue: medImp * 0.08,
               yValue: medEng * 0.1,
-              content: ['Faible'],
+              content: ['À retravailler'],
+              position: { x: 'start', y: 'center' },
               color: C.subtle(),
-              font: { size: 11, style: 'italic' },
+              font: { size: 12, style: 'italic' },
               textAlign: 'left',
             },
           },
@@ -3641,7 +4037,7 @@ function renderTSScatterChart(posts) {
           max: maxImp,
         },
         y: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          ...scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
           title: { display: true, text: 'Engagement (%)', color: C.muted(), font: { size: 12 } },
           max: maxEng,
         },
@@ -3789,7 +4185,7 @@ function renderTSHourChart(posts) {
       },
       scales: {
         x: scaleX(),
-        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+        y: scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
       },
     },
   });
@@ -3807,6 +4203,7 @@ function renderTSTrendChart(posts) {
     const rows = posts.filter(r => r.date && r.date.getMonth() === m);
     return rows.length > 0 ? avg(rows, 'tauxEngagement') : null;
   });
+  const monthCounts = Array.from({ length: 12 }, (_, m) => posts.filter(r => r.date && r.date.getMonth() === m).length);
 
   const ctx = canvas.getContext('2d');
   state.charts['chart-ts-trend'] = new Chart(ctx, {
@@ -3838,14 +4235,14 @@ function renderTSTrendChart(posts) {
           callbacks: {
             title:  (items) => MONTH_LABELS[items[0].dataIndex],
             label:  (item)  => item.parsed.y !== null
-              ? ` Engagement : ${fmtPct(item.parsed.y)}`
+              ? ` Engagement : ${fmtPct(item.parsed.y)} (${postsLabel(monthCounts[item.dataIndex])})`
               : ' Aucun post ce mois',
           },
         },
       },
       scales: {
         x: scaleX(),
-        y: scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+        y: scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
       },
     },
   });
@@ -3869,9 +4266,10 @@ function renderTSMediaChart(posts) {
   if (fallback) fallback.hidden = true;
 
   const colors = DATA_COLORS();
-  const avgImps = mediaTypes.map(m => {
+  const mediaCounts = mediaTypes.map(m => validPosts.filter(p => p.media === m).length);
+  const typImps = mediaTypes.map(m => {
     const group = validPosts.filter(p => p.media === m);
-    return avg(group, 'impressions') / 1000;
+    return median(group.map(p => p.impressions));
   });
   const avgEngs = mediaTypes.map(m => {
     const group = validPosts.filter(p => p.media === m);
@@ -3882,17 +4280,17 @@ function renderTSMediaChart(posts) {
   state.charts['chart-ts-media'] = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: mediaTypes,
+      labels: mediaTypes.map((m, i) => [m, postsLabel(mediaCounts[i])]),
       datasets: [
         {
-          label: 'Impressions moy. (k)',
-          data: avgImps,
+          label: 'Impressions (post typique)',
+          data: typImps,
           backgroundColor: hexToRgba(colors[0], 0.85),
           borderRadius: 4,
           yAxisID: 'yImp',
         },
         {
-          label: 'Engagement moy. (%)',
+          label: 'Engagement moyen (%)',
           data: avgEngs,
           backgroundColor: hexToRgba(colors[1], 0.85),
           borderRadius: 4,
@@ -3908,8 +4306,9 @@ function renderTSMediaChart(posts) {
         tooltip: {
           ...tooltipBase(),
           callbacks: {
+            title: (items) => `${mediaTypes[items[0].dataIndex]} · ${postsLabel(mediaCounts[items[0].dataIndex])}`,
             label: (item) => item.datasetIndex === 0
-              ? ` Impressions : ${item.parsed.y.toFixed(1)}k`
+              ? ` Impressions (post typique) : ${fmt(item.parsed.y)}`
               : ` Engagement : ${fmtPct(item.parsed.y)}`,
           },
         },
@@ -3917,11 +4316,11 @@ function renderTSMediaChart(posts) {
       scales: {
         x: scaleX(),
         yImp: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)}k` } }),
+          ...scaleY({ ticks: { callback: (v) => fmtK(v) } }),
           position: 'left',
         },
         yEng: {
-          ...scaleY({ ticks: { callback: (v) => `${v.toFixed(1)} %` } }),
+          ...scaleY({ ticks: { callback: (v) => `${fmtDec(v)} %` } }),
           position: 'right',
           grid: { display: false },
         },
@@ -3965,6 +4364,7 @@ function scoreRatioPillClass(r) {
  * @param {Function} cfg.onModeChange    - callback(newMode) déclenché au clic toggle
  * @param {object} cfg.secondCol         - { key: 'theme'|'media', label: 'Thème'|'Média' }
  * @param {string} [cfg.emptyIcon]       - lucide icon pour l'empty state
+ * @param {number} [cfg.count=5]         - nombre de posts de chaque côté
  */
 function renderTopFlopBlock(cfg) {
   const container = $(cfg.containerId);
@@ -3999,7 +4399,7 @@ function renderTopFlopBlock(cfg) {
       <div class="empty-state" style="grid-column:1/-1">
         <i data-lucide="${cfg.emptyIcon || 'bar-chart-2'}" aria-hidden="true"></i>
         <p class="empty-state__title">Données insuffisantes</p>
-        <p class="empty-state__desc">Il faut au moins 2 publications avec une portée suffisante (≥ ${MIN_IMPRESSIONS_ABS} impressions et ≥ 50 % de la médiane de leur format) pour établir un classement.</p>
+        <p class="empty-state__desc">Il faut au moins 2 posts assez vus pour établir un classement : au moins ${MIN_IMPRESSIONS_ABS} impressions, et au moins la moitié de celles d'un post typique du même format.</p>
       </div>`;
     if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
     syncTopFlopToggle(cfg);
@@ -4048,8 +4448,27 @@ function renderTopFlopBlock(cfg) {
     ? scored.filter(p => p._score !== -Infinity).sort((a, b) => b._score - a._score)
     : [...scored].sort((a, b) => b._score - a._score);
 
-  const top5  = ranked.slice(0, Math.min(5, ranked.length));
-  const flop5 = ranked.slice(-Math.min(5, ranked.length)).reverse();
+  /* Comparer à son format exige au moins 5 posts du même format dans la référence :
+     sur une période courte, aucun post n'est classable dans ces modes. */
+  if (ranked.length < 2) {
+    container.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <i data-lucide="${cfg.emptyIcon || 'bar-chart-2'}" aria-hidden="true"></i>
+        <p class="empty-state__title">Pas assez de posts par format</p>
+        <p class="empty-state__desc">Pour comparer un post à son format, il faut au moins ${MIN_FORMAT_SAMPLES} posts du même format (image, vidéo…) sur la période. Choisis « Taux d'engagement seul » ou élargis la période.</p>
+      </div>`;
+    if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': '2' } });
+    syncTopFlopToggle(cfg);
+    return;
+  }
+
+  /* Avec peu de posts classés, les deux listes se partagent le classement
+     (moitié haute / moitié basse) au lieu de montrer un même post des deux côtés. */
+  const count = cfg.count || 5;
+  const nTop  = Math.min(count, Math.ceil(ranked.length / 2));
+  const nFlop = Math.min(count, ranked.length - nTop);
+  const top5  = ranked.slice(0, nTop);
+  const flop5 = ranked.slice(ranked.length - nFlop).reverse();
 
   const secondKey   = cfg.secondCol.key;
   const secondLabel = cfg.secondCol.label;
@@ -4057,11 +4476,11 @@ function renderTopFlopBlock(cfg) {
   function buildTable(items, cellClass, idxPrefix) {
     let scoreHeader, headerHelp;
     if (mode === 'global') {
-      scoreHeader = 'Performance globale';
-      headerHelp  = ' title="Moyenne géométrique du score d\'engagement et du score de portée — récompense à la fois la qualité et la portée"';
+      scoreHeader = 'Score global';
+      headerHelp  = ' title="Combine l\'engagement et les impressions du post, comparés à ceux d\'un post typique du même format. 1,5× = 50 % au-dessus."';
     } else if (mode === 'normalized') {
-      scoreHeader = 'Score vs format';
-      headerHelp  = ' title="Taux d\'engagement du post divisé par la médiane des posts de son média (méthode leave-one-out)"';
+      scoreHeader = 'Vs son format';
+      headerHelp  = ' title="Taux d\'engagement du post comparé à celui d\'un post typique du même format. 1,5× = 50 % de mieux."';
     } else {
       scoreHeader = 'Engagement';
       headerHelp  = '';
@@ -4084,7 +4503,7 @@ function renderTopFlopBlock(cfg) {
           scoreCell = `<span class="engagement-pill ${engagementClass(row.tauxEngagement)}">${fmtPct(row.tauxEngagement)}</span>`;
         }
         const lowReachIcon = row._lowReach
-          ? `<i data-lucide="eye-off" class="tf-low-reach-icon" aria-hidden="true" title="Audience restreinte — impressions sous la médiane de son format"></i>`
+          ? `<i data-lucide="eye-off" class="tf-low-reach-icon" aria-hidden="true" title="Moins vu que d'habitude — impressions sous celles d'un post typique du même format"></i>`
           : '';
         const secondVal = row[secondKey];
         return `
@@ -4101,16 +4520,18 @@ function renderTopFlopBlock(cfg) {
       </tbody></table></div>`;
   }
 
+  /* « Les 5 posts qui… », « Le post qui… » : le nombre affiché est le nombre réel */
+  const posts = (n, plural, singular) => n > 1 ? `Les ${n} posts ${plural}` : `Le post ${singular}`;
   let topLabel, flopLabel;
   if (mode === 'global') {
-    topLabel  = 'Top 5 — Meilleure performance globale';
-    flopLabel = 'Flop 5 — Plus faible performance globale';
+    topLabel  = posts(top5.length,  'qui ont le mieux marché', 'qui a le mieux marché');
+    flopLabel = posts(flop5.length, 'qui ont le moins bien marché', 'qui a le moins bien marché');
   } else if (mode === 'normalized') {
-    topLabel  = 'Top 5 — Sur-performance vs format';
-    flopLabel = 'Flop 5 — Sous-performance vs format';
+    topLabel  = posts(top5.length,  'les plus au-dessus de leur format', 'le plus au-dessus de son format');
+    flopLabel = posts(flop5.length, 'les plus en dessous de leur format', 'le plus en dessous de son format');
   } else {
-    topLabel  = 'Top 5 — Meilleur engagement';
-    flopLabel = 'Flop 5 — Plus faible engagement';
+    topLabel  = posts(top5.length,  'les plus engageants', 'le plus engageant');
+    flopLabel = posts(flop5.length, 'les moins engageants', 'le moins engageant');
   }
 
   container.innerHTML = `
@@ -4210,19 +4631,19 @@ function showRowTooltip(rowEl, post, mode) {
     const reachStr = (post._reachRatio !== null && isFinite(post._reachRatio)) ? `${post._reachRatio.toFixed(2).replace('.', ',')}×` : '—';
     ratioBlock = `<div class="tf-tooltip__ratio">
       <span class="tf-tooltip__ratio-value">${post._composite.toFixed(2).replace('.', ',')}×</span>
-      <span class="tf-tooltip__ratio-label">performance globale (qualité ${rateStr} · portée ${reachStr})</span>
+      <span class="tf-tooltip__ratio-label">score global (engagement ${rateStr} · impressions ${reachStr}, vs posts du même format)</span>
     </div>`;
   } else if (mode === 'normalized' && post._ratio !== null && isFinite(post._ratio)) {
     ratioBlock = `<div class="tf-tooltip__ratio">
       <span class="tf-tooltip__ratio-value">${post._ratio.toFixed(2).replace('.', ',')}×</span>
-      <span class="tf-tooltip__ratio-label">vs médiane ${escHtml(post.media)}</span>
+      <span class="tf-tooltip__ratio-label">vs un post ${escHtml(post.media)} typique</span>
     </div>`;
   }
 
   const lowReachBanner = post._lowReach
     ? `<div class="tf-tooltip__warn">
          <i data-lucide="eye-off" aria-hidden="true"></i>
-         <span>Audience restreinte — impressions sous la médiane de son format</span>
+         <span>Moins vu que d'habitude — impressions sous celles d'un post typique du même format</span>
        </div>`
     : '';
 
@@ -4312,8 +4733,9 @@ function renderTSTopFlop(posts) {
     <section class="table-section" aria-label="Classement des publications du thème">
       <div class="table-section__header">
         <div class="table-section__title-group">
-          <p class="section-label">Classement</p>
-          <h2 class="section-title">Toutes les publications</h2>
+          <p class="section-label">Détail du thème</p>
+          <h2 class="section-title">Toutes les publications du thème</h2>
+          <p class="section-desc">Clique sur un en-tête de colonne pour trier.</p>
         </div>
         <div class="table-section__controls">
           <div class="search-field">
@@ -4327,6 +4749,27 @@ function renderTSTopFlop(posts) {
             />
           </div>
           <span class="table-count" id="ts-table-count"></span>
+          <div class="chart-info-wrapper">
+            <button class="chart-info-btn" type="button" aria-label="Comment lire : Toutes les publications du thème">
+              <i data-lucide="info" aria-hidden="true"></i>
+            </button>
+            <div class="chart-info-popover" role="tooltip">
+              <p class="chart-info-popover__title">Comment lire ce tableau</p>
+              <div class="chart-info-popover__section">
+                <p class="chart-info-popover__section-label">Ce que ça montre</p>
+                <p class="chart-info-popover__text">Chaque post de la période avec tous ses chiffres : impressions, réactions, commentaires, republications, clics, taux de clics et taux d'engagement.</p>
+              </div>
+              <div class="chart-info-popover__section">
+                <p class="chart-info-popover__section-label">Comment le lire</p>
+                <p class="chart-info-popover__text">Pastille d'engagement <strong>verte</strong> : parmi le quart de tes posts les plus engageants de tout ton historique. <strong>Orange</strong> : dans ta normale. <strong>Grise</strong> : parmi le quart le moins engageant.</p>
+                <p class="chart-info-popover__text">Colonne « Hors clics » : l'engagement sans compter les clics, pour isoler les réactions, commentaires et republications.</p>
+              </div>
+              <div class="chart-info-popover__section">
+                <p class="chart-info-popover__section-label">Attention à</p>
+                <p class="chart-info-popover__text">À partir de 10 posts, les cases colorées signalent les 10 % meilleurs et les 10 % plus faibles de chaque colonne, parmi les posts affichés : elles changent quand tu filtres ou que tu recherches.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -4350,21 +4793,21 @@ function renderTSTopFlop(posts) {
                 Commentaires <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="republis" tabindex="0" aria-sort="none">
-                Republi. <span class="sort-icon" aria-hidden="true">↕</span>
+                Republications <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="clics" tabindex="0" aria-sort="none">
                 Clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="tauxClics" tabindex="0" aria-sort="none">
-                Tx Clics <span class="sort-icon" aria-hidden="true">↕</span>
-              </th>
-              <th class="sortable text-right" data-col="engagementSocial" tabindex="0" aria-sort="none"
-                  title="(Réactions + commentaires + republications) ÷ impressions — hors clics">
-                Eng. social <span class="sort-icon" aria-hidden="true">↕</span>
+                Taux de clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th class="sortable text-right" data-col="engagement" tabindex="0" aria-sort="none"
-                  title="Taux d'engagement tel que fourni par LinkedIn — inclut les clics">
+                  title="Taux d'engagement LinkedIn : clics, réactions, commentaires, republications et abonnés gagnés ÷ impressions">
                 Engagement <span class="sort-icon" aria-hidden="true">↕</span>
+              </th>
+              <th class="sortable text-right" data-col="engagementHorsClics" tabindex="0" aria-sort="none"
+                  title="(Réactions + commentaires + republications) ÷ impressions — sans les clics">
+                Hors clics <span class="sort-icon" aria-hidden="true">↕</span>
               </th>
               <th>Média</th>
             </tr>
@@ -4451,7 +4894,7 @@ function renderTSTable(posts) {
   data = sortData(data, tsLeaderState.sortCol, tsLeaderState.sortDir);
 
   const engValues      = data.map(d => d.tauxEngagement).sort((a, b) => a - b);
-  const engSocValues   = data.map(d => d.tauxEngagementSocial).sort((a, b) => a - b);
+  const engHcValues    = data.map(d => d.tauxEngagementHorsClics).sort((a, b) => a - b);
   const imprValues     = data.map(d => d.impressions).sort((a, b) => a - b);
   const reactValues    = data.map(d => d.reactions).sort((a, b) => a - b);
   const commValues     = data.map(d => d.commentaires).sort((a, b) => a - b);
@@ -4463,7 +4906,7 @@ function renderTSTable(posts) {
   const p90 = (arr) => arr.length >= 10 ? arr[Math.floor(arr.length * 0.9)] : Infinity;
 
   const engP10      = p10(engValues),      engP90      = p90(engValues);
-  const engSocP10   = p10(engSocValues),   engSocP90   = p90(engSocValues);
+  const engHcP10    = p10(engHcValues),    engHcP90    = p90(engHcValues);
   const imprP10     = p10(imprValues),     imprP90     = p90(imprValues);
   const reactP10    = p10(reactValues),    reactP90    = p90(reactValues);
   const commP10     = p10(commValues),     commP90     = p90(commValues);
@@ -4524,12 +4967,12 @@ function renderTSTable(posts) {
       <td class="text-right ${cellClass(row.republis, repP10, repP90)}">${fmt(row.republis)}</td>
       <td class="text-right ${cellClass(row.clics, clicsRawP10, clicsRawP90)}">${fmt(row.clics)}</td>
       <td class="text-right ${cellClass(row.tauxClics, clicsP10, clicsP90)}">${fmtPct(row.tauxClics)}</td>
-      <td class="text-right ${cellClass(row.tauxEngagementSocial, engSocP10, engSocP90)}">${fmtPct(row.tauxEngagementSocial)}</td>
       <td class="text-right ${cellClass(row.tauxEngagement, engP10, engP90)}">
         <span class="engagement-pill ${engagementClass(row.tauxEngagement)}">
           ${fmtPct(row.tauxEngagement)}
         </span>
       </td>
+      <td class="text-right ${cellClass(row.tauxEngagementHorsClics, engHcP10, engHcP90)}">${fmtPct(row.tauxEngagementHorsClics)}</td>
       <td>${row.media !== '—' ? `<span class="badge badge--neutral">${escHtml(row.media)}</span>` : '<span style="color:var(--color-text-subtle)">—</span>'}</td>
     </tr>
   `).join('');
@@ -4566,13 +5009,25 @@ function groupBy(arr, key) {
    TAB — ABONNÉS
    ═══════════════════════════════════════════════════════════════ */
 
-function renderAbonnesPanel() {
+/* Relevé du même mois, un an plus tôt, dans tout l'historique : { date, abonnes, diff, pct } */
+function yearAgoComparison(point) {
+  const key = `${point.date.getFullYear() - 1}-${point.date.getMonth()}`;
+  const ref = state.subscriberData.find(d => `${d.date.getFullYear()}-${d.date.getMonth()}` === key);
+  if (!ref || ref.abonnes <= 0) return null;
+  const diff = point.abonnes - ref.abonnes;
+  return { date: ref.date, abonnes: ref.abonnes, diff, pct: diff / ref.abonnes * 100 };
+}
+
+/* Relevés d'abonnés de la période : seul le filtre de dates s'applique,
+   thème et format ne changent pas le nombre d'abonnés du compte. */
+function filteredSubscriberData() {
   const { dateFrom, dateTo } = state.filters;
-  const data = state.subscriberData.filter(d => {
-    if (dateFrom && d.date < dateFrom) return false;
-    if (dateTo   && d.date > dateTo)   return false;
-    return true;
-  });
+  return state.subscriberData.filter(d =>
+    (!dateFrom || d.date >= dateFrom) && (!dateTo || d.date <= dateTo));
+}
+
+function renderAbonnesPanel() {
+  const data = filteredSubscriberData();
   const empty   = $('abonnes-empty');
   const content = $('abonnes-content');
 
@@ -4583,6 +5038,16 @@ function renderAbonnesPanel() {
   }
   empty.hidden   = true;
   content.hidden = false;
+
+  /* Thème et format filtrent les posts, jamais les abonnés : le dire */
+  const { theme, media } = state.filters;
+  const filteredOn = [theme && `le thème « ${theme} »`, media && `le format « ${media} »`].filter(Boolean);
+  $('abonnes-filter-note').hidden = filteredOn.length === 0;
+  if (filteredOn.length) {
+    $('abonnes-filter-note-text').textContent =
+      `Filtre actif sur ${filteredOn.join(' et ')} : les abonnés restent ceux de tout le compte. ` +
+      `L'indice de visibilité et les affichages pour gagner un abonné ne comptent que les posts filtrés.`;
+  }
 
   /* Format mois court : "janv. 25" */
   const fmtMois = d => d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
@@ -4610,19 +5075,27 @@ function renderAbonnesPanel() {
   gainEl.style.color                 = gainAbs >= 0 ? cssVar('--color-success') : cssVar('--color-error');
   $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
 
+  /* Sur un an : relevé du même mois l'année précédente, cherché dans tout
+     l'historique (il peut précéder la période filtrée) */
+  const yoy = yearAgoComparison(last);
+  $('ab-hero-yoy').hidden = !yoy;
+  if (yoy) {
+    $('ab-hero-yoy').innerHTML = `Sur un an : <strong>${yoy.diff >= 0 ? '+' : '−'}${fmt(Math.abs(yoy.diff))} abonnés</strong> ` +
+      `(${fmtSignedPct(yoy.pct)}) par rapport à ${yoy.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })} (${fmt(yoy.abonnes)})`;
+  }
+
   setAbKPI('kpi-ab-pct',
-    (gainPct >= 0 ? '+' : '') + gainPct.toFixed(1).replace('.', ',') + '\u202f%',
-    `Par rapport au premier relevé (${fmtMois(first.date)})`);
+    fmtSignedPct(gainPct),
+    `Depuis le premier relevé (${fmtMois(first.date)})`);
   /* Croissance mensuelle en % — le même gain absolu pèse moins à mesure que
      le compte grossit : seul le taux dit si la dynamique tient. Médiane pour
      qu'un mois de campagne ne suffise pas à embellir toute la période. */
   const growth    = buildMonthlyGrowthSeries(data);
   const growthPct = growth.filter(g => g !== null).map(g => g.pct);
-  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + '\u202f%';
   if (growthPct.length > 0) {
     setAbKPI('kpi-ab-avg',
       fmtSignedPct(median(growthPct)),
-      `Médiane par mois · dernier : ${fmtSignedPct(growthPct[growthPct.length - 1])} · moy. ${avgGain >= 0 ? '+' : ''}${fmt(Math.round(avgGain))} abonnés / mois`);
+      `Mois typique · dernier mois : ${fmtSignedPct(growthPct[growthPct.length - 1])} · en moyenne ${avgGain >= 0 ? '+' : ''}${fmt(Math.round(avgGain))} abonnés par mois`);
   } else {
     setAbKPI('kpi-ab-avg', '—', 'Il faut au moins deux relevés');
   }
@@ -4644,17 +5117,17 @@ function renderAbonnesPanel() {
     const medianRatio = median(ratioPoints.map(r => r.ratio));
     setAbKPI('kpi-ab-ratio',
       fmtPct(lastPoint.ratio),
-      `${fmtMois(lastPoint.date)} : ${fmt(lastPoint.medImp)} impr. médianes ÷ ${fmt(lastPoint.abonnes)} abonnés · médiane période ${fmtPct(medianRatio)}`);
+      `${fmtMois(lastPoint.date)} : post typique de ${fmt(lastPoint.medImp)} impressions pour ${fmt(lastPoint.abonnes)} abonnés · mois typique : ${fmtPct(medianRatio)}`);
   } else {
     setAbKPI('kpi-ab-ratio', '—',
-      'Aucun mois ne croise des publications et un relevé d\'abonnés');
+      'Aucun mois n\'a à la fois des publications et un relevé d\'abonnés');
   }
 
   const convCost = gainAbs > 0 ? Math.round(totalImpressions / gainAbs) : null;
   setAbKPI('kpi-ab-conversion',
     convCost !== null ? fmtK(convCost) : '—',
     convCost !== null
-      ? `Impressions nécessaires pour gagner 1 abonné`
+      ? `Impressions de la période ÷ abonnés gagnés`
       : `Aucune croissance sur la période`);
 
   /* ── Graphique combiné (évolution + variations) ── */
@@ -4665,6 +5138,8 @@ function renderAbonnesPanel() {
 
   /* ── Bubble : volume impressions × abonnés par mois ── */
   renderAbonnesOverlay(data, postData);
+
+  renderTakeaways('audience', takeawaysAudience(data, postData));
 }
 
 
@@ -4731,7 +5206,7 @@ function renderPorteeAudience(reachSeries) {
       labels,
       datasets: [
         {
-          label: 'Impressions médianes / publication',
+          label: 'Impressions (post typique)',
           type: 'bar',
           data: medImpVals,
           backgroundColor: c1,
@@ -4741,7 +5216,7 @@ function renderPorteeAudience(reachSeries) {
           order: 2,
         },
         {
-          label: 'Portée / audience',
+          label: 'Indice de visibilité',
           type: 'line',
           data: ratioVals,
           borderColor: c2,
@@ -4771,10 +5246,10 @@ function renderPorteeAudience(reachSeries) {
             label: (ctx) => {
               const r = reachSeries[ctx.dataIndex];
               if (ctx.dataset.yAxisID === 'y1') {
-                return r.ratio === null ? null : `Portée / audience : ${fmtPct(r.ratio)}`;
+                return r.ratio === null ? null : `Indice de visibilité : ${fmtPct(r.ratio)}`;
               }
               if (r.medImp === null) return 'Aucune publication ce mois';
-              return `Impressions médianes : ${fmt(r.medImp)} (${r.count} publication${r.count > 1 ? 's' : ''})`;
+              return `Post typique : ${fmt(r.medImp)} impressions (${r.count} publication${r.count > 1 ? 's' : ''})`;
             },
             afterBody: (items) => {
               const r = reachSeries[items[0].dataIndex];
@@ -4788,7 +5263,7 @@ function renderPorteeAudience(reachSeries) {
         y: {
           ...scaleY({ ticks: { callback: v => fmtK(v) } }),
           position: 'left',
-          title: { display: true, text: 'Impressions médianes', color: C.muted(), font: { size: 11 } },
+          title: { display: true, text: 'Impressions (post typique)', color: C.muted(), font: { size: 11 } },
         },
         y1: {
           position: 'right',
@@ -4796,7 +5271,7 @@ function renderPorteeAudience(reachSeries) {
           border: { display: false },
           ticks:  { color: C.muted(), font: { size: 11 }, callback: v => `${Math.round(v)} %` },
           beginAtZero: true,
-          title: { display: true, text: 'Portée / audience', color: C.muted(), font: { size: 11 } },
+          title: { display: true, text: 'Indice de visibilité', color: C.muted(), font: { size: 11 } },
         },
       },
     },
@@ -4812,7 +5287,6 @@ function renderAbonnesCombined(subData, deltas, growth) {
   const [c1, c2]   = DATA_COLORS();
   const errorColor = cssVar('--color-error');
   const pctMode    = state.aboDeltaMode === 'pct';
-  const fmtSignedPct = n => (n >= 0 ? '+' : '') + n.toFixed(1).replace('.', ',') + ' %';
 
   const labels      = subData.map(d => fmtMois(d.date));
   const abonneVals  = subData.map(d => d.abonnes);
@@ -4863,11 +5337,15 @@ function renderAbonnesCombined(subData, deltas, growth) {
           ...tooltipBase(),
           callbacks: {
             title: items => items[0].label,
+            afterBody: items => {
+              const yoy = yearAgoComparison(subData[items[0].dataIndex]);
+              return yoy ? `Il y a un an : ${fmt(yoy.abonnes)} (${fmtSignedPct(yoy.pct)})` : [];
+            },
             label: ctx => {
               if (ctx.dataset.label === 'Abonnés') return `Abonnés : ${fmt(ctx.raw)}`;
               if (ctx.raw === null) return null;
               const abs = absVals[ctx.dataIndex];
-              const absStr = `${abs >= 0 ? '+' : ''}${fmt(abs)} abonnés`;
+              const absStr = `${abs >= 0 ? '+' : '−'}${fmt(Math.abs(abs))} abonnés`;
               if (!pctMode) return `Variation : ${absStr}`;
               const g = growth[ctx.dataIndex];
               return g.months > 1
@@ -4996,13 +5474,359 @@ function renderAbonnesOverlay(subData, postData) {
 
 
 
+
+/* ═══════════════════════════════════════════════════════════════
+   AIDE INTÉGRÉE — « À retenir », glossaire, visite guidée, infobulles
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── À retenir ──
+   2 ou 3 phrases factuelles par onglet, calculées sur la période filtrée.
+   Une comparaison n'est formulée qu'entre groupes d'au moins MIN_GROUP_POSTS
+   posts : en deçà, l'écart reflète quelques posts, pas une tendance (même
+   seuil que les classements et « posts originaux vs relayés »). */
+const MIN_GROUP_POSTS = 5;
+const JOURS_LONGS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+function renderTakeaways(key, items) {
+  const box = $(`takeaways-${key}`);
+  if (!box) return;
+  const list = items.filter(Boolean);
+  box.hidden = list.length === 0;
+  box.querySelector('.takeaways__list').innerHTML = list.map(t => `<li>${t}</li>`).join('');
+}
+
+const strong     = v => `<strong>${v}</strong>`;
+const typicalImp = posts => median(posts.map(p => p.impressions));
+const postTitle  = post => `« ${escHtml(truncate(post.publication || 'Sans titre', 70))} »`;
+
+/* Groupes d'au moins MIN_GROUP_POSTS posts selon une clé : [{ key, posts }] */
+function reliableGroups(data, keyFn) {
+  const map = {};
+  data.forEach(d => {
+    const k = keyFn(d);
+    if (k === null || k === undefined || k === '—') return;
+    (map[k] = map[k] || []).push(d);
+  });
+  return Object.entries(map)
+    .filter(([, posts]) => posts.length >= MIN_GROUP_POSTS)
+    .map(([key, posts]) => ({ key, posts }));
+}
+
+/* « vus 14 % de plus / de moins que… », « à peu près autant que… » */
+function compareWords(value, ref) {
+  const diff = ref ? (value - ref) / ref * 100 : 0;
+  if (Math.abs(diff) <= 5) return null;
+  return `${strong(fmtDec(Math.abs(diff), 0) + ' %')} de ${diff > 0 ? 'plus' : 'moins'}`;
+}
+
+function takeawaysBilan(data) {
+  if (data.length === 0) return [];
+  const out = [`Un post typique est affiché ${strong(fmt(typicalImp(data)))} fois, pour un taux d'engagement de ` +
+               `${strong(fmtPct(median(data.map(d => d.tauxEngagement))))}.`];
+  if (data.length >= 2 * MIN_GROUP_POSTS) {
+    const sorted = [...data].sort((a, b) => a.date - b.date);
+    const mid = Math.floor(sorted.length / 2);
+    const words = compareWords(typicalImp(sorted.slice(mid)), typicalImp(sorted.slice(0, mid)));
+    out.push(words
+      ? `Tes posts les plus récents de la période sont vus ${words} que les plus anciens.`
+      : 'Tes posts les plus récents de la période sont vus à peu près autant que les plus anciens.');
+  }
+  const top = [...data].sort((a, b) => b.impressions - a.impressions)[0];
+  out.push(`Ton post le plus vu : ${postTitle(top)}, avec ${strong(fmt(top.impressions))} impressions (${formatDisplayDate(top.date)}).`);
+  return out;
+}
+
+function takeawaysAudience(sub, postData) {
+  if (sub.length < 2) return [];
+  const first = sub[0], last = sub[sub.length - 1];
+  const gain  = last.abonnes - first.abonnes;
+  const pct   = first.abonnes > 0 ? gain / first.abonnes * 100 : 0;
+  const since = first.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const out = [`Tu as ${gain >= 0 ? 'gagné' : 'perdu'} ${strong(fmt(Math.abs(gain)))} abonnés depuis ${since} (${strong(fmtSignedPct(pct))}).`];
+
+  const yoy = yearAgoComparison(last);
+  if (yoy) out.push(`Sur un an, ton audience a évolué de ${strong(fmtSignedPct(yoy.pct))} (${yoy.diff >= 0 ? '+' : '−'}${fmt(Math.abs(yoy.diff))} abonnés).`);
+
+  const growth = buildMonthlyGrowthSeries(sub).filter(g => g !== null).map(g => g.pct);
+  if (growth.length) out.push(`Un mois typique fait évoluer ton audience de ${strong(fmtSignedPct(median(growth)))}.`);
+
+  const points = buildReachRatioSeries(sub, postData).filter(r => r.ratio !== null);
+  if (points.length >= 3) {
+    const lastPt = points[points.length - 1];
+    const typ    = median(points.map(r => r.ratio));
+    const diff   = typ ? (lastPt.ratio - typ) / typ * 100 : 0;
+    const where  = Math.abs(diff) <= 5 ? 'proche de' : diff > 0 ? 'au-dessus de' : 'en dessous de';
+    const month  = lastPt.date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+    out.push(`En ${month}, ton indice de visibilité est de ${strong(fmtPct(lastPt.ratio))}, ${where} ton mois typique (${fmtPct(typ)}).`);
+  }
+  return out;
+}
+
+function takeawaysPublications(data) {
+  const out = [];
+  if (data.length >= 10) {
+    const imps  = data.map(d => d.impressions).sort((a, b) => b - a);
+    const n     = Math.max(1, Math.round(imps.length / 10));
+    const total = imps.reduce((a, b) => a + b, 0);
+    const share = total ? imps.slice(0, n).reduce((a, b) => a + b, 0) / total * 100 : 0;
+    out.push(n === 1
+      ? `Ton post le plus vu (10 % de tes posts) totalise ${strong(fmtDec(share, 0) + ' %')} de tes impressions.`
+      : `Tes ${n} posts les plus vus (10 % de tes posts) totalisent ${strong(fmtDec(share, 0) + ' %')} de tes impressions.`);
+  }
+  /* Le plus engageant parmi les posts assez vus : un taux calculé sur quelques
+     dizaines d'affichages se gonfle trop facilement. */
+  const wellSeen = data.filter(d => d.impressions >= typicalImp(data));
+  if (wellSeen.length >= 2) {
+    const best = [...wellSeen].sort((a, b) => b.tauxEngagement - a.tauxEngagement)[0];
+    out.push(`Parmi tes posts vus au moins autant qu'un post typique, le plus engageant est ${postTitle(best)} (${strong(fmtPct(best.tauxEngagement))}).`);
+  }
+  return out;
+}
+
+function takeawaysContenus(data) {
+  const out = [];
+  const formats = reliableGroups(data, d => d.media)
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  if (formats.length >= 2) {
+    const best = formats[0], worst = formats[formats.length - 1];
+    out.push(`Les posts au format ${strong(escHtml(best.key))} sont les plus vus : un post typique y est affiché ` +
+             `${strong(fmt(best.typ))} fois, contre ${fmt(worst.typ)} au format ${escHtml(worst.key)}.`);
+  }
+  const themes = reliableGroups(data, d => d.theme)
+    .map(g => ({ ...g, eng: avg(g.posts, 'tauxEngagement') })).sort((a, b) => b.eng - a.eng);
+  if (themes.length >= 2) {
+    out.push(`Le thème ${strong('« ' + escHtml(themes[0].key) + ' »')} engage le plus : ${strong(fmtPct(themes[0].eng))} ` +
+             `en moyenne sur ${postsLabel(themes[0].posts.length)}.`);
+    const most = [...themes].sort((a, b) => b.posts.length - a.posts.length)[0];
+    if (most.key !== themes[0].key) {
+      const all  = avg(data, 'tauxEngagement');
+      const diff = all ? (most.eng - all) / all : 0;
+      const how  = Math.abs(diff) <= 0.05 ? 'autant que' : diff > 0 ? 'plus que' : 'moins que';
+      out.push(`Ton thème le plus publié, « ${escHtml(most.key)} » (${postsLabel(most.posts.length)}), engage ${how} ` +
+               `l'ensemble de tes posts (${fmtPct(most.eng)} contre ${fmtPct(all)}).`);
+    }
+  }
+  if (!out.length) out.push(`Pas encore assez de posts par format ou par thème (au moins ${MIN_GROUP_POSTS} chacun) pour les comparer de façon fiable.`);
+  return out;
+}
+
+function takeawaysReactions(data) {
+  if (data.length === 0) return [];
+  const out = [];
+  const imp = sum(data, 'impressions');
+  if (imp > 0) out.push(`Pour 1 000 affichages, tes posts reçoivent ${strong(fmtDec(sum(data, 'reactions') / imp * 1000))} réactions.`);
+  const inter = sum(data, 'interactions');
+  if (inter > 0) {
+    const deep = (sum(data, 'commentaires') + sum(data, 'republis')) / inter * 100;
+    out.push(`Commentaires et republications représentent ${strong(fmtDec(deep, 0) + ' %')} de tes interactions ; ` +
+             `le reste, ce sont des réactions (« j'aime »…).`);
+  }
+  const zero = data.filter(d => d.commentaires === 0).length;
+  out.push(`${strong(fmtDec(zero / data.length * 100, 0) + ' %')} de tes posts n'ont reçu aucun commentaire.`);
+  return out;
+}
+
+function takeawaysCalendrier(data) {
+  if (data.length === 0) return [];
+  const out = [];
+  const sorted = [...data].sort((a, b) => a.date - b.date);
+  const f = sorted[0].date, l = sorted[sorted.length - 1].date;
+  const months = (l.getFullYear() - f.getFullYear()) * 12 + l.getMonth() - f.getMonth() + 1;
+  const active = new Set(data.map(d => `${d.date.getFullYear()}-${d.date.getMonth()}`)).size;
+  const perMonth = data.length / months;
+  out.push(`Tu publies en moyenne ${strong(fmtDec(perMonth))} post${perMonth >= 2 ? 's' : ''} par mois` +
+           (months > active ? ` ; ${months - active} mois sur ${months} n'ont eu aucune publication.` : ', sans aucun mois vide.'));
+
+  const days = reliableGroups(data, d => d.date.getDay())
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  if (days.length >= 2) {
+    out.push(`Le ${strong(JOURS_LONGS[days[0].key])} est ton meilleur jour : un post typique y est affiché ${strong(fmt(days[0].typ))} fois ` +
+             `(${postsLabel(days[0].posts.length)}), contre ${fmt(typicalImp(data))} pour l'ensemble de tes posts.`);
+  }
+  const slots = slotGroups(data).filter(g => g.posts.length >= MIN_GROUP_POSTS)
+    .map(g => ({ ...g, typ: typicalImp(g.posts) })).sort((a, b) => b.typ - a.typ);
+  out.push(slots.length >= 2
+    ? `Meilleur moment de la journée : ${strong(slots[0].full.replace(/^./, c => c.toLowerCase()))}, avec un post typique affiché ${strong(fmt(slots[0].typ))} fois (${postsLabel(slots[0].posts.length)}).`
+    : `Pas encore assez de posts avec l'heure renseignée pour désigner un meilleur moment de la journée (il en faut au moins ${MIN_GROUP_POSTS} par créneau).`);
+  return out;
+}
+
+function takeawaysHistorique(data) {
+  const years = [...new Set(data.map(d => d.date.getFullYear()))].sort((a, b) => a - b);
+  if (years.length < 2) {
+    return data.length ? ["Une seule année dans la période : l'historique se lit mieux avec plusieurs années de publications."] : [];
+  }
+  const L = years[years.length - 1], P = years[years.length - 2];
+  const inL = data.filter(d => d.date.getFullYear() === L);
+  const inP = data.filter(d => d.date.getFullYear() === P);
+  const out = [];
+
+  /* Année en cours : on compare à la même date de l'année précédente */
+  const now = new Date();
+  if (L === now.getFullYear()) {
+    const cut = new Date(P, now.getMonth(), now.getDate(), 23, 59, 59);
+    out.push(`En ${L}, tu as publié ${strong(postsLabel(inL.length))} à ce jour, contre ${postsLabel(inP.filter(d => d.date <= cut).length)} à la même date en ${P}.`);
+  } else {
+    out.push(`En ${L}, tu as publié ${strong(postsLabel(inL.length))}, contre ${postsLabel(inP.length)} en ${P}.`);
+  }
+  const tL = typicalImp(inL), tP = typicalImp(inP);
+  if (tP > 0) {
+    out.push(`Un post typique de ${L} est affiché ${strong(fmt(tL))} fois, contre ${fmt(tP)} en ${P} (${strong(fmtSignedPct((tL - tP) / tP * 100))}).`);
+  }
+  out.push(`Engagement moyen : ${strong(fmtPct(avg(inL, 'tauxEngagement')))} en ${L}, contre ${fmtPct(avg(inP, 'tauxEngagement'))} en ${P}.`);
+  if (Math.min(inL.length, inP.length) < MIN_GROUP_POSTS) {
+    out.push(`Attention : l'une de ces années compte moins de ${MIN_GROUP_POSTS} posts, ces écarts sont peu fiables.`);
+  }
+  return out;
+}
+
+/* ── Infobulles ⓘ : au clic et au toucher ──
+   Le survol n'existe pas sur mobile : un clic (ou un toucher) ouvre
+   l'infobulle, un clic ailleurs ou Échap la referme. Au clavier, le focus
+   l'ouvre déjà (CSS :focus-visible). Délégation sur le document : couvre
+   aussi les infobulles créées après coup (tableau du thème). */
+function closeInfoPopovers(except) {
+  document.querySelectorAll('.chart-info-wrapper.is-open').forEach(w => {
+    if (w === except) return;
+    w.classList.remove('is-open');
+    w.querySelector('.chart-info-btn').setAttribute('aria-expanded', 'false');
+  });
+}
+
+function initInfoPopovers() {
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.chart-info-popover')) return;           // lecture de l'infobulle ouverte
+    const btn = e.target.closest('.chart-info-btn');
+    const wrapper = btn ? btn.parentElement : null;
+    closeInfoPopovers(wrapper);
+    if (wrapper) btn.setAttribute('aria-expanded', String(wrapper.classList.toggle('is-open')));
+  });
+  /* Échap ferme aussi une infobulle ouverte au clavier (focus) ou au survol,
+     sans déplacer le focus (WCAG 1.4.13) : elle reste écartée jusqu'à ce que
+     le focus ou la souris quitte le bouton. */
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    closeInfoPopovers(null);
+    const active = document.activeElement && document.activeElement.closest('.chart-info-wrapper');
+    [active, ...document.querySelectorAll('.chart-info-wrapper:hover')].forEach(w => w && w.classList.add('is-dismissed'));
+  });
+  const undismiss = (e) => {
+    const w = e.target.closest && e.target.closest('.chart-info-wrapper');
+    if (w && !w.contains(e.relatedTarget)) w.classList.remove('is-dismissed');
+  };
+  document.addEventListener('focusout', undismiss);
+  document.addEventListener('mouseout', undismiss);
+}
+
+/* ── Glossaire ── (<dialog> natif : Échap, fond inerte et retour du focus) */
+function initGlossary() {
+  const dlg = $('glossary');
+  $('glossary-btn').addEventListener('click', () => { closeInfoPopovers(null); dlg.showModal(); });
+  $('glossary-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });   // clic sur le fond
+  $('tour-replay').addEventListener('click', () => { dlg.close(); startTour(); });
+}
+
+/* ── Visite guidée ── 4 étapes au premier chargement, relançable depuis le glossaire */
+const TOUR_KEY = 'linkedin-analytics-tour-done';
+const TOUR_STEPS = [
+  { target: () => document.querySelector('.tab-bar'),
+    title: 'Chaque onglet répond à une question',
+    text: "Commence par la Vue d'ensemble, puis ouvre l'onglet qui répond à ta question : « Quels posts ont marché ? », « Quand et à quel rythme publier ? »…" },
+  { target: () => document.querySelector('.view-toggle'),
+    title: 'Vue essentielle ou vue complète',
+    text: "La vue essentielle montre l'indispensable de chaque onglet. La vue complète ajoute les analyses détaillées : nuages de points, radars, distributions." },
+  { target: () => [...document.querySelectorAll('.tab-panel.is-active .chart-info-btn')].find(b => b.offsetParent),
+    title: "Chaque graphique s'explique",
+    text: 'Le bouton ⓘ indique ce que montre le graphique, comment le lire et à quoi faire attention.' },
+  { target: () => $('glossary-btn'),
+    title: "Un mot t'échappe ?",
+    text: "Le glossaire définit tous les termes : post typique, indice de visibilité, taux d'engagement… Tu peux aussi y relancer cette visite." },
+];
+let tourStep = -1;
+
+function maybeStartTour() {
+  let done = false;
+  try { done = localStorage.getItem(TOUR_KEY) === '1'; } catch (e) { /* stockage indisponible */ }
+  if (!done) startTour();
+}
+
+function startTour() {
+  closeInfoPopovers(null);
+  showTourStep(0);
+}
+
+function showTourStep(i) {
+  document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+  if (i >= TOUR_STEPS.length) { endTour(); return; }
+  tourStep = i;
+  const step = TOUR_STEPS[i];
+  const target = step.target();
+  $('tour-step').textContent  = `${i + 1} / ${TOUR_STEPS.length}`;
+  $('tour-title').textContent = step.title;
+  $('tour-text').textContent  = step.text;
+  $('tour-next').textContent  = i === TOUR_STEPS.length - 1 ? 'Terminer' : 'Suivant';
+  $('tour').hidden = false;
+  if (target) {
+    target.classList.add('tour-target');
+    target.scrollIntoView({ block: 'center' });
+  }
+  positionTour();
+  $('tour-next').focus();
+}
+
+/* Carte placée sous l'élément visé (au-dessus s'il manque de place) ;
+   sur mobile, fixée en bas de l'écran comme une bottom sheet. */
+function positionTour() {
+  const tour = $('tour');
+  if (!tour || tour.hidden) return;
+  const sheet = window.innerWidth <= 768;
+  tour.classList.toggle('tour--sheet', sheet);
+  if (sheet) { tour.style.top = tour.style.left = ''; return; }
+  const target = document.querySelector('.tour-target');
+  const t = tour.getBoundingClientRect();
+  const margin = 16, gap = 12;
+  if (!target) {
+    tour.style.top  = `${(innerHeight - t.height) / 2}px`;
+    tour.style.left = `${(innerWidth - t.width) / 2}px`;
+    return;
+  }
+  const r = target.getBoundingClientRect();
+  let top = r.bottom + gap;
+  if (top + t.height > innerHeight - margin) top = Math.max(margin, r.top - gap - t.height);
+  const left = Math.min(Math.max(margin, r.left), innerWidth - t.width - margin);
+  tour.style.top  = `${top}px`;
+  tour.style.left = `${left}px`;
+}
+
+function endTour() {
+  document.querySelectorAll('.tour-target').forEach(el => el.classList.remove('tour-target'));
+  $('tour').hidden = true;
+  tourStep = -1;
+  try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { /* stockage indisponible */ }
+}
+
+function initTour() {
+  $('tour-next').addEventListener('click', () => showTourStep(tourStep + 1));
+  $('tour-skip').addEventListener('click', endTour);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('tour').hidden) endTour(); });
+  window.addEventListener('resize', positionTour);
+  window.addEventListener('scroll', positionTour, { passive: true });
+}
+
 /* ─── Utilities ──────────────────────────────────────────────── */
 
 function fmt(n)     { return Math.round(n).toLocaleString('fr-FR'); }
+/* Nombre décimal au format français : 2,3 et non 2.3 */
+function fmtDec(n, digits = 1) { return (+n).toFixed(digits).replace('.', ','); }
+/* Pourcentage signé : +4,9 % / −1,2 % */
+function fmtSignedPct(n) { return (n >= 0 ? '+' : '−') + fmtDec(Math.abs(n)) + '\u202f%'; }
+/* « 1 post », « 12 posts » */
+function postsLabel(n) { return `${fmt(n)} post${n > 1 ? 's' : ''}`; }
 function fmtK(n)    {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
+  if (Math.abs(n) >= 1_000_000) return `${fmtDec(n / 1_000_000)}\u202fM`;
+  if (Math.abs(n) >= 1_000)     return `${fmtDec(n / 1_000)}\u202fk`;
+  return Number.isInteger(n) ? String(n) : fmtDec(n);
 }
 function fmtPct(n)  { return `${(+n).toFixed(2).replace('.', ',')} %`; }
 
