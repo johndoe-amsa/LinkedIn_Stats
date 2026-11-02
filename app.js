@@ -457,6 +457,16 @@ function initDashboard() {
   resetFiltersBtn.addEventListener('click', resetFilters);
   $('active-filters-reset').addEventListener('click', resetFilters);
 
+  /* Barre de filtres repliable (mobile) */
+  const filterToggle = $('filterbar-toggle');
+  if (filterToggle) {
+    filterToggle.addEventListener('click', () => {
+      const open = filterToggle.getAttribute('aria-expanded') !== 'true';
+      filterToggle.setAttribute('aria-expanded', open);
+      filterToggle.closest('.filterbar').classList.toggle('is-open', open);
+    });
+  }
+
   /* Tabs */
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -935,7 +945,7 @@ function applyQuickDateFilter(preset) {
    SHARED CHART HELPERS
    ═══════════════════════════════════════════════════════════════ */
 
-Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 
 /* Mobile : graphiques moins plats (ratio 2:1 par défaut → 1,4:1), pour
@@ -945,6 +955,8 @@ const MOBILE_CHART_MQ = window.matchMedia('(max-width: 768px)');
 function syncChartAspect() { Chart.defaults.aspectRatio = MOBILE_CHART_MQ.matches ? 1.4 : 2; }
 syncChartAspect();
 MOBILE_CHART_MQ.addEventListener('change', syncChartAspect);
+/* Ratio explicite d'un graphique : plafonné à 1,4 sur mobile */
+function chartAspect(desktopRatio) { return MOBILE_CHART_MQ.matches ? Math.min(desktopRatio, 1.4) : desktopRatio; }
 
 // Returns a scriptable pointRadius that shows only the last non-null data point
 function lastPointRadius(visibleRadius = 4) {
@@ -1058,6 +1070,7 @@ function accountAvgEngagement() {
 function renderBilan(data) {
   renderTakeaways('bilan', takeawaysBilan(data));
   renderKPIs(data);
+  renderKpiSparklines(data);
   renderOverviewAudience(data);
   renderTimelineChart(data);
   renderPodium(data);
@@ -1282,7 +1295,7 @@ function renderCadencePortee(data) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 3,
+      aspectRatio: chartAspect(3),
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: legendSpec('top', 'end'),
@@ -1395,6 +1408,88 @@ function renderKPIs(data) {
     ['kpi-impressions-trend', 'kpi-clics-trend', 'kpi-engagement-trend', 'kpi-interactions-trend']
       .forEach(id => $(id).innerHTML = '');
   }
+}
+
+/* ── Mini-courbes des chiffres clés (Vue d'ensemble) ──
+   Une valeur par mois, sans axe : elles montrent la forme de la tendance,
+   les chiffres exacts restent dans le graphique « Évolution mois par mois ».
+   Couleur lue sur la carte (--spark-color) : la tuile héros a la sienne. */
+const KPI_SPARKS = [
+  { card: 'kpi-impressions',  label: 'Impressions',        value: (posts) => sum(posts, 'impressions'),                        format: (v) => fmt(v) },
+  { card: 'kpi-clics',        label: 'Taux de clics',      value: (posts) => avg(posts, 'tauxClics'),                          format: (v) => fmtPct(v) },
+  { card: 'kpi-engagement',   label: "Taux d'engagement",  value: (posts) => avg(posts, 'tauxEngagement'),                     format: (v) => fmtPct(v) },
+  { card: 'kpi-interactions', label: 'Actions',            value: (posts) => posts.reduce((a, d) => a + d.totalInteractions, 0), format: (v) => fmt(v) },
+];
+
+function renderKpiSparklines(data) {
+  const byMonth = new Map();
+  [...data].sort((a, b) => a.date - b.date).forEach(d => {
+    const key = `${d.date.getFullYear()}-${String(d.date.getMonth() + 1).padStart(2, '0')}`;
+    if (!byMonth.has(key)) byMonth.set(key, []);
+    byMonth.get(key).push(d);
+  });
+  const months = [...byMonth.keys()];
+  const labels = months.map(k => {
+    const [y, m] = k.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
+  });
+
+  KPI_SPARKS.forEach(spec => {
+    const card = $(spec.card);
+    const canvas = card && card.querySelector('.kpi-card__spark');
+    if (!canvas) return;
+    const id = `spark-${spec.card}`;
+    destroyChart(id);
+    canvas.hidden = months.length < 3;
+    if (months.length < 3) return;
+
+    const color = getComputedStyle(card).getPropertyValue('--spark-color').trim() || cssVar('--color-data-1');
+    const values = months.map(k => spec.value(byMonth.get(k)));
+    state.charts[id] = new Chart(canvas.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          borderColor: color,
+          borderWidth: 2,
+          cubicInterpolationMode: 'monotone',
+          fill: true,
+          backgroundColor: (ctx) => {
+            const { chart } = ctx;
+            if (!chart.chartArea) return 'transparent';
+            const g = chart.ctx.createLinearGradient(0, chart.chartArea.top, 0, chart.chartArea.bottom);
+            g.addColorStop(0, hexToRgba(color, 0.28));
+            g.addColorStop(1, hexToRgba(color, 0));
+            return g;
+          },
+          pointRadius: lastPointRadius(3),
+          pointHoverRadius: 4,
+          pointBackgroundColor: color,
+          pointBorderWidth: 0,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        layout: { padding: { top: 4, bottom: 2, left: 2, right: 4 } },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          annotation: { annotations: {} },
+          tooltip: {
+            displayColors: false,
+            callbacks: {
+              title: (items) => items[0].label,
+              label: (ctx) => `${spec.label} : ${spec.format(ctx.raw)}`,
+            },
+          },
+        },
+        scales: { x: { display: false }, y: { display: false, grace: '8%' } },
+      },
+    });
+  });
 }
 
 function renderTrend(elementId, oldVal, newVal) {
@@ -1550,7 +1645,7 @@ function renderTimelineChart(data) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 3,
+      aspectRatio: chartAspect(3),
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: legendSpec('top', 'end'),
@@ -2051,7 +2146,7 @@ function renderFunnelChart(data) {
       indexAxis: 'y',
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 2.5,
+      aspectRatio: chartAspect(2.5),
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -3127,7 +3222,7 @@ function renderCompareRadarChart(yearDataMap, years, yearColorMap) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 2,
+      aspectRatio: chartAspect(2),
       plugins: {
         legend: legendSpec('top', 'end'),
         tooltip: {
@@ -3632,7 +3727,7 @@ function renderCTPerfChart(themeDataMap, themes, themeColorMap) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 2,
+      aspectRatio: chartAspect(2),
       plugins: {
         legend: legendSpec('top', 'end'),
         tooltip: {
@@ -5080,7 +5175,9 @@ function renderAbonnesPanel() {
   $('ab-hero-count').textContent     = fmt(last.abonnes);
   const gainEl                       = $('ab-hero-gain');
   gainEl.textContent                 = (gainAbs >= 0 ? '+' : '') + fmt(gainAbs) + ' abonnés';
-  gainEl.style.color                 = gainAbs >= 0 ? cssVar('--color-success') : cssVar('--color-error');
+  /* Couleur lue sur l'élément : la tuile héros redéfinit success/error */
+  const gainStyle                    = getComputedStyle(gainEl);
+  gainEl.style.color                 = gainStyle.getPropertyValue(gainAbs >= 0 ? '--color-success' : '--color-error').trim();
   $('ab-hero-gain-sub').textContent  = `depuis ${fmtMois(first.date)} · ${data.length} relevés`;
 
   /* Sur un an : relevé du même mois l'année précédente, cherché dans tout
@@ -5741,7 +5838,7 @@ const TOUR_STEPS = [
   { target: () => document.querySelector('.tab-bar'),
     title: 'Chaque onglet répond à une question',
     text: "Commence par la Vue d'ensemble, puis ouvre l'onglet qui répond à ta question : « Quels posts ont marché ? », « Quand et à quel rythme publier ? »…" },
-  { target: () => document.querySelector('.view-toggle'),
+  { target: () => [...document.querySelectorAll('.view-toggle')].find(el => el.offsetParent),
     title: 'Vue essentielle ou vue complète',
     text: "La vue essentielle montre l'indispensable de chaque onglet. La vue complète ajoute les analyses détaillées : nuages de points, radars, distributions." },
   { target: () => [...document.querySelectorAll('.tab-panel.is-active .chart-info-btn')].find(b => b.offsetParent),

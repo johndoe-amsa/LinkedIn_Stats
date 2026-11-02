@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#F2F1EC" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0B0B0D" media="(prefers-color-scheme: dark)" />
   <title>LinkedIn Analytics — Dashboard V2</title>
 
-  <!-- Geist + Geist Mono — Google Fonts (jsDelivr retourne 403 : package npm geist est Next.js-only) -->
+  <!-- Bricolage Grotesque (titres, chiffres) + Inter (texte) + JetBrains Mono — Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -59,7 +59,7 @@
           <span class="upload-hero__dot" aria-hidden="true"></span>
           Dashboard V2 · 100 % local
         </p>
-        <h1 class="upload-hero__title">Analysez vos statistiques LinkedIn</h1>
+        <h1 class="upload-hero__title">Vos stats <span class="hl">LinkedIn</span>, enfin lisibles.</h1>
         <p class="upload-hero__desc">Importez votre export LinkedIn pour visualiser vos performances, croiser thèmes et formats, et définir votre stratégie éditoriale.</p>
 
         <ul class="upload-features">
@@ -135,65 +135,106 @@
        DASHBOARD SCREEN (hidden until CSV loaded)
   ══════════════════════════════════════════════ -->
   <div id="dashboard-screen" hidden>
+   <div class="app">
 
-    <!-- Navigation -->
-    <nav class="nav" role="navigation" aria-label="Navigation principale">
-      <div class="brand">
-        <span class="brand__mark"><i data-lucide="bar-chart-2" aria-hidden="true"></i></span>
-        <span class="brand__name">LinkedIn Analytics</span>
+    <!-- ── Rail de navigation (bas d'écran sur mobile) ── -->
+    <nav class="rail" aria-label="Navigation principale">
+      <div class="rail__brand" aria-hidden="true">
+        <span class="brand__mark"><i data-lucide="bar-chart-2"></i></span>
       </div>
-      <div class="nav__meta">
-        <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
-        <span class="nav__filename" id="nav-filename"></span>
-        <span class="nav__separator" aria-hidden="true">&middot;</span>
-        <span class="nav__count" id="nav-count"></span>
-      </div>
-      <div class="nav__actions">
-        <button type="button" class="btn btn--ghost btn--sm" id="glossary-btn" aria-haspopup="dialog">
-          <i data-lucide="book-open" aria-hidden="true"></i>
-          Glossaire
+      <div class="tab-bar" role="tablist" aria-orientation="vertical" aria-label="Sections du dashboard">
+        <button class="tab-btn is-active" role="tab" data-tab="bilan" aria-selected="true" aria-controls="panel-bilan" aria-label="Vue d'ensemble" title="Comment va mon compte ?">
+          <span class="tab-btn__icon"><i data-lucide="layout-dashboard" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Bilan</span>
         </button>
-        <button type="button" class="theme-toggle" id="theme-toggle-nav" aria-label="Changer le thème clair/sombre">
-          <i data-lucide="moon" aria-hidden="true"></i>
+        <button class="tab-btn" role="tab" data-tab="abonnes" aria-selected="false" aria-controls="panel-abonnes" aria-label="Audience" title="Mon audience grandit-elle ?">
+          <span class="tab-btn__icon"><i data-lucide="users" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Audience</span>
         </button>
-        <button type="button" class="btn btn--secondary btn--sm" id="reset-btn">
-          <i data-lucide="upload" aria-hidden="true"></i>
-          Nouveau fichier
+        <button class="tab-btn" role="tab" data-tab="laboratoire" aria-selected="false" aria-controls="panel-laboratoire" aria-label="Publications" title="Quels posts ont marché ?">
+          <span class="tab-btn__icon"><i data-lucide="list" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Posts</span>
+        </button>
+        <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false" aria-controls="panel-compare-themes" aria-label="Contenus" title="Quels sujets et formats marchent ?">
+          <span class="tab-btn__icon"><i data-lucide="layers" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Contenus</span>
+        </button>
+        <button class="tab-btn" role="tab" data-tab="entonnoir" aria-selected="false" aria-controls="panel-entonnoir" aria-label="Réactions" title="Comment les gens réagissent-ils ?">
+          <span class="tab-btn__icon"><i data-lucide="heart" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Réactions</span>
+        </button>
+        <button class="tab-btn" role="tab" data-tab="calendrier" aria-selected="false" aria-controls="panel-calendrier" aria-label="Calendrier" title="Quand et à quel rythme publier ?">
+          <span class="tab-btn__icon"><i data-lucide="calendar-clock" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Agenda</span>
+        </button>
+        <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false" aria-controls="panel-statistiques" aria-label="Historique" title="Est-ce que je progresse d'année en année ?">
+          <span class="tab-btn__icon"><i data-lucide="history" aria-hidden="true"></i></span>
+          <span class="tab-btn__label">Historique</span>
         </button>
       </div>
     </nav>
 
-    <!-- Main layout: Sidebar + Content -->
-    <main class="dashboard-layout">
+    <div class="workspace">
 
-      <!-- ── Sidebar Filters ── -->
-      <aside class="sidebar" role="complementary" aria-label="Filtres">
-        <div class="sidebar__header">
-          <p class="section-label">Filtres</p>
-          <h2 class="sidebar__title">Panneau de contrôle</h2>
+      <!-- ── Barre du haut : question de l'onglet + actions ── -->
+      <header class="topbar">
+        <div class="topbar__title">
+          <p class="topbar__eyebrow" id="tab-section-label">Vue d'ensemble</p>
+          <h1 class="topbar__heading" id="tab-section-title">Comment va mon compte ?</h1>
         </div>
+        <div class="topbar__meta nav__meta">
+          <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
+          <span class="nav__filename" id="nav-filename"></span>
+          <span class="nav__separator" aria-hidden="true">&middot;</span>
+          <span class="nav__count" id="nav-count"></span>
+        </div>
+        <div class="view-toggle view-toggle--top" role="group" aria-label="Niveau de détail">
+          <button class="btn btn--ghost btn--sm view-toggle__btn is-active" data-view="essentielle" type="button" aria-pressed="true"
+                  title="Montre les blocs indispensables de chaque onglet">Essentiel</button>
+          <button class="btn btn--ghost btn--sm view-toggle__btn" data-view="complete" type="button" aria-pressed="false"
+                  title="Ajoute les analyses détaillées : nuages de points, radars, distributions…">Complet</button>
+        </div>
+        <div class="topbar__actions">
+          <button type="button" class="icon-btn" id="glossary-btn" aria-haspopup="dialog" aria-label="Glossaire" title="Glossaire">
+            <i data-lucide="book-open" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="theme-toggle icon-btn" id="theme-toggle-nav" aria-label="Changer le thème clair/sombre" title="Thème clair / sombre">
+            <i data-lucide="moon" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="btn btn--primary btn--sm topbar__new" id="reset-btn" aria-label="Importer un nouveau fichier">
+            <i data-lucide="upload" aria-hidden="true"></i>
+            <span>Nouveau fichier</span>
+          </button>
+        </div>
+      </header>
 
-        <div class="sidebar__filters">
-          <!-- Date range -->
-          <div class="filter-group">
-            <label class="filter-group__label" for="filter-date-from">Date début</label>
+      <!-- ── Barre de filtres ── -->
+      <section class="filterbar sidebar" aria-label="Filtres">
+        <button type="button" class="filterbar__toggle" id="filterbar-toggle" aria-expanded="false" aria-controls="filterbar-body">
+          <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+          Filtres
+          <span class="filterbar__toggle-count sidebar__count" id="sidebar-count">0 publications</span>
+          <i data-lucide="chevron-down" class="filterbar__chevron" aria-hidden="true"></i>
+        </button>
+
+        <div class="filterbar__body sidebar__filters" id="filterbar-body">
+          <div class="filter-group filter-group--date">
+            <label class="filter-group__label" for="filter-date-from">Du</label>
             <input type="date" class="filter-group__input" id="filter-date-from" aria-label="Date de début" />
           </div>
-          <div class="filter-group">
-            <label class="filter-group__label" for="filter-date-to">Date fin</label>
+          <div class="filter-group filter-group--date">
+            <label class="filter-group__label" for="filter-date-to">Au</label>
             <input type="date" class="filter-group__input" id="filter-date-to" aria-label="Date de fin" />
           </div>
 
-          <!-- Quick date filters -->
           <div class="date-quick-filters" role="group" aria-label="Filtres rapides de période">
             <button type="button" class="date-quick-btn" data-preset="30d" aria-label="30 derniers jours">30 j</button>
             <button type="button" class="date-quick-btn" data-preset="3m" aria-label="3 derniers mois">3 mois</button>
             <button type="button" class="date-quick-btn" data-preset="1y" aria-label="1 dernière année">1 an</button>
           </div>
 
-          <hr class="sidebar__divider" />
+          <span class="filterbar__sep" aria-hidden="true"></span>
 
-          <!-- Theme -->
           <div class="filter-group">
             <label class="filter-group__label" for="filter-theme">Thème</label>
             <select class="filter-group__select" id="filter-theme" aria-label="Filtrer par thème">
@@ -201,7 +242,6 @@
             </select>
           </div>
 
-          <!-- Media -->
           <div class="filter-group">
             <label class="filter-group__label" for="filter-media">Média</label>
             <select class="filter-group__select" id="filter-media" aria-label="Filtrer par média">
@@ -210,64 +250,21 @@
           </div>
 
           <button type="button" class="btn btn--ghost btn--sm sidebar__reset-btn" id="reset-filters-btn" aria-label="Réinitialiser les filtres">
-            <i data-lucide="x" aria-hidden="true"></i>
+            <i data-lucide="rotate-ccw" aria-hidden="true"></i>
             Réinitialiser
           </button>
-        </div>
 
-        <div class="sidebar__footer">
-          <span class="sidebar__count" id="sidebar-count">0 publications</span>
-        </div>
-      </aside>
-
-      <!-- ── Main Content ── -->
-      <div class="dashboard-main">
-
-        <!-- Page title -->
-        <section class="dashboard-main__header">
-          <div>
-            <p class="section-label" id="tab-section-label">Vue d'ensemble</p>
-            <h2 class="section-title" id="tab-section-title">Comment va mon compte ?</h2>
-          </div>
-          <div class="view-toggle" role="group" aria-label="Niveau de détail">
+          <div class="view-toggle view-toggle--filters" role="group" aria-label="Niveau de détail">
             <button class="btn btn--ghost btn--sm view-toggle__btn is-active" data-view="essentielle" type="button" aria-pressed="true"
-                    title="Montre les blocs indispensables de chaque onglet">Vue essentielle</button>
+                    title="Montre les blocs indispensables de chaque onglet">Essentiel</button>
             <button class="btn btn--ghost btn--sm view-toggle__btn" data-view="complete" type="button" aria-pressed="false"
-                    title="Ajoute les analyses détaillées : nuages de points, radars, distributions…">Vue complète</button>
+                    title="Ajoute les analyses détaillées : nuages de points, radars, distributions…">Complet</button>
           </div>
-        </section>
-
-        <!-- ── Tab Bar ── -->
-        <div class="tab-bar" role="tablist" aria-label="Sections du dashboard">
-          <button class="tab-btn is-active" role="tab" data-tab="bilan" aria-selected="true" title="Comment va mon compte ?">
-            <i data-lucide="layout-dashboard" aria-hidden="true"></i>
-            Vue d'ensemble
-          </button>
-          <button class="tab-btn" role="tab" data-tab="abonnes" aria-selected="false" title="Mon audience grandit-elle ?">
-            <i data-lucide="users" aria-hidden="true"></i>
-            Audience
-          </button>
-          <button class="tab-btn" role="tab" data-tab="laboratoire" aria-selected="false" title="Quels posts ont marché ?">
-            <i data-lucide="list" aria-hidden="true"></i>
-            Publications
-          </button>
-          <button class="tab-btn" role="tab" data-tab="compare-themes" aria-selected="false" title="Quels sujets et formats marchent ?">
-            <i data-lucide="layers" aria-hidden="true"></i>
-            Contenus
-          </button>
-          <button class="tab-btn" role="tab" data-tab="entonnoir" aria-selected="false" title="Comment les gens réagissent-ils ?">
-            <i data-lucide="heart" aria-hidden="true"></i>
-            Réactions
-          </button>
-          <button class="tab-btn" role="tab" data-tab="calendrier" aria-selected="false" title="Quand et à quel rythme publier ?">
-            <i data-lucide="calendar-clock" aria-hidden="true"></i>
-            Calendrier
-          </button>
-          <button class="tab-btn" role="tab" data-tab="statistiques" aria-selected="false" title="Est-ce que je progresse d'année en année ?">
-            <i data-lucide="history" aria-hidden="true"></i>
-            Historique
-          </button>
         </div>
+      </section>
+
+      <!-- ── Contenu ── -->
+      <main class="dashboard-main">
 
         <!-- Filtres actifs : rappelés sur chaque onglet -->
         <div class="active-filters" id="active-filters" hidden role="status" aria-live="polite">
@@ -292,7 +289,7 @@
 
           <!-- KPI Cards -->
           <section class="kpis" aria-label="Indicateurs clés">
-            <div class="kpi-card" id="kpi-impressions">
+            <div class="kpi-card kpi-card--hero" id="kpi-impressions">
               <div class="kpi-card__header">
                 <p class="kpi-card__label">Impressions totales</p>
                 <div class="kpi-card__icon"><i data-lucide="eye" aria-hidden="true"></i></div>
@@ -306,6 +303,7 @@
               <p class="kpi-card__sub">
                 Post typique : <strong id="kpi-impressions-median">0</strong> impressions
               </p>
+              <div class="kpi-card__spark-wrap"><canvas class="kpi-card__spark" aria-hidden="true"></canvas></div>
             </div>
 
             <div class="kpi-card" id="kpi-clics">
@@ -319,6 +317,7 @@
                 <span id="kpi-clics-trend"></span>
                 Post typique : <strong id="kpi-clics-median">0 %</strong>
               </p>
+              <div class="kpi-card__spark-wrap"><canvas class="kpi-card__spark" aria-hidden="true"></canvas></div>
             </div>
 
             <div class="kpi-card" id="kpi-engagement">
@@ -336,6 +335,7 @@
                 Définition LinkedIn, clics inclus ·
                 hors clics : <strong id="kpi-engagement-horsclics">0 %</strong>
               </p>
+              <div class="kpi-card__spark-wrap"><canvas class="kpi-card__spark" aria-hidden="true"></canvas></div>
             </div>
 
             <div class="kpi-card" id="kpi-interactions">
@@ -349,6 +349,7 @@
                 <span id="kpi-interactions-trend"></span>
                 Réactions, commentaires, republications et clics
               </p>
+              <div class="kpi-card__spark-wrap"><canvas class="kpi-card__spark" aria-hidden="true"></canvas></div>
             </div>
           </section>
 
@@ -2284,8 +2285,9 @@
           <button type="button" class="btn btn--secondary btn--sm" id="view-hint-btn">Afficher la vue complète</button>
         </div>
 
-      </div><!-- /.dashboard-main -->
-    </main>
+      </main><!-- /.dashboard-main -->
+    </div><!-- /.workspace -->
+   </div><!-- /.app -->
   </div>
 
   <!-- Glossaire -->
