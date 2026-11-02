@@ -2,7 +2,9 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#FAFAFA" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
   <title>LinkedIn Analytics — Dashboard V2</title>
 
   <!-- Geist + Geist Mono — Google Fonts (jsDelivr retourne 403 : package npm geist est Next.js-only) -->
@@ -41,10 +43,10 @@
        UPLOAD SCREEN
   ══════════════════════════════════════════════ -->
   <div id="upload-screen">
-    <header class="upload-header" style="justify-content: space-between;">
-      <div class="upload-header__brand">
-        <i data-lucide="bar-chart-2" aria-hidden="true"></i>
-        <span>LinkedIn Analytics</span>
+    <header class="upload-header">
+      <div class="brand">
+        <span class="brand__mark"><i data-lucide="bar-chart-2" aria-hidden="true"></i></span>
+        <span class="brand__name">LinkedIn Analytics</span>
       </div>
       <button type="button" class="theme-toggle" id="theme-toggle-upload" aria-label="Changer le thème clair/sombre">
         <i data-lucide="moon" aria-hidden="true"></i>
@@ -53,67 +55,78 @@
 
     <main class="upload-main">
       <div class="upload-hero">
-        <p class="upload-hero__label">Dashboard V2</p>
-        <h1 class="upload-hero__title">Analysez vos<br>statistiques LinkedIn</h1>
-        <p class="upload-hero__desc">Importez votre export CSV LinkedIn pour visualiser vos performances, croiser thèmes et formats, et définir votre stratégie éditoriale.</p>
+        <p class="upload-hero__label">
+          <span class="upload-hero__dot" aria-hidden="true"></span>
+          Dashboard V2 · 100 % local
+        </p>
+        <h1 class="upload-hero__title">Analysez vos statistiques LinkedIn</h1>
+        <p class="upload-hero__desc">Importez votre export LinkedIn pour visualiser vos performances, croiser thèmes et formats, et définir votre stratégie éditoriale.</p>
+
+        <ul class="upload-features">
+          <li class="upload-feature">
+            <span class="upload-feature__icon"><i data-lucide="shield" aria-hidden="true"></i></span>
+            <span><strong>Aucune donnée envoyée</strong>Le fichier est lu dans votre navigateur, rien ne quitte votre appareil.</span>
+          </li>
+          <li class="upload-feature">
+            <span class="upload-feature__icon"><i data-lucide="zap" aria-hidden="true"></i></span>
+            <span><strong>Traitement instantané</strong>Les tableaux et graphiques s'affichent dès l'import.</span>
+          </li>
+          <li class="upload-feature">
+            <span class="upload-feature__icon"><i data-lucide="line-chart" aria-hidden="true"></i></span>
+            <span><strong>Graphiques interactifs</strong>Filtrez par période, thème ou format et comparez vos années.</span>
+          </li>
+        </ul>
       </div>
 
-      <div class="url-connect">
-        <label class="url-connect__label" for="url-input">Lien Dropbox public</label>
-        <div class="url-connect__row">
-          <input
-            type="url"
-            id="url-input"
-            class="url-connect__input"
-            placeholder="https://www.dropbox.com/..."
-            spellcheck="false"
-            autocomplete="off"
-          />
-          <button type="button" id="url-connect-btn" class="btn btn--primary url-connect__btn">
-            Connecter
+      <section class="upload-card" aria-label="Importer vos données">
+        <div class="upload-card__head">
+          <h2 class="upload-card__title">Importer vos données</h2>
+          <p class="upload-card__sub">Depuis un lien Dropbox ou un fichier sur votre appareil.</p>
+        </div>
+
+        <div class="url-connect">
+          <label class="url-connect__label" for="url-input">Lien Dropbox public</label>
+          <div class="url-connect__row">
+            <input
+              type="url"
+              id="url-input"
+              class="url-connect__input"
+              placeholder="https://www.dropbox.com/..."
+              spellcheck="false"
+              autocomplete="off"
+              inputmode="url"
+            />
+            <button type="button" id="url-connect-btn" class="btn btn--primary url-connect__btn">
+              Connecter
+            </button>
+          </div>
+          <div id="url-error" class="upload-error" hidden>
+            <i data-lucide="alert-circle" aria-hidden="true"></i>
+            <span id="url-error-msg"></span>
+          </div>
+        </div>
+
+        <div class="upload-divider"><span>ou</span></div>
+
+        <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
+          <input type="file" id="file-input" accept=".csv,.xlsx,.xls" hidden aria-label="Sélectionner un fichier CSV ou Excel" />
+          <div class="drop-zone__icon">
+            <i data-lucide="upload-cloud" aria-hidden="true"></i>
+          </div>
+          <p class="drop-zone__title">Glissez-déposez votre fichier</p>
+          <p class="drop-zone__sub">ou cliquez pour parcourir</p>
+          <button type="button" class="btn btn--secondary drop-zone__btn" id="browse-btn">
+            <i data-lucide="folder-open" aria-hidden="true"></i>
+            Parcourir
           </button>
+          <p class="drop-zone__hint">Formats acceptés : <code>.xlsx</code>, <code>.xls</code> ou <code>.csv</code></p>
         </div>
-        <div id="url-error" class="upload-error" hidden>
+
+        <div id="upload-error" class="upload-error" hidden>
           <i data-lucide="alert-circle" aria-hidden="true"></i>
-          <span id="url-error-msg"></span>
+          <span id="upload-error-msg"></span>
         </div>
-      </div>
-
-      <div class="upload-divider"><span>ou</span></div>
-
-      <div id="drop-zone" class="drop-zone" role="button" tabindex="0" aria-label="Zone d'import de fichier CSV">
-        <input type="file" id="file-input" accept=".csv,.xlsx,.xls" hidden aria-label="Sélectionner un fichier CSV ou Excel" />
-        <div class="drop-zone__icon">
-          <i data-lucide="upload-cloud" aria-hidden="true"></i>
-        </div>
-        <p class="drop-zone__title">Glissez-déposez votre fichier CSV</p>
-        <p class="drop-zone__sub">ou cliquez pour parcourir</p>
-        <button type="button" class="btn btn--secondary drop-zone__btn" id="browse-btn">
-          <i data-lucide="folder-open" aria-hidden="true"></i>
-          Parcourir
-        </button>
-        <p class="drop-zone__hint">Formats acceptés : <code>.xlsx</code>, <code>.xls</code> ou <code>.csv</code></p>
-      </div>
-
-      <div id="upload-error" class="upload-error" hidden>
-        <i data-lucide="alert-circle" aria-hidden="true"></i>
-        <span id="upload-error-msg"></span>
-      </div>
-
-      <div class="upload-features">
-        <div class="upload-feature">
-          <i data-lucide="shield" aria-hidden="true"></i>
-          <span>100 % local — aucune donnée envoyée</span>
-        </div>
-        <div class="upload-feature">
-          <i data-lucide="zap" aria-hidden="true"></i>
-          <span>Traitement instantané dans le navigateur</span>
-        </div>
-        <div class="upload-feature">
-          <i data-lucide="line-chart" aria-hidden="true"></i>
-          <span>Graphiques interactifs avec Chart.js</span>
-        </div>
-      </div>
+      </section>
     </main>
   </div>
 
@@ -125,11 +138,12 @@
 
     <!-- Navigation -->
     <nav class="nav" role="navigation" aria-label="Navigation principale">
-      <div class="nav__brand">
-        <i data-lucide="bar-chart-2" aria-hidden="true"></i>
-        <span>LinkedIn Analytics</span>
+      <div class="brand">
+        <span class="brand__mark"><i data-lucide="bar-chart-2" aria-hidden="true"></i></span>
+        <span class="brand__name">LinkedIn Analytics</span>
       </div>
       <div class="nav__meta">
+        <i data-lucide="file-spreadsheet" aria-hidden="true"></i>
         <span class="nav__filename" id="nav-filename"></span>
         <span class="nav__separator" aria-hidden="true">&middot;</span>
         <span class="nav__count" id="nav-count"></span>

@@ -938,6 +938,14 @@ function applyQuickDateFilter(preset) {
 Chart.defaults.font.family = "'Geist', system-ui, sans-serif";
 Chart.defaults.font.size = 12;
 
+/* Mobile : graphiques moins plats (ratio 2:1 par défaut → 1,4:1), pour
+   qu'ils remplissent la hauteur minimale de leur carte au lieu d'y
+   laisser un vide. Pris en compte à chaque (re)création de graphique. */
+const MOBILE_CHART_MQ = window.matchMedia('(max-width: 768px)');
+function syncChartAspect() { Chart.defaults.aspectRatio = MOBILE_CHART_MQ.matches ? 1.4 : 2; }
+syncChartAspect();
+MOBILE_CHART_MQ.addEventListener('change', syncChartAspect);
+
 // Returns a scriptable pointRadius that shows only the last non-null data point
 function lastPointRadius(visibleRadius = 4) {
   return (ctx) => {
@@ -1190,7 +1198,7 @@ function renderGroupPerfChart(canvasId, groups) {
         },
       },
       scales: {
-        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }),
         y:  { ...scaleY({ beginAtZero: true, ticks: { callback: v => fmtK(v) } }), position: 'left' },
         y1: {
           position: 'right',
@@ -1578,7 +1586,7 @@ function renderTimelineChart(data) {
         },
       },
       scales: {
-        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: false } }),
+        x:  scaleX({ ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }),
         y:  { ...scaleY({ ticks: { callback: (v) => fmtK(v) } }), position: 'left' },
         y1: {
           position: 'right',
